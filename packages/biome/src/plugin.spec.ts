@@ -63,12 +63,12 @@ describe('@nx-devkit/biome createNodesV2', () => {
     expect(lint.cache).toBe(true)
   })
 
-  it('inputs include biome config file and src/**/*', () => {
-    const result = createNodesV2[1](['apps/demo/biome.json'], {}, makeContext('/workspace'))
+  it('inputs include biome config file and project files', async () => {
+    const result = await createNodesV2[1](['apps/demo/biome.json'], {}, makeContext('/workspace'))
     const targets = result[0]![1].projects?.['apps/demo']?.targets
     const formatInputs = targets!.format!.inputs as string[]
     expect(formatInputs).toContain('{projectRoot}/biome.json')
-    expect(formatInputs).toContain('{projectRoot}/src/**/*')
+    expect(formatInputs).toContain('{projectRoot}/**/*')
   })
 
   it('handles biome.jsonc (json with comments) the same as biome.json', () => {
@@ -85,7 +85,7 @@ describe('@nx-devkit/biome createNodesV2', () => {
   })
 
   it('exports the createNodesV2 tuple with the correct glob pattern', () => {
-    expect(createNodesV2[0]).toBe('**/biome.jsonc?')
+    expect(createNodesV2[0]).toBe('**/biome.json{,c}')
     expect(createNodesV2[0]).toMatch(/biome\.json/)
   })
 
