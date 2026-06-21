@@ -154,20 +154,12 @@ export function inferVitestTargets(
   }
 } {
   const configName = basename(vitestConfigFile)
-  const workspaceVitestInputs = [
-    '{workspaceRoot}/vitest.config.ts',
-    '{workspaceRoot}/vitest.config.js',
-    '{workspaceRoot}/vitest.config.mts',
-    '{workspaceRoot}/vitest.config.mjs',
-    '{workspaceRoot}/vitest.config.cts',
-    '{workspaceRoot}/vitest.config.cjs',
-  ]
   const baseInputs = [
     '{projectRoot}/src/**/*.ts',
     '{projectRoot}/tests/**/*',
     `{projectRoot}/${configName}`,
     '{projectRoot}/package.json',
-    ...workspaceVitestInputs,
+    '{workspaceRoot}/vitest.config.{ts,js,mts,mjs,cts,cjs}',
   ]
 
   return {

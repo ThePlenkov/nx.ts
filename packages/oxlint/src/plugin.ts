@@ -16,11 +16,10 @@ function inferLintTarget(projectRoot: string): TargetConfiguration {
   }
 }
 
-const MAX_OXLINTRC_BYTES = 1024 * 1024 // 1 MiB
-
 function readOxLintrc(file: string): Record<string, unknown> | null {
   try {
-    if (statSync(file).size > MAX_OXLINTRC_BYTES) {
+    const stats = statSync(file)
+    if (stats.size > 1_048_576) {
       return null
     }
     const raw = readFileSync(file, 'utf-8')

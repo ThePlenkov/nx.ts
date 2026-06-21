@@ -79,19 +79,19 @@ When `vitest.config.{ts,js,mts,mjs,cts,cjs}` exists alongside `tsconfig.json`, t
 
 ## Options
 
-Pass options via the inline plugin tuple in `nx.json`:
+The plugin accepts options registered via the tuple-based plugin option approach in `nx.json`:
 
 ```jsonc
 {
   "plugins": [
-    [
-      "@nx-devkit/typescript",
-      {
+    {
+      "plugin": "@nx-devkit/typescript",
+      "options": {
         "tsgo": true,
         "configFile": "tsconfig.json",
         "clean": false
       }
-    ]
+    }
   ]
 }
 ```

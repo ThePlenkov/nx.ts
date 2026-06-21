@@ -26,9 +26,9 @@ The repository's `nx.json` MUST pin Nx to `22.7.1` and declare `packageManager: 
 ### Requirement: Husky pre-commit runs biome format
 The repository MUST ship `.husky/pre-commit` that runs `bunx biome format --write --no-errors-on-unmatched` followed by `git add -u` on every commit.
 
-#### Scenario: Pre-commit formats and re-stages files
+#### Scenario: Pre-commit formats all files
 - **WHEN** a developer commits any file
-- **THEN** biome rewrites all matching files in the repo to the formatter config, and `git add -u` re-stages any formatting changes before the commit is created
+- **THEN** biome reformats all matching files in the repository and stages the changes via `git add -u` before the commit is created
 
 ### Requirement: License preserved
 The `LICENSE` file MUST remain unchanged from the upstream fork (MIT, Copyright nx-devkit, 2026).
