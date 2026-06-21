@@ -17,7 +17,7 @@ The repository root MUST ship `tsconfig.base.json`, `biome.json`, `.oxlintrc.jso
 - **THEN** `strict`, `noUncheckedIndexedAccess`, `noImplicitOverride`, and `exactOptionalPropertyTypes` are all `true`
 
 ### Requirement: Nx 22.7.1 with bun package manager
-The repository's `nx.json` MUST pin Nx to `22.7.1` and declare `packageManager: "bun@1.3.14"`. The `pluginsConfig` field MUST list all four plugin scopes (`@nx-devkit/tsdown`, `@nx-devkit/oxlint`, `@nx-devkit/biome`, `@nx-devkit/typescript`) with empty options. The `plugins` array MUST be empty in this foundation bead.
+The repository's `nx.json` MUST pin Nx to `22.7.1` and declare `packageManager: "bun@1.3.14"`. The `pluginsConfig` field MUST list all four plugin scopes (`@nx-devkit/tsdown`, `@nx-devkit/oxlint`, `@nx-devkit/biome`, `@nx-devkit/typescript`) with empty options, and the `plugins` array MUST register each of the four `@nx-devkit/*` plugin entry points (their `src/index.ts`) so Nx actually loads them.
 
 #### Scenario: nx.json schema is valid
 - **WHEN** a developer runs `bunx nx --version`

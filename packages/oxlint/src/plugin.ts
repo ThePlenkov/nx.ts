@@ -2,7 +2,7 @@ import { readFileSync, statSync } from 'node:fs'
 import { dirname, isAbsolute, join, relative } from 'node:path'
 import type { CreateNodesV2, ProjectConfiguration, TargetConfiguration } from '@nx/devkit'
 
-const OXLINT_RC_PATTERN = /(^|\/)\.oxlintrc\.(json|ya?ml|[cm]?js)$/
+const OXLINT_RC_GLOB = '**/.oxlintrc.{json,yml,yaml,cjs,mjs,js,cts,mts}'
 
 // Cap the size of an .oxlintrc file we will parse. A malicious or
 // accidentally huge config file should not be loaded into memory.
@@ -30,11 +30,14 @@ function readOxLintrc(file: string): Record<string, unknown> | null {
     }
     const raw = readFileSync(file, 'utf-8')
     if (file.endsWith('.json')) {
-      const parsed: unknown = JSON.parse(raw)
-      if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
-        return null
+      try {
+        return JSON.parse(raw) as Record<string, unknown>
+      } catch {
+        return { '//': 'oxlint config may contain comments/trailing commas' } as Record<
+          string,
+          unknown
+        >
       }
-      return parsed as Record<string, unknown>
     }
     return { '//': 'yaml/js configs parsed at runtime by oxlint' } as Record<string, unknown>
   } catch {
@@ -43,14 +46,14 @@ function readOxLintrc(file: string): Record<string, unknown> | null {
 }
 
 export const createNodesV2: CreateNodesV2 = [
-  '**/.oxlintrc.{json,yaml,yml,js,cjs,mjs}',
+  OXLINT_RC_GLOB,
   (projectConfigurationFiles, _options, context) => {
     const workspaceRoot = context.workspaceRoot
     const results: Array<readonly [string, { projects: Record<string, ProjectConfiguration> }]> = []
 
     for (const configFilePath of projectConfigurationFiles) {
-      const fileName = configFilePath.replace(/\\/g, '/').split('/').pop() ?? ''
-      if (!OXLINT_RC_PATTERN.test(fileName)) continue
+      const fileName = configFilePath.split('/').pop() ?? ''
+      if (!fileName.startsWith('.oxlintrc.')) continue
 
       const configFilePathAbs = isAbsolute(configFilePath)
         ? configFilePath
@@ -80,5 +83,5 @@ export default createNodesV2
 export const __testing = {
   inferLintTarget,
   readOxLintrc,
-  OXLINT_RC_PATTERN,
+  OXLINT_RC_GLOB,
 }
