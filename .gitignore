@@ -13,6 +13,8 @@ coverage/
 
 # OpenSpec skill/command artifacts managed by openspec init
 .kilocode/
+.agents/
+tmp/
 
 # Bun
 bun.lockb

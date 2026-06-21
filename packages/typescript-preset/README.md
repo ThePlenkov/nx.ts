@@ -97,7 +97,7 @@ Pass options via `pluginsConfig["@nx-devkit/typescript"]` in `nx.json`:
 | ------------ | --------- | ------------------ | ------------------------------------------------------------------------------ |
 | `tsgo`       | `boolean` | `true`             | `true` uses `tsgo` and external-deps `@typescript/native-preview`; `false` uses `tsc` and external-deps `typescript`. |
 | `configFile` | `string`  | `"tsconfig.json"`  | The trigger file basename. Use e.g. `"tsconfig.lib.json"` for lib projects.    |
-| `clean`      | `boolean` | `false`            | When `true`, the typecheck command is prefixed with `--build --clean` to force a full rebuild. |
+| `clean`      | `boolean` | `false`            | When `true`, a `tsgo/tsc --build --clean <configFile>` runs first, chained with `&&`, so a full clean rebuild happens before the normal typecheck. |
 
 ## Skip rules
 

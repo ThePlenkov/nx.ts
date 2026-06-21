@@ -28,7 +28,7 @@ export interface BiomeProjectConfiguration {
 export type BiomeCreateNodesResult = ReadonlyArray<readonly [string, BiomeProjectConfiguration]>
 
 function isWorkspaceRoot(configFilePath: string): boolean {
-  const normalized = configFilePath.replaceAll('\\', '/')
+  const normalized = configFilePath.replaceAll('\\', '/').replace(/^\.\//, '')
   return normalized === WORKSPACE_ROOT_MARKER || normalized === 'biome.jsonc'
 }
 
@@ -81,7 +81,7 @@ const createNodesFn: CreateNodesFunctionV2<BiomePluginOptions> = (
       continue
     }
 
-    const projectRoot = normalized.replace(/\/biome\.jsonc?$/, '')
+    const projectRoot = normalized.replace(/^\.\//, '').replace(/\/biome\.jsonc?$/, '')
     if (projectRoot === '' || projectRoot === workspaceRoot) {
       continue
     }
@@ -103,7 +103,9 @@ const createNodesFn: CreateNodesFunctionV2<BiomePluginOptions> = (
   return results as unknown as ReturnType<CreateNodesFunctionV2<BiomePluginOptions>>
 }
 
-export const createNodesV2: readonly ['**/biome.json', CreateNodesFunctionV2<BiomePluginOptions>] =
-  ['**/biome.json', createNodesFn]
+export const createNodesV2: readonly [
+  '**/biome.jsonc?',
+  CreateNodesFunctionV2<BiomePluginOptions>,
+] = ['**/biome.jsonc?', createNodesFn]
 
 export default { createNodesV2, name: PLUGIN_NAME }
