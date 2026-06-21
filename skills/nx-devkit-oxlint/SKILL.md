@@ -42,7 +42,7 @@ bun add -D @nx-devkit/oxlint
 
 Given this layout:
 
-```
+```text
 .
 ├── nx.json
 ├── packages/
@@ -60,7 +60,7 @@ npx nx show project packages/foo
 
 Expected output:
 
-```
+```text
 foo
 - lint (nx:run-commands, cacheable)
   command: npx oxlint .
