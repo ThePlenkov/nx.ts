@@ -43,7 +43,7 @@ function readOxLintrc(file: string): Record<string, unknown> | null {
 }
 
 export const createNodesV2: CreateNodesV2 = [
-  OXLINT_RC_PATTERN.source,
+  '**/.oxlintrc.{json,yaml,yml,js,cjs,mjs}',
   (projectConfigurationFiles, _options, context) => {
     const workspaceRoot = context.workspaceRoot
     const results: Array<readonly [string, { projects: Record<string, ProjectConfiguration> }]> = []

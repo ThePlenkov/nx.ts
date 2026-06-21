@@ -85,7 +85,7 @@ describe('@nx-devkit/biome createNodesV2', () => {
   })
 
   it('exports the createNodesV2 tuple with the correct glob pattern', () => {
-    expect(createNodesV2[0]).toBe('**/biome.json')
+    expect(createNodesV2[0]).toBe('**/biome.json{,c}')
     expect(createNodesV2[0]).toMatch(/biome\.json/)
   })
 

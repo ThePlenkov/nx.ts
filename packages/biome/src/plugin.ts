@@ -103,7 +103,7 @@ const createNodesFn: CreateNodesFunctionV2<BiomePluginOptions> = (
   return results as unknown as ReturnType<CreateNodesFunctionV2<BiomePluginOptions>>
 }
 
-export const createNodesV2: readonly ['**/biome.json', CreateNodesFunctionV2<BiomePluginOptions>] =
-  ['**/biome.json', createNodesFn]
+export const createNodesV2: readonly ['**/biome.json{,c}', CreateNodesFunctionV2<BiomePluginOptions>] =
+  ['**/biome.json{,c}', createNodesFn]
 
 export default { createNodesV2, name: PLUGIN_NAME }
