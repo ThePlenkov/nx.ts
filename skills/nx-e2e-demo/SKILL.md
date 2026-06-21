@@ -1,18 +1,18 @@
 ---
 name: nx-e2e-demo
-description: End-to-end validation skill for the nx-devkit-plugins monorepo demo workspace
+description: End-to-end validation skill for verifying all @nx-devkit plugins work together
 ---
 
 # nx-e2e-demo
 
-Run and validate the end-to-end demo that exercises all `@nx-devkit` plugins together in a real Nx workspace.
+Validate that all `@nx-devkit` plugins work together in a real Nx workspace.
 
 ## When to Use
 
 Use this skill when:
 - You want to verify all plugins work together in a real workspace
 - You are adding a new plugin and need to validate integration
-- You need to run the demo workspace's full build/lint/typecheck/test pipeline
+- You need to run the full build/lint/typecheck/test pipeline across all plugins
 
 ## Prerequisites
 
@@ -20,101 +20,76 @@ Use this skill when:
 - Node >= 20.19.0
 - All packages built (`bun run build` from workspace root)
 
-## Quick Start
+## What the Plugins Validate
 
-```bash
-# From the workspace root
-bun run build
-
-# Navigate to the demo
-cd apps/demo
-
-# Install dependencies
-bun install
-
-# Run all targets
-bunx nx run-many -t build typecheck lint format test
-```
-
-## What the Demo Validates
-
-The `apps/demo` workspace demonstrates:
+Each plugin infers targets from config files in project directories:
 
 1. **tsdown plugin** — projects with `tsdown.config.ts` get automatic `build` targets
 2. **oxlint plugin** — projects with `.oxlintrc.json` get automatic `lint` targets
 3. **biome plugin** — projects with `biome.json` get automatic `format`, `format-check`, and `lint` targets
 4. **typescript plugin** — projects with `tsconfig.json` get automatic `typecheck` and `test` targets
 
-## Full E2E Script
+## Manual Validation Steps
 
-The repository includes `scripts/e2e.sh`:
-
-```bash
-#!/usr/bin/env bash
-set -euo pipefail
-
-cd "$(dirname "$0")/.."
-
-echo "==> Building packages"
-bun run build
-
-cd apps/demo
-
-echo "==> Installing dependencies in apps/demo"
-bun install
-
-echo "==> Running nx run-many against demo workspace"
-bunx nx run-many -t build typecheck lint format test
-```
-
-Run it:
+### 1. Create a test project
 
 ```bash
-bash scripts/e2e.sh
+mkdir -p /tmp/e2e-test/packages/demo
+cd /tmp/e2e-test
 ```
 
-## Verifying Individual Targets
+Initialize a workspace with `nx.json`:
 
-### Build
+```json
+{
+  "plugins": [
+    "@nx-devkit/tsdown",
+    "@nx-devkit/oxlint",
+    "@nx-devkit/biome",
+    "@nx-devkit/typescript"
+  ]
+}
+```
+
+### 2. Add config files to trigger each plugin
+
+In `packages/demo/`, add:
+- `tsdown.config.ts` — triggers the build target
+- `.oxlintrc.json` — triggers the lint target
+- `biome.json` — triggers format/lint targets
+- `tsconfig.json` — triggers typecheck target
+
+### 3. Verify inferred targets
 
 ```sh
-bunx nx run-many -t build --project-filter=demo-*
+npx nx show project packages/demo
 ```
 
-### Typecheck
+Expected: all four target types appear (`build`, `lint`, `format`, `typecheck`).
+
+### 4. Run each target
 
 ```sh
-bunx nx run-many -t typecheck --project-filter=demo-*
+npx nx build packages/demo
+npx nx lint packages/demo
+npx nx format packages/demo
+npx nx typecheck packages/demo
 ```
 
-### Lint
+## Verifying Individual Plugins
 
-```sh
-bunx nx run-many -t lint --project-filter=demo-*
-```
-
-### Format Check
-
-```sh
-bunx nx run-many -t format-check --project-filter=demo-*
-```
-
-### Test
-
-```sh
-bunx nx run-many -t test --project-filter=demo-*
-```
+See the individual plugin skills for detailed verification:
+- `nx-devkit-tsdown` — build target inference
+- `nx-devkit-oxlint` — lint target inference
+- `nx-devkit-biome` — format/lint target inference
+- `nx-devkit-typescript` — typecheck/test target inference
 
 ## Troubleshooting
 
-### "dist/ directories not found"
-
-Build packages first: `bun run build` from the workspace root. The demo references plugins via `../../packages/*/dist/plugin.mjs`.
-
 ### "No projects found"
 
-Ensure the demo workspace's `nx.json` includes all four plugins and that `bun install` has been run in `apps/demo/`.
+Ensure each project directory contains the relevant config file and `bun install` has been run.
 
-### CI Stuck
+### "dist/ directories not found"
 
-If CI checks are stuck for more than 5 minutes, post a `### check status` comment and continue. CI is non-blocking for this skill.
+Build packages first: `bun run build` from the workspace root. Plugins reference other plugins via `../../packages/*/dist/plugin.mjs`.

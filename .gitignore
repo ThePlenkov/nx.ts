@@ -18,3 +18,6 @@ tmp/
 
 # Bun
 bun.lockb
+
+# Operational artifacts
+review_scores.csv
