@@ -21,8 +21,9 @@ afterAll(() => {
 })
 
 function callWith(file: string) {
+  const relFile = file.startsWith(tmp) ? file.slice(tmp.length + 1) : file
   const fileName = file.split(sep).pop()!
-  const result = createNodesV2[1]([file], { configFile: fileName }, ctx)
+  const result = createNodesV2[1]([relFile], { configFile: fileName }, ctx)
   return result
 }
 

@@ -1,6 +1,6 @@
-import { type CreateNodesV2, logger, workspaceRoot } from '@nx/devkit'
 import { closeSync, existsSync, openSync, readSync, statSync } from 'node:fs'
 import { dirname, join, relative, resolve } from 'node:path'
+import { type CreateNodesV2, logger, workspaceRoot } from '@nx/devkit'
 
 let cachedEnv: { exists: boolean; verbose: boolean } | null = null
 

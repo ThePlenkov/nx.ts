@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs'
-import { basename, dirname } from 'node:path'
+import { basename, dirname, join } from 'node:path'
 import type { CreateNodesV2, ProjectConfiguration, TargetConfiguration } from '@nx/devkit'
 
 const OXLINT_RC_GLOB = '**/.oxlintrc.{json,yml,yaml,cjs,mjs,js,cts,mts}'
@@ -52,7 +52,7 @@ export const createNodesV2: CreateNodesV2 = [
       const projectRoot = dirname(configFilePath)
       if (projectRoot === '' || projectRoot === '.') continue
 
-      const config = readOxLintrc(configFilePathAbs)
+      const config = readOxLintrc(join(workspaceRoot, configFilePath))
       if (config === null) continue
 
       const project: ProjectConfiguration = {

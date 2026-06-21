@@ -1,6 +1,6 @@
+import { vol } from 'memfs'
 import type { CreateNodesContextV2 } from 'nx/src/devkit-exports'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { vol } from 'memfs'
 import { createNodesV2 } from './plugin.js'
 
 vi.mock('fs', async () => {
