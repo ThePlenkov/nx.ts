@@ -8,7 +8,7 @@ function inferLintTarget(projectRoot: string): TargetConfiguration {
   return {
     executor: 'nx:run-commands',
     cache: true,
-    inputs: ['{projectRoot}/src/**/*', '{projectRoot}/.oxlintrc.*', '{projectRoot}/package.json'],
+    inputs: ['{projectRoot}/**/*', '{projectRoot}/.oxlintrc.*', '{projectRoot}/package.json'],
     options: {
       command: 'npx oxlint .',
       cwd: projectRoot || '.',

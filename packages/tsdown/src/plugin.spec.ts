@@ -86,7 +86,7 @@ describe('@nx-devkit/tsdown createNodesV2', () => {
     expect(build.dependsOn).toEqual(['^build'])
   })
 
-  it('build inputs include src/**/*.ts, tsdown.config.ts, tsconfig.lib.json, package.json', () => {
+  it('build inputs include src/**/*.ts, tsdown.config.ts, tsconfig*.json, package.json', () => {
     const [, fn] = createNodesV2
     const results = fn(['project-a/tsdown.config.ts'], {}, makeContext()) as FnResult
     const inputs = results[0]![1].projects['project-a']!.targets!.build!.inputs
@@ -95,7 +95,7 @@ describe('@nx-devkit/tsdown createNodesV2', () => {
       expect.arrayContaining([
         '{projectRoot}/src/**/*.ts',
         '{projectRoot}/tsdown.config.ts',
-        '{projectRoot}/tsconfig.lib.json',
+        '{projectRoot}/tsconfig*.json',
         '{projectRoot}/package.json',
       ]),
     )

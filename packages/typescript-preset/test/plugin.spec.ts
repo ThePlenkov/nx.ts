@@ -176,13 +176,13 @@ describe('inferVitestTargets', () => {
     expect(Object.keys(targets).sort()).toEqual(['test', 'test:coverage', 'test:watch'])
   })
 
-  it('test target caches and outputs coverage', () => {
+  it('test target caches and does not output coverage', () => {
     const t = inferVitestTargets('/w/p', 'vitest.config.ts').test
     expect(t.executor).toBe('nx:run-commands')
     expect(t.options.command).toBe('npx vitest run')
     expect(t.options.cwd).toBe('/w/p')
     expect(t.cache).toBe(true)
-    expect(t.outputs).toEqual(['{projectRoot}/coverage'])
+    expect(t).not.toHaveProperty('outputs')
     expect(t.dependsOn).toEqual(['^build'])
     expect(t.inputs).toEqual(
       expect.arrayContaining([

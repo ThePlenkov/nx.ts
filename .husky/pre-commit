@@ -1,4 +1,3 @@
 #!/usr/bin/env sh
 set -e
 bunx biome format --write --no-errors-on-unmatched
-git add -u

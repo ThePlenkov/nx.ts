@@ -1,3 +1,4 @@
+import { dirname } from 'node:path'
 import type { CreateNodesV2 } from '@nx/devkit'
 
 const PLUGIN_NAME = '@nx-devkit/biome'
@@ -78,8 +79,8 @@ const createNodesFn: CreateNodesV2<BiomePluginOptions>[1] = (configFiles, option
       continue
     }
 
-    const projectRoot = normalized.replace(/^\.\//, '').replace(/\/biome\.jsonc?$/, '')
-    if (projectRoot === '' || projectRoot === workspaceRoot) {
+    const projectRoot = dirname(normalized).replace(/^\.\//, '')
+    if (projectRoot === '.' || projectRoot === '' || projectRoot === workspaceRoot) {
       continue
     }
 

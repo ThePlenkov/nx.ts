@@ -24,44 +24,33 @@ const VITEST_CONFIG_NAMES = [
 
 const PLUGIN_SCOPE = 'nx-typescript'
 
-let cachedEnv: { exists: boolean; verbose: boolean } | null = null
+const VERBOSE_RE = /^\s*NX_VERBOSE_LOGGING\s*=\s*["']?true["']?\s*$/m
 
-function readEnv(): { exists: boolean; verbose: boolean } {
-  if (cachedEnv) return cachedEnv
+let cachedVerbose: boolean | null = null
+
+function readEnvVerbose(): boolean {
+  if (cachedVerbose !== null) return cachedVerbose
   try {
     const envPath = join(defaultWorkspaceRoot, '.env')
-    if (!existsSync(envPath)) {
-      cachedEnv = { exists: false, verbose: false }
-      return cachedEnv
-    }
-    const content = readFileSync(envPath, 'utf-8')
-    const verbose = content
-      .split('\n')
-      .some(
-        (line) =>
-          !line.trimStart().startsWith('#') &&
-          /^\s*NX_VERBOSE_LOGGING\s*=\s*["']?true["']?\s*$/.test(line),
-      )
-    cachedEnv = { exists: true, verbose }
-    return cachedEnv
+    if (!existsSync(envPath)) { cachedVerbose = false; return false }
+    cachedVerbose = readFileSync(envPath, 'utf-8').split('\n').some(
+      (l) => !l.trimStart().startsWith('#') && VERBOSE_RE.test(l),
+    )
+    return cachedVerbose
   } catch {
-    cachedEnv = { exists: false, verbose: false }
-    return cachedEnv
+    cachedVerbose = false
+    return false
   }
 }
 
 export function isVerbose(): boolean {
-  if (process.argv.includes('--verbose')) {
-    return true
-  }
-  if (process.env.NX_VERBOSE_LOGGING === 'true') {
-    return true
-  }
-  return readEnv().verbose
+  return process.argv.includes('--verbose') ||
+    process.env.NX_VERBOSE_LOGGING === 'true' ||
+    readEnvVerbose()
 }
 
 export function resetCachedEnv(): void {
-  cachedEnv = null
+  cachedVerbose = null
 }
 
 export function logDebug(scope: string, message: string): void {
@@ -177,7 +166,6 @@ export function inferVitestTargets(
         command: 'npx vitest run',
         cwd: projectRoot,
       },
-      outputs: ['{projectRoot}/coverage'],
       cache: true,
       inputs: baseInputs,
       dependsOn: ['^build'],

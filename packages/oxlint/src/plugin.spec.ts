@@ -120,14 +120,14 @@ describe('@nx-devkit/oxlint createNodesV2', () => {
     expect(lint.cache).toBe(true)
   })
 
-  it('lint inputs include src/**/*, .oxlintrc.*, package.json', () => {
+  it('lint inputs include **/*, .oxlintrc.*, package.json', () => {
     makeProject('bazinputs', '.oxlintrc.json')
     const result = callWith(join(tmp, 'packages', 'bazinputs', '.oxlintrc.json'))
     const { project } = firstProject(result)
     const inputs = project.targets['lint']!.inputs
     expect(inputs).toEqual(
       expect.arrayContaining([
-        '{projectRoot}/src/**/*',
+        '{projectRoot}/**/*',
         '{projectRoot}/.oxlintrc.*',
         '{projectRoot}/package.json',
       ]),

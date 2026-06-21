@@ -2,40 +2,29 @@ import { existsSync, readFileSync } from 'node:fs'
 import { dirname, join, relative, resolve } from 'node:path'
 import { type CreateNodesV2, logger, workspaceRoot } from '@nx/devkit'
 
-let cachedEnv: { exists: boolean; verbose: boolean } | null = null
+const VERBOSE_RE = /^\s*NX_VERBOSE_LOGGING\s*=\s*["']?true["']?\s*$/m
 
-function readEnv(): { exists: boolean; verbose: boolean } {
-  if (cachedEnv) return cachedEnv
+let cachedVerbose: boolean | null = null
+
+function readEnvVerbose(): boolean {
+  if (cachedVerbose !== null) return cachedVerbose
   try {
     const envPath = join(workspaceRoot, '.env')
-    if (!existsSync(envPath)) {
-      cachedEnv = { exists: false, verbose: false }
-      return cachedEnv
-    }
-    const content = readFileSync(envPath, 'utf-8')
-    const verbose = content
-      .split('\n')
-      .some(
-        (line) =>
-          !line.trimStart().startsWith('#') &&
-          /^\s*NX_VERBOSE_LOGGING\s*=\s*["']?true["']?\s*$/.test(line),
-      )
-    cachedEnv = { exists: true, verbose }
-    return cachedEnv
+    if (!existsSync(envPath)) { cachedVerbose = false; return false }
+    cachedVerbose = readFileSync(envPath, 'utf-8').split('\n').some(
+      (l) => !l.trimStart().startsWith('#') && VERBOSE_RE.test(l),
+    )
+    return cachedVerbose
   } catch {
-    cachedEnv = { exists: false, verbose: false }
-    return cachedEnv
+    cachedVerbose = false
+    return false
   }
 }
 
 export function isVerbose(): boolean {
-  if (process.argv.includes('--verbose')) {
-    return true
-  }
-  if (process.env.NX_VERBOSE_LOGGING === 'true') {
-    return true
-  }
-  return readEnv().verbose
+  return process.argv.includes('--verbose') ||
+    process.env.NX_VERBOSE_LOGGING === 'true' ||
+    readEnvVerbose()
 }
 
 function logDebug(message: string): void {
@@ -73,7 +62,7 @@ export const createNodesV2: CreateNodesV2 = [
           cache: true,
           inputs: [
             `{projectRoot}/src/**/*.ts`,
-            `{projectRoot}/tsconfig.lib.json`,
+            `{projectRoot}/tsconfig*.json`,
             `{projectRoot}/tsdown.config.ts`,
             `{projectRoot}/package.json`,
           ],

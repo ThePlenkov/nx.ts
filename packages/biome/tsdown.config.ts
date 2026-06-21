@@ -5,7 +5,5 @@ export default defineConfig({
   format: 'esm',
   clean: true,
   dts: true,
-  deps: {
-    neverBundle: ['nx', '@nx/devkit'],
-  },
+  deps: { neverBundle: ['nx', '@nx/devkit'] },
 })
