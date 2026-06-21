@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto'
 import { readFileSync, existsSync } from 'node:fs'
 import { logger } from '@nx/devkit'
+import { minimatch } from 'minimatch'
 
 export interface FeatureFlagDefinition {
   percentage: number
@@ -70,19 +71,4 @@ export function loadFeatureFlags(flagFilePath: string): FeatureFlagsConfig {
     logger.warn(`[feature-flags] Failed to parse .feature-flags.json: ${err}`)
     return { flags: {} }
   }
-}
-
-function minimatch(str: string, pattern: string): boolean {
-  const regex = patternToRegex(pattern)
-  return regex.test(str)
-}
-
-function patternToRegex(pattern: string): RegExp {
-  let regexStr = pattern
-  regexStr = regexStr.replace(/\./g, '\\.')
-  regexStr = regexStr.replace(/\*\*\//g, '(.+/)?')
-  regexStr = regexStr.replace(/\*\*/g, '.*')
-  regexStr = regexStr.replace(/\*/g, '[^/]*')
-  regexStr = `^${regexStr}$`
-  return new RegExp(regexStr)
 }

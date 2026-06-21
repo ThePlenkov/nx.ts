@@ -1,5 +1,5 @@
-import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { describe, expect, it, beforeEach, afterEach } from 'vitest'
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import type { CreateNodesContextV2 } from 'nx/src/devkit-exports'
@@ -24,18 +24,18 @@ afterEach(() => {
 
 describe('@nx-devkit/feature-flags plugin', () => {
   it('exports createNodesV2 with correct glob pattern', () => {
-    expect(plugin.createNodesV2[0]).toBe('**/.feature-flags.json')
+    expect(plugin.createNodesV2[0]).toBe('.feature-flags.json')
   })
 
   it('returns empty array when no flags are defined', () => {
     writeFileSync(join(tmp, '.feature-flags.json'), JSON.stringify({ flags: {} }))
-    const [pattern, fn] = plugin.createNodesV2!
+    const [, fn] = plugin.createNodesV2!
     const result = fn(['.feature-flags.json'], {}, makeContext(tmp))
     expect(result).toEqual([])
   })
 
   it('returns empty array when .feature-flags.json does not exist', () => {
-    const [pattern, fn] = plugin.createNodesV2!
+    const [, fn] = plugin.createNodesV2!
     const result = fn(['.feature-flags.json'], {}, makeContext(tmp))
     expect(result).toEqual([])
   })
@@ -50,7 +50,7 @@ describe('@nx-devkit/feature-flags plugin', () => {
       }),
     )
 
-    const [pattern, fn] = plugin.createNodesV2!
+    const [, fn] = plugin.createNodesV2!
     const result = fn(['.feature-flags.json'], {}, makeContext(tmp))
 
     expect(result).toHaveLength(1)
@@ -79,7 +79,7 @@ describe('@nx-devkit/feature-flags plugin', () => {
       }),
     )
 
-    const [pattern, fn] = plugin.createNodesV2!
+    const [, fn] = plugin.createNodesV2!
     const result = fn(['.feature-flags.json'], {}, makeContext(tmp))
 
     const rootProject = (
@@ -93,6 +93,30 @@ describe('@nx-devkit/feature-flags plugin', () => {
     })
   })
 
+  it('uses configFile option when provided', () => {
+    writeFileSync(
+      join(tmp, 'custom-flags.json'),
+      JSON.stringify({
+        flags: {
+          'custom-flag': { percentage: 100 },
+        },
+      }),
+    )
+
+    const [, fn] = plugin.createNodesV2!
+    const result = fn(['custom-flags.json'], { configFile: 'custom-flags.json' }, makeContext(tmp))
+
+    expect(result).toHaveLength(1)
+    const rootProject = (
+      result[0]![1] as {
+        projects: Record<string, { metadata: { featureFlags: Record<string, boolean> } }>
+      }
+    ).projects['.']
+    expect(rootProject.metadata.featureFlags).toEqual({
+      'custom-flag': true,
+    })
+  })
+
   it('extracts project root from nested config path', () => {
     writeFileSync(
       join(tmp, '.feature-flags.json'),
@@ -103,7 +127,7 @@ describe('@nx-devkit/feature-flags plugin', () => {
       }),
     )
 
-    const [pattern, fn] = plugin.createNodesV2!
+    const [, fn] = plugin.createNodesV2!
     const result = fn(['packages/my-lib/.feature-flags.json'], {}, makeContext(tmp))
 
     const projects = (result[0]![1] as { projects: Record<string, unknown> }).projects

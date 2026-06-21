@@ -1,4 +1,5 @@
 import type { CreateNodesV2, NxPluginV2 } from '@nx/devkit'
+import { dirname, relative, resolve, isAbsolute } from 'node:path'
 import { loadFeatureFlags, isFeatureEnabled, type FeatureFlagsConfig } from './feature-flags'
 
 export interface FeatureFlagsPluginOptions {
@@ -6,17 +7,10 @@ export interface FeatureFlagsPluginOptions {
 }
 
 function extractProjectRoot(configFile: string, workspaceRoot: string): string {
-  const normalizedConfig = configFile.replace(/\\/g, '/')
-  const normalizedRoot = workspaceRoot.replace(/\\/g, '/')
-
-  let relativePath = normalizedConfig
-  if (normalizedConfig.startsWith(normalizedRoot)) {
-    relativePath = normalizedConfig.slice(normalizedRoot.length + 1)
-  }
-
-  const parts = relativePath.split('/')
-  parts.pop()
-  return parts.join('/') || '.'
+  const absConfig = isAbsolute(configFile) ? configFile : resolve(workspaceRoot, configFile)
+  const projectDir = dirname(absConfig)
+  const rel = relative(workspaceRoot, projectDir)
+  return rel || '.'
 }
 
 const createNodesFn: CreateNodesV2<FeatureFlagsPluginOptions>[1] = (
@@ -25,8 +19,8 @@ const createNodesFn: CreateNodesV2<FeatureFlagsPluginOptions>[1] = (
   context,
 ) => {
   const configFilePath = options?.configFile
-    ? join(context.workspaceRoot, options.configFile)
-    : join(context.workspaceRoot, '.feature-flags.json')
+    ? resolve(context.workspaceRoot, options.configFile)
+    : resolve(context.workspaceRoot, '.feature-flags.json')
 
   let config: FeatureFlagsConfig
   try {
@@ -60,12 +54,8 @@ const createNodesFn: CreateNodesV2<FeatureFlagsPluginOptions>[1] = (
   })
 }
 
-function join(...paths: string[]): string {
-  return paths.join('/').replace(/\/+/g, '/')
-}
-
 export const createNodesV2: CreateNodesV2<FeatureFlagsPluginOptions> = [
-  '**/.feature-flags.json',
+  '.feature-flags.json',
   createNodesFn,
 ]
 
