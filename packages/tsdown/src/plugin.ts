@@ -1,4 +1,4 @@
-import { closeSync, existsSync, openSync, readSync, statSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { dirname, join, relative, resolve } from 'node:path'
 import { type CreateNodesV2, logger, workspaceRoot } from '@nx/devkit'
 
@@ -12,26 +12,12 @@ function readEnv(): { exists: boolean; verbose: boolean } {
       cachedEnv = { exists: false, verbose: false }
       return cachedEnv
     }
-    const stat = statSync(envPath)
-    if (stat.size > 1_048_576) {
-      cachedEnv = { exists: true, verbose: false }
-      return cachedEnv
-    }
-    const fd = openSync(envPath, 'r')
-    try {
-      const buf = Buffer.alloc(Math.min(stat.size, 4096))
-      readSync(fd, buf, 0, buf.length, 0)
-      const content = buf.toString('utf-8')
-      const verbose = content
-        .split('\n')
-        .some(
-          (line) => !line.trimStart().startsWith('#') && line.includes('NX_VERBOSE_LOGGING=true'),
-        )
-      cachedEnv = { exists: true, verbose }
-      return cachedEnv
-    } finally {
-      closeSync(fd)
-    }
+    const content = readFileSync(envPath, 'utf-8')
+    const verbose = content
+      .split('\n')
+      .some((line) => !line.trimStart().startsWith('#') && line.includes('NX_VERBOSE_LOGGING=true'))
+    cachedEnv = { exists: true, verbose }
+    return cachedEnv
   } catch {
     cachedEnv = { exists: false, verbose: false }
     return cachedEnv
@@ -70,7 +56,7 @@ export const createNodesV2: CreateNodesV2 = [
         if (dirAbs === workspaceRootAbs) {
           return null
         }
-        const projectRoot = relative(workspaceRootAbs, dirAbs)
+        const projectRoot = relative(workspaceRootAbs, dirAbs).replace(/\\/g, '/')
         logDebug(`Found tsdown.config.ts in ${projectRoot}`)
 
         const buildTarget = {

@@ -4,11 +4,11 @@ import { extname, join, relative } from 'node:path'
 
 const ROOT = process.cwd()
 const SCAN_DIRS = ['openspec', 'packages']
-const PLUGIN_FILES = ['packages/*/src/plugin.ts']
 const TARGET_PATTERNS = [
   /createNodesV2\s*[:=]/,
   /createNodes\s*[:=]/,
-  /inferTarget\s*\(/,
+  /infer\w+Target\s*\(/,
+  /infer\w+Targets\s*\(/,
   /buildTarget\s*[:=]/,
   /testTarget\s*[:=]/,
   /lintTarget\s*[:=]/,

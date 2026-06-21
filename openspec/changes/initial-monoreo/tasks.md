@@ -1,4 +1,4 @@
-# Tasks: initial monoreo foundation
+# Tasks: initial monorepo foundation
 
 Tasks map 1:1 to convoy beads. Status icons: `[ ]` pending, `[x]` done.
 

@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "Minimal Nx workspace that exercises all 5 @nx-devkit/* inference plugins (tsdown, oxlint, biome, typescript-preset).",
+  "description": "Minimal Nx workspace that exercises all 4 @nx-devkit/* inference plugins (tsdown, oxlint, biome, typescript-preset).",
   "scripts": {
     "build": "nx run-many -t build",
     "typecheck": "nx run-many -t typecheck",

@@ -1,4 +1,4 @@
-import { closeSync, existsSync, openSync, readSync, statSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { basename, dirname, join, relative, resolve } from 'node:path'
 import {
   type CreateNodesResult,
@@ -34,26 +34,12 @@ function readEnv(): { exists: boolean; verbose: boolean } {
       cachedEnv = { exists: false, verbose: false }
       return cachedEnv
     }
-    const stat = statSync(envPath)
-    if (stat.size > 1_048_576) {
-      cachedEnv = { exists: true, verbose: false }
-      return cachedEnv
-    }
-    const fd = openSync(envPath, 'r')
-    try {
-      const buf = Buffer.alloc(Math.min(stat.size, 4096))
-      readSync(fd, buf, 0, buf.length, 0)
-      const content = buf.toString('utf-8')
-      const verbose = content
-        .split('\n')
-        .some(
-          (line) => !line.trimStart().startsWith('#') && line.includes('NX_VERBOSE_LOGGING=true'),
-        )
-      cachedEnv = { exists: true, verbose }
-      return cachedEnv
-    } finally {
-      closeSync(fd)
-    }
+    const content = readFileSync(envPath, 'utf-8')
+    const verbose = content
+      .split('\n')
+      .some((line) => !line.trimStart().startsWith('#') && line.includes('NX_VERBOSE_LOGGING=true'))
+    cachedEnv = { exists: true, verbose }
+    return cachedEnv
   } catch {
     cachedEnv = { exists: false, verbose: false }
     return cachedEnv
@@ -176,7 +162,7 @@ export function inferVitestTargets(
     test: {
       executor: 'nx:run-commands',
       options: {
-        command: 'npx vitest run --reporter=default',
+        command: 'npx vitest run',
         cwd: projectRoot,
       },
       outputs: ['{projectRoot}/coverage'],
@@ -187,7 +173,7 @@ export function inferVitestTargets(
     'test:watch': {
       executor: 'nx:run-commands',
       options: {
-        command: 'npx vitest --reporter=default',
+        command: 'npx vitest',
         cwd: projectRoot,
       },
       cache: false,
@@ -197,7 +183,7 @@ export function inferVitestTargets(
     'test:coverage': {
       executor: 'nx:run-commands',
       options: {
-        command: 'npx vitest run --coverage --reporter=default',
+        command: 'npx vitest run --coverage',
         cwd: projectRoot,
       },
       outputs: ['{projectRoot}/coverage'],

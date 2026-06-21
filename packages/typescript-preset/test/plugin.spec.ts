@@ -179,7 +179,7 @@ describe('inferVitestTargets', () => {
   it('test target caches and outputs coverage', () => {
     const t = inferVitestTargets('/w/p', 'vitest.config.ts').test
     expect(t.executor).toBe('nx:run-commands')
-    expect(t.options.command).toBe('npx vitest run --reporter=default')
+    expect(t.options.command).toBe('npx vitest run')
     expect(t.options.cwd).toBe('/w/p')
     expect(t.cache).toBe(true)
     expect(t.outputs).toEqual(['{projectRoot}/coverage'])
@@ -198,12 +198,12 @@ describe('inferVitestTargets', () => {
   it('test:watch disables cache', () => {
     const w = inferVitestTargets('/w/p', 'vitest.config.ts')['test:watch']
     expect(w.cache).toBe(false)
-    expect(w.options.command).toBe('npx vitest --reporter=default')
+    expect(w.options.command).toBe('npx vitest')
   })
 
   it('test:coverage adds --coverage and outputs', () => {
     const c = inferVitestTargets('/w/p', 'vitest.config.ts')['test:coverage']
-    expect(c.options.command).toBe('npx vitest run --coverage --reporter=default')
+    expect(c.options.command).toBe('npx vitest run --coverage')
     expect(c.outputs).toEqual(['{projectRoot}/coverage'])
     expect(c.cache).toBe(true)
   })

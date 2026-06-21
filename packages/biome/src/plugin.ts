@@ -106,7 +106,7 @@ const createNodesFn: CreateNodesFunctionV2<BiomePluginOptions> = (
     ])
   }
 
-  return results as unknown as ReturnType<CreateNodesFunctionV2<BiomePluginOptions>>
+  return results as BiomeCreateNodesResult
 }
 
 export const createNodesV2: readonly [

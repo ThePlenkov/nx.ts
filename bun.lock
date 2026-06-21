@@ -39,7 +39,7 @@
         "vitest": "^4.1.9",
       },
       "peerDependencies": {
-        "@nx/devkit": "^22.0.0",
+        "@nx/devkit": "22.7.1",
       },
     },
     "packages/oxlint": {

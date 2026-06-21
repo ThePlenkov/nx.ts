@@ -8,7 +8,7 @@ The repo is a fork of [ThePlenkov/nx.ts](https://github.com/ThePlenkov/nx.ts), w
 
 ## Architecture
 
-Five workspace packages under `packages/`:
+Four workspace packages under `packages/`:
 
 | Package | Scope | Role |
 |---|---|---|

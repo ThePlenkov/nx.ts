@@ -5,8 +5,10 @@
   "type": "module",
   "main": "./dist/plugin.mjs",
   "module": "./dist/plugin.mjs",
+  "types": "./dist/plugin.d.ts",
   "exports": {
     ".": {
+      "types": "./dist/plugin.d.ts",
       "default": "./dist/plugin.mjs"
     }
   },
@@ -18,9 +20,10 @@
     "test": "vitest run"
   },
   "peerDependencies": {
-    "@nx/devkit": "^22.0.0"
+    "@nx/devkit": "22.7.1"
   },
   "devDependencies": {
+    "tsdown": "^0.22.3",
     "typescript": "^6.0.3",
     "vitest": "^4.1.9"
   }
