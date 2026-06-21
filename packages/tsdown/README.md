@@ -45,7 +45,7 @@ now has a `build` target.
 
 For a project at `packages/foo/` with a `tsdown.config.ts`:
 
-```
+```sh
 npx nx show project packages/foo
 ```
 

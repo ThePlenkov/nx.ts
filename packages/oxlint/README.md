@@ -1,10 +1,10 @@
 # @nx-devkit/oxlint
 
-Zero-config Nx plugin that infers a `lint` target from `.oxlintrc.{json,yaml,yml,js,mjs,cjs}` config files.
+Zero-config Nx plugin that infers a `lint` target from `.oxlintrc.{json,yaml,yml,js,mjs,cjs,cts,mts}` config files.
 
 ## What it does
 
-Scans the workspace for any file matching `**/.oxlintrc.{json,yaml,yml,js,mjs,cjs}`. For each match (outside the workspace root), it injects a `lint` target into the project graph.
+Scans the workspace for any file matching `**/.oxlintrc.{json,yaml,yml,js,mjs,cjs,cts,mts}`. For each match (outside the workspace root), it injects a `lint` target into the project graph.
 
 ## Install
 
@@ -24,7 +24,7 @@ bun add -D @nx-devkit/oxlint
 
 | Trigger file | Target | Executor | Command | Cache | Inputs |
 |---|---|---|---|---|---|
-| `**/.oxlintrc.{json,yaml,yml,js,mjs,cjs}` | `lint` | `nx:run-commands` | `npx oxlint .` | true | `{projectRoot}/src/**/*`, `{projectRoot}/.oxlintrc.*`, `{projectRoot}/package.json` |
+| `**/.oxlintrc.{json,yaml,yml,js,mjs,cjs,cts,mts}` | `lint` | `nx:run-commands` | `npx oxlint .` | true | `{projectRoot}/src/**/*`, `{projectRoot}/.oxlintrc.*`, `{projectRoot}/package.json` |
 
 The `cwd` of the lint command is the project root (relative to the workspace root).
 
@@ -37,7 +37,7 @@ The `cwd` of the lint command is the project root (relative to the workspace roo
 
 Given this layout:
 
-```
+```text
 .
 ├── nx.json
 ├── packages/
@@ -49,7 +49,7 @@ Given this layout:
 
 Running `bunx nx show project foo` will list the `lint` target:
 
-```
+```text
 > nx show project foo
 
 foo
