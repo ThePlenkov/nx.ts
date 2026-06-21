@@ -19,5 +19,9 @@
   },
   "peerDependencies": {
     "@nx/devkit": "^22.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.9"
   }
 }

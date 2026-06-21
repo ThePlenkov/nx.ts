@@ -1,7 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-cd "$(dirname "$0")/../apps/demo"
+cd "$(dirname "$0")/.."
+
+echo "==> Building packages"
+bun run build
+
+cd apps/demo
 
 echo "==> Installing dependencies in apps/demo"
 bun install
