@@ -1,11 +1,12 @@
 import { readFileSync } from 'node:fs'
-import { dirname, relative } from 'node:path'
+import { dirname, isAbsolute, join, relative } from 'node:path'
 import type { CreateNodesV2, ProjectConfiguration, TargetConfiguration } from '@nx/devkit'
 
 const OXLINT_RC_PATTERN = /(^|\/)\.oxlintrc\.(json|ya?ml|[cm]?js)$/
 
 function inferLintTarget(projectRoot: string, workspaceRoot: string): TargetConfiguration {
-  const cwd = relative(workspaceRoot, projectRoot) || '.'
+  const absProjectRoot = isAbsolute(projectRoot) ? projectRoot : join(workspaceRoot, projectRoot)
+  const cwd = relative(workspaceRoot, absProjectRoot) || '.'
   return {
     executor: 'nx:run-commands',
     cache: true,
@@ -39,11 +40,13 @@ export const createNodesV2: CreateNodesV2 = [
       const fileName = configFilePath.replace(/\\/g, '/').split('/').pop() ?? ''
       if (!OXLINT_RC_PATTERN.test(fileName)) continue
 
-      const projectRootAbs = dirname(configFilePath)
+      const projectRootAbs = isAbsolute(configFilePath)
+        ? dirname(configFilePath)
+        : join(workspaceRoot, dirname(configFilePath))
       const projectRoot = relative(workspaceRoot, projectRootAbs)
       if (projectRoot === '' || projectRoot === '.') continue
 
-      const config = readOxLintrc(configFilePath)
+      const config = readOxLintrc(projectRootAbs)
       if (config === null) continue
 
       const project: ProjectConfiguration = {

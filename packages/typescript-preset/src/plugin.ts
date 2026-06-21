@@ -1,5 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs'
-import { basename, dirname, join, relative } from 'node:path'
+import { basename, dirname, isAbsolute, join, relative } from 'node:path'
 import {
   type CreateNodesResult,
   type CreateNodesV2,
@@ -56,11 +56,13 @@ export function shouldSkipPath(
   projectRoot: string,
   workspaceRoot: string = defaultWorkspaceRoot,
 ): boolean {
-  if (projectRoot === workspaceRoot) {
+  const absProjectRoot = isAbsolute(projectRoot) ? projectRoot : join(workspaceRoot, projectRoot)
+
+  if (absProjectRoot === workspaceRoot) {
     return true
   }
 
-  const rel = relative(workspaceRoot, projectRoot)
+  const rel = relative(workspaceRoot, absProjectRoot)
   if (!rel || rel.startsWith('..')) {
     return true
   }
@@ -180,8 +182,9 @@ export function inferVitestTargets(
 }
 
 function findVitestConfig(projectRoot: string, workspaceRoot: string): string | null {
+  const absProjectRoot = isAbsolute(projectRoot) ? projectRoot : join(workspaceRoot, projectRoot)
   for (const name of VITEST_CONFIG_NAMES) {
-    const candidate = join(projectRoot, name)
+    const candidate = join(absProjectRoot, name)
     if (existsSync(candidate)) {
       return candidate
     }

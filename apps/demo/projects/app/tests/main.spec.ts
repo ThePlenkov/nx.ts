@@ -2,5 +2,5 @@ import { test, expect } from "vitest";
 import { main } from "../src/main.ts";
 
 test("main runs without error", () => {
-	expect(typeof main).toBe("function");
+	expect(() => main()).not.toThrow();
 });

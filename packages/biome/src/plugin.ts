@@ -82,7 +82,7 @@ const createNodesFn: CreateNodesFunctionV2<BiomePluginOptions> = (
     }
 
     const projectRoot = normalized.replace(/\/biome\.jsonc?$/, '')
-    if (projectRoot === '' || projectRoot === workspaceRoot) {
+    if (projectRoot === '' || projectRoot === '.' || projectRoot === workspaceRoot) {
       continue
     }
 
