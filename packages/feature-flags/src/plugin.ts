@@ -21,10 +21,19 @@ function extractProjectRoot(configFile: string, workspaceRoot: string): string {
 
 const createNodesFn: CreateNodesV2<FeatureFlagsPluginOptions>[1] = (
   configFiles,
-  _options,
+  options,
   context,
 ) => {
-  const config: FeatureFlagsConfig = loadFeatureFlags(context.workspaceRoot)
+  const configFilePath = options?.configFile
+    ? join(context.workspaceRoot, options.configFile)
+    : join(context.workspaceRoot, '.feature-flags.json')
+
+  let config: FeatureFlagsConfig
+  try {
+    config = loadFeatureFlags(configFilePath)
+  } catch {
+    return []
+  }
 
   if (Object.keys(config.flags).length === 0) {
     return []
@@ -49,6 +58,10 @@ const createNodesFn: CreateNodesV2<FeatureFlagsPluginOptions>[1] = (
       },
     ] as const
   })
+}
+
+function join(...paths: string[]): string {
+  return paths.join('/').replace(/\/+/g, '/')
 }
 
 export const createNodesV2: CreateNodesV2<FeatureFlagsPluginOptions> = [
