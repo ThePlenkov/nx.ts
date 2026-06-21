@@ -41,7 +41,7 @@ Workspace root is skipped by every plugin.
 2. **app** - same config set plus a `src/main.ts` entry.
 3. **monorepo-pkg** - same config set as a workspace-pkg-style package (publishable).
 
-`scripts/e2e.sh` runs `cd apps/demo && bunx nx run-many -t build typecheck lint format test` and asserts exit 0. The demo serves as living documentation and the e2e gate.
+`scripts/e2e.sh` runs `cd apps/demo && bunx nx run-many -t build typecheck lint format-check test` and asserts exit 0. The demo serves as living documentation and the e2e gate.
 
 ## Skills catalog
 

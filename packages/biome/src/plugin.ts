@@ -72,7 +72,7 @@ const createNodesFn: CreateNodesFunctionV2<BiomePluginOptions> = (
   context,
 ) => {
   const workspaceRoot = context.workspaceRoot.replaceAll('\\', '/')
-  const results: BiomeCreateNodesResult = []
+  const results: Array<readonly [string, BiomeProjectConfiguration]> = []
   const seenRoots = new Set<string>()
 
   for (const configFile of configFiles) {

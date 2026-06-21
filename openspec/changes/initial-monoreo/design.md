@@ -1,4 +1,4 @@
-# Design: initial monoreo foundation
+# Design: initial monorepo foundation
 
 ## Workspace topology
 
@@ -51,7 +51,7 @@
 
 ## spec-check.ts design
 
-Scans every `.ts` and `.md` file under `openspec/` and `packages/`. For each file, scans for `createNodesV2`, `createNodes`, `inferTarget`, `buildTarget`, `testTarget`, `lintTarget`, `formatTarget`, `typecheckTarget` definitions, and for each line that matches, extracts target keys (`build`, `test`, `lint`, `format`, `format-check`, `typecheck`, `test:watch`, `test:coverage`). A target key defined in two distinct files (one spec, one plugin, or two plugins) is a conflict and exits non-zero.
+Scans plugin entrypoints (`packages/*/src/plugin.ts`) and OpenSpec files (`openspec/**/*.md`, `openspec/**/*.ts`). For each file, scans for `createNodesV2`, `createNodes`, `inferTarget`, `buildTarget`, `testTarget`, `lintTarget`, `formatTarget`, `typecheckTarget` definitions, and for each line that matches, extracts target keys (`build`, `test`, `lint`, `format`, `format-check`, `typecheck`, `test:watch`, `test:coverage`). A target key defined in two distinct files (one spec, one plugin, or two plugins) is a conflict and exits non-zero.
 
 ## Risk / non-goals
 

@@ -1,8 +1,8 @@
-# Proposal: initial monoreo foundation
+# Proposal: initial monorepo foundation
 
 ## Why
 
-We need a single home for the five `@nx-devkit/*` Nx plugins (tsdown, oxlint, biome, typescript-preset) plus a runnable demo, installable skills, and the supporting OpenSpec-driven spec layer. Today these live as five separate prototype repos with no shared conventions, no spec discipline, no shared CI, and no demo. The convoy that proves the concept ("drop in a `tsdown.config.ts` and get `nx build` for free") cannot be demonstrated end-to-end without first building a bun-managed monorepo skeleton and the OpenSpec spec layer that guards it.
+We need a single home for the four `@nx-devkit/*` Nx plugins (tsdown, oxlint, biome, typescript-preset) plus a runnable demo, installable skills, and the supporting OpenSpec-driven spec layer. Today these live as four separate prototype repos with no shared conventions, no spec discipline, no shared CI, and no demo. The convoy that proves the concept ("drop in a `tsdown.config.ts` and get `nx build` for free") cannot be demonstrated end-to-end without first building a bun-managed monorepo skeleton and the OpenSpec spec layer that guards it.
 
 ## What Changes
 

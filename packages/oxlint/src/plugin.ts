@@ -49,7 +49,7 @@ export const createNodesV2: CreateNodesV2 = [
       const fileName = basename(configFilePath)
       if (!fileName.startsWith('.oxlintrc.')) continue
 
-      const projectRoot = dirname(configFilePath)
+      const projectRoot = dirname(configFilePath).replace(/\\/g, '/')
       if (projectRoot === '' || projectRoot === '.') continue
 
       const config = readOxLintrc(join(workspaceRoot, configFilePath))

@@ -7,7 +7,7 @@ The repository root `package.json` MUST be `private: true` and MUST declare `wor
 
 #### Scenario: Workspaces declared correctly
 - **WHEN** a developer runs `bun install` at the repo root
-- **THEN** every package in `packages/`, `apps/`, and `skills/` is linked and resolvable from `@nx-devkit/*` import paths
+- **THEN** every package in `packages/` is linked and resolvable from `@nx-devkit/*` import paths
 
 ### Requirement: Root tooling configuration
 The repository root MUST ship `tsconfig.base.json`, `biome.json`, `.oxlintrc.json`, `nx.json`, and `.gitignore` so that downstream packages can extend the base TS config and so that biome/oxlint/nx operate on a consistent root.
@@ -20,15 +20,15 @@ The repository root MUST ship `tsconfig.base.json`, `biome.json`, `.oxlintrc.jso
 The repository's `nx.json` MUST pin Nx to `22.7.1` and declare `packageManager: "bun@1.3.14"`. The `pluginsConfig` field MUST list all four plugin scopes (`@nx-devkit/tsdown`, `@nx-devkit/oxlint`, `@nx-devkit/biome`, `@nx-devkit/typescript`) with empty options, and the `plugins` array MUST register each of the four `@nx-devkit/*` plugin entry points (their `src/index.ts`) so Nx actually loads them.
 
 #### Scenario: nx.json schema is valid
-- **WHEN** a developer runs `bunx nx --version`
-- **THEN** Nx reports `22.7.1` and the schema is accepted without error
+- **WHEN** a developer runs `bunx nx show project .`
+- **THEN** Nx accepts the configuration without error
 
 ### Requirement: Husky pre-commit runs biome format
-The repository MUST ship `.husky/pre-commit` that runs `bunx biome format --write .` on every commit.
+The repository MUST ship `.husky/pre-commit` that runs `bunx biome format --write --staged` on every commit.
 
 #### Scenario: Pre-commit formats staged changes
 - **WHEN** a developer commits any file
-- **THEN** biome rewrites the file to match the formatter config before the commit is created
+- **THEN** biome rewrites only staged files to match the formatter config before the commit is created
 
 ### Requirement: License preserved
 The `LICENSE` file MUST remain unchanged from the upstream fork (MIT, Copyright nx-devkit, 2026).

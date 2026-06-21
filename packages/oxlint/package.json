@@ -6,7 +6,10 @@
   "main": "./dist/plugin.mjs",
   "types": "./dist/plugin.d.ts",
   "exports": {
-    ".": "./dist/plugin.mjs"
+    ".": {
+      "types": "./dist/plugin.d.ts",
+      "import": "./dist/plugin.mjs"
+    }
   },
   "files": [
     "dist"

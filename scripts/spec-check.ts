@@ -77,11 +77,14 @@ for (const file of files) {
     const line = lines[i] ?? ''
     for (const pattern of TARGET_PATTERNS) {
       if (pattern.test(line)) {
+        const contextStart = Math.max(0, i - 2)
+        const contextEnd = Math.min(lines.length - 1, i + 2)
+        const contextBlock = lines.slice(contextStart, contextEnd + 1).join('\n')
         for (const key of INFERENCE_KEYS) {
           if (
-            line.includes(`'${key}'`) ||
-            line.includes(`"${key}"`) ||
-            line.includes(`\`${key}\``)
+            contextBlock.includes(`'${key}'`) ||
+            contextBlock.includes(`"${key}"`) ||
+            contextBlock.includes(`\`${key}\``)
           ) {
             findings.push({ file: rel, line: i + 1, key, content: line.trim() })
           }

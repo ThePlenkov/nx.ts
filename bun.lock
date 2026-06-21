@@ -34,6 +34,10 @@
     "packages/biome": {
       "name": "@nx-devkit/biome",
       "version": "0.0.1",
+      "devDependencies": {
+        "typescript": "^6.0.3",
+        "vitest": "^4.1.9",
+      },
       "peerDependencies": {
         "@nx/devkit": "^22.0.0",
       },
@@ -41,9 +45,6 @@
     "packages/oxlint": {
       "name": "@nx-devkit/oxlint",
       "version": "0.0.1",
-      "dependencies": {
-        "@nx/devkit": "22.7.1",
-      },
       "devDependencies": {
         "@types/node": "^26.0.0",
         "memfs": "^4.57.8",
@@ -76,9 +77,6 @@
     "packages/typescript-preset": {
       "name": "@nx-devkit/typescript",
       "version": "0.0.0",
-      "dependencies": {
-        "@nx/devkit": "22.7.1",
-      },
       "devDependencies": {
         "tsdown": "^0.22.3",
         "vitest": "^4.1.9",

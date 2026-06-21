@@ -9,6 +9,7 @@ import {
   inferVitestTargets,
   isVerbose,
   logDebug,
+  resetCachedEnv,
   shouldSkipPath,
 } from '../src/plugin.js'
 
@@ -71,6 +72,7 @@ describe('isVerbose / logDebug', () => {
   beforeEach(() => {
     process.argv = originalArgv.filter((a) => a !== '--verbose')
     delete process.env.NX_VERBOSE_LOGGING
+    resetCachedEnv()
   })
 
   afterEach(() => {

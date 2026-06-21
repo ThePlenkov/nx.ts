@@ -44,7 +44,12 @@ function readEnv(): { exists: boolean; verbose: boolean } {
       const buf = Buffer.alloc(Math.min(stat.size, 4096))
       readSync(fd, buf, 0, buf.length, 0)
       const content = buf.toString('utf-8')
-      cachedEnv = { exists: true, verbose: content.includes('NX_VERBOSE_LOGGING=true') }
+      const verbose = content
+        .split('\n')
+        .some(
+          (line) => !line.trimStart().startsWith('#') && line.includes('NX_VERBOSE_LOGGING=true'),
+        )
+      cachedEnv = { exists: true, verbose }
       return cachedEnv
     } finally {
       closeSync(fd)
@@ -63,6 +68,10 @@ export function isVerbose(): boolean {
     return true
   }
   return readEnv().verbose
+}
+
+export function resetCachedEnv(): void {
+  cachedEnv = null
 }
 
 export function logDebug(scope: string, message: string): void {
@@ -233,7 +242,9 @@ export const createNodesV2: CreateNodesV2<NxDevkitTypescriptOptions> = [
           return null
         }
 
-        const projectKey = relative(workspaceRoot, resolve(workspaceRoot, projectRoot)) || '.'
+        const projectKey = (
+          relative(workspaceRoot, resolve(workspaceRoot, projectRoot)) || '.'
+        ).replace(/\\/g, '/')
 
         logDebug(PLUGIN_SCOPE, `Registering targets for ${projectKey}`)
 
