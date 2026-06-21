@@ -1,4 +1,4 @@
-import type { CreateNodesFunctionV2 } from 'nx/src/project-graph/plugins/public-api'
+import type { CreateNodesV2 } from '@nx/devkit'
 
 const PLUGIN_NAME = '@nx-devkit/biome'
 const WORKSPACE_ROOT_MARKER = 'biome.json'
@@ -25,7 +25,7 @@ export interface BiomeProjectConfiguration {
   projects: Record<string, { targets: Record<string, BiomeTarget> }>
 }
 
-export type BiomeCreateNodesResult = ReadonlyArray<readonly [string, BiomeProjectConfiguration]>
+export type BiomeCreateNodesResult = Array<readonly [string, BiomeProjectConfiguration]>
 
 function isWorkspaceRoot(configFilePath: string): boolean {
   const normalized = configFilePath.replaceAll('\\', '/').replace(/^\.\//, '')
@@ -66,13 +66,9 @@ function inferBiomeTargets(
   }
 }
 
-const createNodesFn: CreateNodesFunctionV2<BiomePluginOptions> = (
-  configFiles,
-  options,
-  context,
-) => {
+const createNodesFn: CreateNodesV2<BiomePluginOptions>[1] = (configFiles, options, context) => {
   const workspaceRoot = context.workspaceRoot.replaceAll('\\', '/')
-  const results: Array<readonly [string, BiomeProjectConfiguration]> = []
+  const results: BiomeCreateNodesResult = []
   const seenRoots = new Set<string>()
 
   for (const configFile of configFiles) {
@@ -109,9 +105,6 @@ const createNodesFn: CreateNodesFunctionV2<BiomePluginOptions> = (
   return results as BiomeCreateNodesResult
 }
 
-export const createNodesV2: readonly [
-  '**/biome.json{,c}',
-  CreateNodesFunctionV2<BiomePluginOptions>,
-] = ['**/biome.json{,c}', createNodesFn]
+export const createNodesV2: CreateNodesV2<BiomePluginOptions> = ['**/biome.json{,c}', createNodesFn]
 
 export default { createNodesV2, name: PLUGIN_NAME }

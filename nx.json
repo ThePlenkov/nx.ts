@@ -4,10 +4,13 @@
   "packageManager": "bun@1.3.14",
   "version": 2,
   "plugins": [
-    ["./packages/tsdown/src/index.ts", {}],
-    ["./packages/oxlint/src/plugin.ts", {}],
-    ["./packages/biome/src/plugin.ts", {}],
-    ["./packages/typescript-preset/src/plugin.ts", {}]
+    "./packages/tsdown/dist/plugin.mjs",
+    "./packages/oxlint/dist/plugin.mjs",
+    "./packages/biome/dist/plugin.mjs",
+    {
+      "plugin": "./packages/typescript-preset/dist/plugin.mjs",
+      "options": { "tsgo": false }
+    }
   ],
   "namedInputs": {
     "sharedGlobals": [

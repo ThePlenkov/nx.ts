@@ -3,6 +3,8 @@ import type { CreateNodesContextV2 } from 'nx/src/devkit-exports'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createNodesV2 } from './plugin.js'
 
+type FnResult = Array<[string, { projects: Record<string, { targets: Record<string, any> }> }]>
+
 vi.mock('fs', async () => {
   const memfs = await import('memfs')
   return {
@@ -58,7 +60,7 @@ describe('@nx-devkit/tsdown createNodesV2', () => {
     const [pattern, fn] = createNodesV2
     expect(pattern).toBe('**/tsdown.config.ts')
 
-    const results = fn(['project-a/tsdown.config.ts'], {}, makeContext())
+    const results = fn(['project-a/tsdown.config.ts'], {}, makeContext()) as FnResult
 
     expect(results).toHaveLength(1)
     const [configFile, project] = results[0]!
@@ -71,7 +73,7 @@ describe('@nx-devkit/tsdown createNodesV2', () => {
 
   it('build target uses nx:run-commands with cwd, outputs, cache, dependsOn', () => {
     const [, fn] = createNodesV2
-    const results = fn(['project-a/tsdown.config.ts'], {}, makeContext())
+    const results = fn(['project-a/tsdown.config.ts'], {}, makeContext()) as FnResult
     const build = results[0]![1].projects['project-a']!.targets!.build!
 
     expect(build.executor).toBe('nx:run-commands')
@@ -86,7 +88,7 @@ describe('@nx-devkit/tsdown createNodesV2', () => {
 
   it('build inputs include src/**/*.ts, tsdown.config.ts, tsconfig.lib.json, package.json', () => {
     const [, fn] = createNodesV2
-    const results = fn(['project-a/tsdown.config.ts'], {}, makeContext())
+    const results = fn(['project-a/tsdown.config.ts'], {}, makeContext()) as FnResult
     const inputs = results[0]![1].projects['project-a']!.targets!.build!.inputs
 
     expect(inputs).toEqual(
@@ -111,7 +113,7 @@ describe('@nx-devkit/tsdown createNodesV2', () => {
       ['project-a/tsdown.config.ts', 'project-b/tsdown.config.ts', 'tsdown.config.ts'],
       {},
       makeContext(),
-    )
+    ) as FnResult
     expect(results).toHaveLength(2)
     const roots = results.flatMap((r) => Object.keys(r[1].projects))
     expect(roots).toEqual(expect.arrayContaining(['project-a', 'project-b']))
