@@ -57,8 +57,6 @@ export const createNodesV2: CreateNodesV2 = [
   },
 ]
 
-export const createNodes = createNodesV2
-
 export default createNodesV2
 
 export const __testing = {

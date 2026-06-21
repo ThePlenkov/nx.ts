@@ -1,3 +1,4 @@
+import { describe, expect, it } from 'vitest'
 import { createNodesV2 } from './plugin.js'
 import type { CreateNodesContextV2 } from 'nx/src/project-graph/plugins/public-api'
 
