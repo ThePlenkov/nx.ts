@@ -19,6 +19,7 @@
     "@nx/devkit": "22.7.1",
     "@typescript/native-preview": "^7.0.0-dev.20260621.1",
     "nx": "22.7.1",
+    "vitest": "^4.1.9",
     "typescript": "^6.0.3"
   }
 }

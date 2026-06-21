@@ -33,7 +33,7 @@ All three targets run with `cwd` set to the project root.
 Each target's `inputs` array contains:
 
 - `{projectRoot}/biome.json` (or `biome.jsonc`)
-- `{projectRoot}/src/**/*`
+- `{projectRoot}/**/*`
 
 ## Workspace root is skipped
 

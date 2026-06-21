@@ -57,7 +57,7 @@ When `vitest.config.{ts,js,mts,mjs,cts,cjs}` exists alongside `tsconfig.json`, t
   "test": {
     "executor": "nx:run-commands",
     "options": {
-      "command": "npx vitest run --reporter=default",
+      "command": "npx vitest run",
       "cwd": "{projectRoot}"
     },
     "outputs": ["{projectRoot}/coverage"],
@@ -79,17 +79,20 @@ When `vitest.config.{ts,js,mts,mjs,cts,cjs}` exists alongside `tsconfig.json`, t
 
 ## Options
 
-Pass options via `pluginsConfig["@nx-devkit/typescript"]` in `nx.json`:
+Pass options via the inline plugin tuple in `nx.json`:
 
 ```jsonc
 {
-  "pluginsConfig": {
-    "@nx-devkit/typescript": {
-      "tsgo": true,
-      "configFile": "tsconfig.json",
-      "clean": false
-    }
-  }
+  "plugins": [
+    [
+      "@nx-devkit/typescript",
+      {
+        "tsgo": true,
+        "configFile": "tsconfig.json",
+        "clean": false
+      }
+    ]
+  ]
 }
 ```
 

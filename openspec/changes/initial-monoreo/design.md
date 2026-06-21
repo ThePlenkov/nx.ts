@@ -2,7 +2,7 @@
 
 ## Workspace topology
 
-```
+```text
 /
   package.json          # private, workspaces [packages/*, apps/*, skills/*]
   tsconfig.base.json    # strict, ES2022, ESNext, Bundler resolution
@@ -47,7 +47,7 @@
 
 ## Husky pre-commit
 
-`.husky/pre-commit` is a self-executing `#!/usr/bin/env bun` script that runs `bunx biome format --write .`. Because biome is installed at root and the hook runs from repo root, this works without `cd`.
+`.husky/pre-commit` is a `#!/usr/bin/env sh` shell script that runs `bunx biome format --write --no-errors-on-unmatched` followed by `git add -u` to re-stage formatted files. Because biome is installed at root and the hook runs from repo root, this works without `cd`.
 
 ## spec-check.ts design
 

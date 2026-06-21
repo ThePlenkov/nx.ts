@@ -44,7 +44,7 @@ function walk(dir: string, depth: number = 0): string[] {
   for (const entry of entries) {
     if (entry === 'node_modules' || entry.startsWith('.')) continue
     const full = join(dir, entry)
-    let st
+    let st: ReturnType<typeof lstatSync> | undefined
     try {
       st = lstatSync(full)
     } catch {

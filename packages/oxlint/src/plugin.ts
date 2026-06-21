@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs'
+import { readFileSync, statSync } from 'node:fs'
 import { basename, dirname, join } from 'node:path'
 import type { CreateNodesV2, ProjectConfiguration, TargetConfiguration } from '@nx/devkit'
 
@@ -16,10 +16,11 @@ function inferLintTarget(projectRoot: string): TargetConfiguration {
   }
 }
 
+const MAX_OXLINTRC_BYTES = 1024 * 1024 // 1 MiB
+
 function readOxLintrc(file: string): Record<string, unknown> | null {
   try {
-    const stat = statSync(file)
-    if (!stat.isFile() || stat.size > MAX_OXLINT_RC_BYTES) {
+    if (statSync(file).size > MAX_OXLINTRC_BYTES) {
       return null
     }
     const raw = readFileSync(file, 'utf-8')
