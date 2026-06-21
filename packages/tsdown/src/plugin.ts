@@ -15,7 +15,11 @@ function readEnv(): { exists: boolean; verbose: boolean } {
     const content = readFileSync(envPath, 'utf-8')
     const verbose = content
       .split('\n')
-      .some((line) => !line.trimStart().startsWith('#') && line.includes('NX_VERBOSE_LOGGING=true'))
+      .some(
+        (line) =>
+          !line.trimStart().startsWith('#') &&
+          /^\s*NX_VERBOSE_LOGGING\s*=\s*["']?true["']?\s*$/.test(line),
+      )
     cachedEnv = { exists: true, verbose }
     return cachedEnv
   } catch {
