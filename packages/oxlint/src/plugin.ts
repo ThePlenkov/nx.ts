@@ -1,8 +1,12 @@
-import { readFileSync } from 'node:fs'
+import { readFileSync, statSync } from 'node:fs'
 import { dirname, isAbsolute, join, relative } from 'node:path'
 import type { CreateNodesV2, ProjectConfiguration, TargetConfiguration } from '@nx/devkit'
 
 const OXLINT_RC_PATTERN = /(^|\/)\.oxlintrc\.(json|ya?ml|[cm]?js)$/
+
+// Cap the size of an .oxlintrc file we will parse. A malicious or
+// accidentally huge config file should not be loaded into memory.
+const MAX_OXLINT_RC_BYTES = 1 * 1024 * 1024 // 1 MiB
 
 function inferLintTarget(projectRoot: string, workspaceRoot: string): TargetConfiguration {
   const absProjectRoot = isAbsolute(projectRoot) ? projectRoot : join(workspaceRoot, projectRoot)
@@ -20,9 +24,17 @@ function inferLintTarget(projectRoot: string, workspaceRoot: string): TargetConf
 
 function readOxLintrc(file: string): Record<string, unknown> | null {
   try {
+    const stat = statSync(file)
+    if (!stat.isFile() || stat.size > MAX_OXLINT_RC_BYTES) {
+      return null
+    }
     const raw = readFileSync(file, 'utf-8')
     if (file.endsWith('.json')) {
-      return JSON.parse(raw) as Record<string, unknown>
+      const parsed: unknown = JSON.parse(raw)
+      if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+        return null
+      }
+      return parsed as Record<string, unknown>
     }
     return { '//': 'yaml/js configs parsed at runtime by oxlint' } as Record<string, unknown>
   } catch {
