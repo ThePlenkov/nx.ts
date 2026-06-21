@@ -28,7 +28,7 @@
     {
       "name": "nx-e2e-demo",
       "path": "nx-e2e-demo/SKILL.md",
-      "description": "End-to-end validation skill for the nx-devkit-plugins monorepo demo workspace"
+      "description": "End-to-end validation skill for verifying all @nx-devkit plugins work together"
     }
   ]
 }

@@ -73,6 +73,7 @@ const createNodesFn: CreateNodesFunctionV2<BiomePluginOptions> = (
 ) => {
   const workspaceRoot = context.workspaceRoot.replaceAll('\\', '/')
   const results: BiomeCreateNodesResult = []
+  const seenRoots = new Set<string>()
 
   for (const configFile of configFiles) {
     const normalized = configFile.replaceAll('\\', '/')
@@ -85,6 +86,11 @@ const createNodesFn: CreateNodesFunctionV2<BiomePluginOptions> = (
     if (projectRoot === '' || projectRoot === workspaceRoot) {
       continue
     }
+
+    if (seenRoots.has(projectRoot)) {
+      continue
+    }
+    seenRoots.add(projectRoot)
 
     const configFileBasename = normalized.split('/').pop() ?? 'biome.json'
 

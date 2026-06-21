@@ -91,6 +91,8 @@ describe('@nx-devkit/oxlint createNodesV2', () => {
     '.oxlintrc.js',
     '.oxlintrc.mjs',
     '.oxlintrc.cjs',
+    '.oxlintrc.cts',
+    '.oxlintrc.mts',
   ])('infers lint target for %s', (cfg) => {
     const project = cfg.replace(/\W/g, '')
     makeProject(project, cfg, '{"rules":{}}')

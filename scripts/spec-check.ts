@@ -78,8 +78,11 @@ for (const file of files) {
     for (const pattern of TARGET_PATTERNS) {
       if (pattern.test(line)) {
         for (const key of INFERENCE_KEYS) {
-          const keyRe = new RegExp(`['"\`]${key}['"\`]:?`)
-          if (keyRe.test(line)) {
+          if (
+            line.includes(`'${key}'`) ||
+            line.includes(`"${key}"`) ||
+            line.includes(`\`${key}\``)
+          ) {
             findings.push({ file: rel, line: i + 1, key, content: line.trim() })
           }
         }

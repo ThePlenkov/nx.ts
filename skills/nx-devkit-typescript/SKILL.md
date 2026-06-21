@@ -80,7 +80,7 @@ When `vitest.config.{ts,js,mts,mjs,cts,cjs}` exists alongside `tsconfig.json`, t
     "inputs": [
       "{projectRoot}/src/**/*.ts",
       "{projectRoot}/tests/**/*",
-      "{projectRoot}/vitest.config.ts",
+      "{projectRoot}/vitest.config.{ts,js,mts,mjs,cts,cjs}",
       "{projectRoot}/package.json",
       "{workspaceRoot}/vitest.config.ts"
     ],
