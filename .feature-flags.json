@@ -1,0 +1,14 @@
+{
+  "flags": {
+    "use-new-tsdown-executor": {
+      "percentage": 10,
+      "include": ["packages/*"]
+    },
+    "enable-parallel-typecheck": {
+      "percentage": 0,
+      "overrides": {
+        "packages/tsdown": true
+      }
+    }
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "name": "@nx-devkit/feature-flags",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/plugin.mjs",
+  "types": "./dist/plugin.d.ts",
+  "peerDependencies": {
+    "@nx/devkit": "^22.0.0"
+  },
+  "devDependencies": {
+    "@nx/devkit": "22.7.1",
+    "@types/node": "^20.19.0",
+    "minimatch": "^10.0.0",
+    "tsdown": "^0.22.3",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.9"
+  }
+}

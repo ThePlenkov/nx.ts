@@ -4,6 +4,7 @@
   "packageManager": "bun@1.3.14",
   "version": 2,
   "plugins": [
+    ["./packages/feature-flags/src/plugin.ts", {}],
     ["./packages/tsdown/src/index.ts", {}],
     ["./packages/oxlint/src/plugin.ts", {}],
     ["./packages/biome/src/plugin.ts", {}],
