@@ -155,4 +155,4 @@ Messages are prefixed with `[nx-typescript]`.
 
 ## Source Reference
 
-Implementation: [`packages/typescript-preset/src/plugin.ts`](./packages/typescript-preset/src/plugin.ts)
+Implementation: [`packages/typescript-preset/src/plugin.ts`](../../packages/typescript-preset/src/plugin.ts)

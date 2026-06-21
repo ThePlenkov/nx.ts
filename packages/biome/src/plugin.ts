@@ -42,7 +42,7 @@ function inferBiomeTargets(
   const lintCommand = options?.lintCommand ?? 'npx biome lint .'
 
   const configInput = `{projectRoot}/${configFileBasename}`
-  const baseInputs: string[] = [configInput, '{projectRoot}/src/**/*']
+  const baseInputs: string[] = [configInput, '{projectRoot}/**/*']
 
   return {
     format: {
@@ -104,8 +104,8 @@ const createNodesFn: CreateNodesFunctionV2<BiomePluginOptions> = (
 }
 
 export const createNodesV2: readonly [
-  '**/biome.jsonc?',
+  '**/biome.json{,c}',
   CreateNodesFunctionV2<BiomePluginOptions>,
-] = ['**/biome.jsonc?', createNodesFn]
+] = ['**/biome.json{,c}', createNodesFn]
 
 export default { createNodesV2, name: PLUGIN_NAME }

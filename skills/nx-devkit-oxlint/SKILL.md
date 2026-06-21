@@ -87,4 +87,4 @@ A `.oxlintrc` at the workspace root is skipped so the root config does not becom
 
 ## Source Reference
 
-Implementation: [`packages/oxlint/src/plugin.ts`](./packages/oxlint/src/plugin.ts)
+Implementation: [`packages/oxlint/src/plugin.ts`](../../packages/oxlint/src/plugin.ts)

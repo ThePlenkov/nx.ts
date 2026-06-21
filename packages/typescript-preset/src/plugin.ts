@@ -204,7 +204,7 @@ function findVitestConfig(projectRoot: string, workspaceRoot: string): string | 
 }
 
 export const createNodesV2: CreateNodesV2<NxDevkitTypescriptOptions> = [
-  '**/tsconfig.json',
+  '**/tsconfig*.json',
   (configFiles, options = {}, context) => {
     const configFileName = options.configFile ?? 'tsconfig.json'
     const tsgo = options.tsgo ?? true

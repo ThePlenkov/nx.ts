@@ -109,4 +109,4 @@ A `biome.json` at the workspace root is skipped so the root config does not beco
 
 ## Source Reference
 
-Implementation: [`packages/biome/src/plugin.ts`](./packages/biome/src/plugin.ts)
+Implementation: [`packages/biome/src/plugin.ts`](../../packages/biome/src/plugin.ts)

@@ -1,3 +1,4 @@
 #!/usr/bin/env sh
+set -e
 bunx biome format --write --staged --no-errors-on-unmatched
 git update-index --again

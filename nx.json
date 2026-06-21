@@ -11,9 +11,9 @@
   },
   "plugins": [
     "./packages/tsdown/src/index.ts",
-    "./packages/oxlint/src/index.ts",
-    "./packages/biome/src/index.ts",
-    "./packages/typescript-preset/src/index.ts"
+    "./packages/oxlint/src/plugin.ts",
+    "./packages/biome/src/plugin.ts",
+    "./packages/typescript-preset/src/plugin.ts"
   ],
   "namedInputs": {
     "sharedGlobals": [

@@ -1,23 +1,17 @@
 import { readFileSync } from 'node:fs'
-import { dirname, relative, resolve } from 'node:path'
+import { dirname, resolve } from 'node:path'
 import type { CreateNodesV2, ProjectConfiguration, TargetConfiguration } from '@nx/devkit'
 
 const OXLINT_RC_GLOB = '**/.oxlintrc.{json,yml,yaml,cjs,mjs,js,cts,mts}'
 
-// Cap the size of an .oxlintrc file we will parse. A malicious or
-// accidentally huge config file should not be loaded into memory.
-const MAX_OXLINT_RC_BYTES = 1 * 1024 * 1024 // 1 MiB
-
-function inferLintTarget(projectRoot: string, workspaceRoot: string): TargetConfiguration {
-  const absProjectRoot = isAbsolute(projectRoot) ? projectRoot : join(workspaceRoot, projectRoot)
-  const cwd = relative(workspaceRoot, absProjectRoot) || '.'
+function inferLintTarget(projectRoot: string): TargetConfiguration {
   return {
     executor: 'nx:run-commands',
     cache: true,
     inputs: ['{projectRoot}/src/**/*', '{projectRoot}/.oxlintrc.*', '{projectRoot}/package.json'],
     options: {
       command: 'npx oxlint .',
-      cwd,
+      cwd: projectRoot || '.',
     },
   }
 }
@@ -65,7 +59,7 @@ export const createNodesV2: CreateNodesV2 = [
 
       const project: ProjectConfiguration = {
         targets: {
-          lint: inferLintTarget(projectRootAbs, workspaceRoot),
+          lint: inferLintTarget(projectRoot),
         },
       }
       results.push([configFilePath, { projects: { [projectRoot]: project } }])

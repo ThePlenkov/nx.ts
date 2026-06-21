@@ -91,4 +91,4 @@ A `tsdown.config.ts` at the workspace root is skipped so the repo itself is not 
 
 ## Source Reference
 
-Implementation: [`packages/tsdown/src/plugin.ts`](./packages/tsdown/src/plugin.ts)
+Implementation: [`packages/tsdown/src/plugin.ts`](../../packages/tsdown/src/plugin.ts)
