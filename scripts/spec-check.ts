@@ -4,6 +4,7 @@ import { extname, join, relative } from 'node:path'
 
 const ROOT = process.cwd()
 const SCAN_DIRS = ['openspec', 'packages']
+const PLUGIN_FILES = ['packages/*/src/plugin.ts']
 const TARGET_PATTERNS = [
   /createNodesV2\s*[:=]/,
   /createNodes\s*[:=]/,
@@ -43,7 +44,7 @@ function walk(dir: string, depth: number = 0): string[] {
   for (const entry of entries) {
     if (entry === 'node_modules' || entry.startsWith('.')) continue
     const full = join(dir, entry)
-    let st: ReturnType<typeof lstatSync>
+    let st
     try {
       st = lstatSync(full)
     } catch {
@@ -90,12 +91,8 @@ for (const file of files) {
 const seen = new Map<string, Finding[]>()
 for (const f of findings) {
   const k = `${f.key}`
-  const existing = seen.get(k)
-  if (existing) {
-    existing.push(f)
-  } else {
-    seen.set(k, [f])
-  }
+  if (!seen.has(k)) seen.set(k, [])
+  seen.get(k)!.push(f)
 }
 
 const conflicts: Array<{ key: string; entries: Finding[] }> = []

@@ -15,7 +15,7 @@
   "linter": {
     "enabled": true,
     "rules": {
-      "preset": "recommended",
+      "recommended": true,
       "suspicious": {
         "noExplicitAny": "error"
       },
@@ -25,18 +25,6 @@
       }
     }
   },
-  "overrides": [
-    {
-      "includes": ["**/*.spec.ts", "**/*.test.ts"],
-      "linter": {
-        "rules": {
-          "style": {
-            "noNonNullAssertion": "off"
-          }
-        }
-      }
-    }
-  ],
   "javascript": {
     "formatter": {
       "quoteStyle": "single",

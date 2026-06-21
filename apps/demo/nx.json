@@ -1,0 +1,38 @@
+{
+  "$schema": "../../node_modules/nx/schemas/nx-schema.json",
+  "namedInputs": {
+    "default": ["{projectRoot}/**/*"],
+    "production": ["default"]
+  },
+  "targetDefaults": {
+    "build": {
+      "cache": false
+    },
+    "typecheck": {
+      "cache": false,
+      "inputs": [
+        "{projectRoot}/**/*",
+        "{projectRoot}/tsconfig.json",
+        "{workspaceRoot}/tsconfig.base.json"
+      ]
+    },
+    "lint": {
+      "cache": false
+    },
+    "format": {
+      "cache": false
+    },
+    "test": {
+      "cache": false
+    }
+  },
+  "plugins": [
+    {
+      "plugin": "../../packages/typescript-preset/dist/plugin.mjs",
+      "options": { "tsgo": false }
+    },
+    "../../packages/tsdown/dist/plugin.mjs",
+    "../../packages/oxlint/dist/plugin.mjs",
+    "../../packages/biome/dist/plugin.mjs"
+  ]
+}
