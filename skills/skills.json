@@ -1,0 +1,34 @@
+{
+  "skills": [
+    {
+      "name": "nx-devkit-tsdown",
+      "path": "nx-devkit-tsdown/SKILL.md",
+      "description": "Zero-config Nx plugin that infers a `build` target from tsdown.config.ts files"
+    },
+    {
+      "name": "nx-devkit-oxlint",
+      "path": "nx-devkit-oxlint/SKILL.md",
+      "description": "Zero-config Nx plugin that infers a `lint` target from .oxlintrc config files"
+    },
+    {
+      "name": "nx-devkit-biome",
+      "path": "nx-devkit-biome/SKILL.md",
+      "description": "Nx plugin that infers format, format-check, and lint targets from biome.json/biome.jsonc"
+    },
+    {
+      "name": "nx-devkit-typescript",
+      "path": "nx-devkit-typescript/SKILL.md",
+      "description": "Preset Nx plugin that infers typecheck and vitest test targets from tsconfig.json and vitest.config.*"
+    },
+    {
+      "name": "nx-vs-nx",
+      "path": "nx-vs-nx/SKILL.md",
+      "description": "Explains how @nx-devkit plugins extend Nx without replacing it"
+    },
+    {
+      "name": "nx-e2e-demo",
+      "path": "nx-e2e-demo/SKILL.md",
+      "description": "End-to-end validation skill for the nx-devkit-plugins monorepo demo workspace"
+    }
+  ]
+}
