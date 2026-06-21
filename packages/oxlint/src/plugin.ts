@@ -40,13 +40,14 @@ export const createNodesV2: CreateNodesV2 = [
       const fileName = configFilePath.replace(/\\/g, '/').split('/').pop() ?? ''
       if (!OXLINT_RC_PATTERN.test(fileName)) continue
 
-      const projectRootAbs = isAbsolute(configFilePath)
-        ? dirname(configFilePath)
-        : join(workspaceRoot, dirname(configFilePath))
+      const configFilePathAbs = isAbsolute(configFilePath)
+        ? configFilePath
+        : join(workspaceRoot, configFilePath)
+      const projectRootAbs = dirname(configFilePathAbs)
       const projectRoot = relative(workspaceRoot, projectRootAbs)
       if (projectRoot === '' || projectRoot === '.') continue
 
-      const config = readOxLintrc(projectRootAbs)
+      const config = readOxLintrc(configFilePathAbs)
       if (config === null) continue
 
       const project: ProjectConfiguration = {
