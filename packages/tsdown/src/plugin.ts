@@ -1,8 +1,10 @@
-import { existsSync, readFileSync } from 'node:fs'
+import { existsSync, readFileSync, statSync } from 'node:fs'
 import { dirname, join, relative, resolve } from 'node:path'
 import { type CreateNodesV2, logger, workspaceRoot } from '@nx/devkit'
 
 const VERBOSE_RE = /^\s*NX_VERBOSE_LOGGING\s*=\s*["']?true["']?\s*$/m
+
+const MAX_ENV_BYTES = 1024 * 64 // 64 KiB
 
 let cachedVerbose: boolean | null = null
 
@@ -11,6 +13,7 @@ function readEnvVerbose(): boolean {
   try {
     const envPath = join(workspaceRoot, '.env')
     if (!existsSync(envPath)) { cachedVerbose = false; return false }
+    if (statSync(envPath).size > MAX_ENV_BYTES) { cachedVerbose = false; return false }
     cachedVerbose = readFileSync(envPath, 'utf-8').split('\n').some(
       (l) => !l.trimStart().startsWith('#') && VERBOSE_RE.test(l),
     )

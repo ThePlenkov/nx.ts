@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-import { lstatSync, readdirSync, readFileSync } from 'node:fs'
+import { lstatSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { extname, join, relative } from 'node:path'
 
 const ROOT = process.cwd()
@@ -31,6 +31,7 @@ type Finding = { file: string; line: number; key: string; content: string }
 const findings: Finding[] = []
 
 const MAX_DEPTH = 10
+const MAX_FILE_BYTES = 1024 * 1024 // 1 MiB
 
 function walk(dir: string, depth: number = 0): string[] {
   if (depth > MAX_DEPTH) return []
@@ -71,6 +72,11 @@ const files = SCAN_DIRS.flatMap((d) => {
 
 for (const file of files) {
   const rel = relative(ROOT, file)
+  try {
+    if (statSync(file).size > MAX_FILE_BYTES) continue
+  } catch {
+    continue
+  }
   const content = readFileSync(file, 'utf8')
   const lines = content.split('\n')
   for (let i = 0; i < lines.length; i++) {

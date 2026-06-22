@@ -1,5 +1,6 @@
 import type { CreateNodesContextV2 } from 'nx/src/project-graph/plugins/public-api'
 import { describe, expect, it } from 'vitest'
+import type { BiomeCreateNodesResult } from './plugin.js'
 import { createNodesV2 } from './plugin.js'
 
 function makeContext(workspaceRoot: string): CreateNodesContextV2 {
@@ -9,16 +10,20 @@ function makeContext(workspaceRoot: string): CreateNodesContextV2 {
   } as unknown as CreateNodesContextV2
 }
 
+function callCreate(configFiles: string[], workspaceRoot: string): BiomeCreateNodesResult {
+  return createNodesV2[1](configFiles, {}, makeContext(workspaceRoot)) as BiomeCreateNodesResult
+}
+
 describe('@nx-devkit/biome createNodesV2', () => {
   it('returns empty array when no biome config files are matched', () => {
-    const result = createNodesV2[1]([], {}, makeContext('/workspace'))
+    const result = callCreate([], '/workspace')
     expect(result).toEqual([])
   })
 
   it('infers format, format-check, and lint targets for a biome.json project', () => {
     const workspaceRoot = '/workspace'
     const configFile = 'packages/lib/biome.json'
-    const result = createNodesV2[1]([configFile], {}, makeContext(workspaceRoot))
+    const result = callCreate([configFile], workspaceRoot)
 
     expect(result).toHaveLength(1)
     const [file, project] = result[0]!
@@ -35,7 +40,7 @@ describe('@nx-devkit/biome createNodesV2', () => {
   })
 
   it('format target writes files, is uncached, and runs in projectRoot', () => {
-    const result = createNodesV2[1](['apps/demo/biome.json'], {}, makeContext('/workspace'))
+    const result = callCreate(['apps/demo/biome.json'], '/workspace')
     const targets = result[0]![1].projects?.['apps/demo']?.targets
     const format = targets!.format!
     expect(format.executor).toBe('nx:run-commands')
@@ -45,7 +50,7 @@ describe('@nx-devkit/biome createNodesV2', () => {
   })
 
   it('format-check target is read-only and cacheable', () => {
-    const result = createNodesV2[1](['apps/demo/biome.json'], {}, makeContext('/workspace'))
+    const result = callCreate(['apps/demo/biome.json'], '/workspace')
     const targets = result[0]![1].projects?.['apps/demo']?.targets
     const check = targets!['format-check']!
     expect(check.executor).toBe('nx:run-commands')
@@ -55,7 +60,7 @@ describe('@nx-devkit/biome createNodesV2', () => {
   })
 
   it('lint target runs biome lint and is cacheable', () => {
-    const result = createNodesV2[1](['apps/demo/biome.json'], {}, makeContext('/workspace'))
+    const result = callCreate(['apps/demo/biome.json'], '/workspace')
     const targets = result[0]![1].projects?.['apps/demo']?.targets
     const lint = targets!.lint!
     expect(lint.executor).toBe('nx:run-commands')
@@ -64,8 +69,8 @@ describe('@nx-devkit/biome createNodesV2', () => {
     expect(lint.cache).toBe(true)
   })
 
-  it('inputs include biome config file and project files', async () => {
-    const result = await createNodesV2[1](['apps/demo/biome.json'], {}, makeContext('/workspace'))
+  it('inputs include biome config file and project files', () => {
+    const result = callCreate(['apps/demo/biome.json'], '/workspace')
     const targets = result[0]![1].projects?.['apps/demo']?.targets
     const formatInputs = targets!.format!.inputs as string[]
     expect(formatInputs).toContain('{projectRoot}/biome.json')
@@ -73,7 +78,7 @@ describe('@nx-devkit/biome createNodesV2', () => {
   })
 
   it('handles biome.jsonc (json with comments) the same as biome.json', () => {
-    const result = createNodesV2[1](['apps/demo/biome.jsonc'], {}, makeContext('/workspace'))
+    const result = callCreate(['apps/demo/biome.jsonc'], '/workspace')
     expect(result).toHaveLength(1)
     const targets = result[0]![1].projects?.['apps/demo']?.targets
     expect(targets!.format).toBeDefined()
@@ -81,7 +86,7 @@ describe('@nx-devkit/biome createNodesV2', () => {
   })
 
   it('skips workspace root (biome.json at workspace root)', () => {
-    const result = createNodesV2[1](['biome.json'], {}, makeContext('/workspace'))
+    const result = callCreate(['biome.json'], '/workspace')
     expect(result).toEqual([])
   })
 
