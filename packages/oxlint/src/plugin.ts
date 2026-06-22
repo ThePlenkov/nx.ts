@@ -47,6 +47,7 @@ export const createNodesV2: CreateNodesV2 = [
       if (config === null) continue
 
       const project: ProjectConfiguration = {
+        root: projectRoot,
         targets: {
           lint: inferLintTarget(projectRootAbs, workspaceRoot),
         },

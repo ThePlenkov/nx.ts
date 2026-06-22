@@ -7,9 +7,14 @@
     "@nx-devkit/tsdown": {},
     "@nx-devkit/oxlint": {},
     "@nx-devkit/biome": {},
-    "@nx-devkit/typescript": {}
+    "@nx-devkit/typescript": { "tsgo": false }
   },
-  "plugins": [],
+  "plugins": [
+    { "plugin": "@nx-devkit/tsdown" },
+    { "plugin": "@nx-devkit/oxlint" },
+    { "plugin": "@nx-devkit/biome" },
+    { "plugin": "@nx-devkit/typescript", "options": { "tsgo": false } }
+  ],
   "namedInputs": {
     "sharedGlobals": [
       "{workspaceRoot}/tsconfig.base.json",

@@ -3,16 +3,16 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "main": "./src/index.js",
-  "types": "./src/index.d.ts",
+  "main": "./dist/index.mjs",
+  "types": "./dist/index.d.mts",
   "exports": {
     ".": {
-      "types": "./src/index.d.ts",
-      "default": "./src/index.js"
+      "types": "./dist/index.d.mts",
+      "default": "./dist/index.mjs"
     },
     "./plugin": {
-      "types": "./src/plugin.d.ts",
-      "default": "./src/plugin.js"
+      "types": "./dist/plugin.d.mts",
+      "default": "./dist/plugin.mjs"
     }
   },
   "files": [

@@ -10,11 +10,12 @@
     "skills/*"
   ],
   "scripts": {
-    "build": "bun run --filter='./packages/*' build",
-    "test": "bun run --filter='./packages/*' test",
-    "lint": "biome lint .",
-    "format": "biome format --write .",
-    "format:check": "biome format .",
+    "build": "nx run-many -t build",
+    "lint": "nx run-many -t lint",
+    "format": "nx run-many -t format",
+    "test": "nx run-many -t test",
+    "typecheck": "nx run-many -t typecheck",
+    "ci": "nx run-many -t build lint test typecheck",
     "spec:check": "bun run scripts/spec-check.ts",
     "spec:validate": "openspec validate",
     "prepare": "husky"
