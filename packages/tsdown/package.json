@@ -16,6 +16,7 @@
     }
   },
   "files": [
+    "dist",
     "src",
     "tsdown.config.ts",
     "README.md"

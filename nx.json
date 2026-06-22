@@ -3,12 +3,6 @@
   "$schema": "./node_modules/nx/schemas/nx-schema.json",
   "packageManager": "bun@1.3.14",
   "version": 2,
-  "pluginsConfig": {
-    "@nx-devkit/tsdown": {},
-    "@nx-devkit/oxlint": {},
-    "@nx-devkit/biome": {},
-    "@nx-devkit/typescript": { "tsgo": false }
-  },
   "plugins": [
     { "plugin": "@nx-devkit/tsdown" },
     { "plugin": "@nx-devkit/oxlint" },
