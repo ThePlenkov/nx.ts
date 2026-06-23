@@ -20,15 +20,6 @@ bun add -D @nx-devkit/oxlint
 }
 ```
 
-## Options
-
-```ts
-export interface NxOxlintPluginOptions {
-  /** Optional override for the .oxlintrc config file name. Default: ".oxlintrc.json". */
-  configFile?: string;
-}
-```
-
 ## Targets generated
 
 | Trigger file | Target | Executor | Command | Cache | Inputs |
@@ -37,13 +28,9 @@ export interface NxOxlintPluginOptions {
 
 The `cwd` of the lint command is the project root (relative to the workspace root).
 
-For a project at `packages/foo/` with an `.oxlintrc.json`:
+## Options
 
-```bash
-npx nx show project packages/foo
-```
-
-reports a `lint` target that runs `npx oxlint .` with `cwd: packages/foo`.
+This plugin accepts no options. The discovery glob is fixed; rename the trigger file if you need to restrict it.
 
 ## Skip rules
 
