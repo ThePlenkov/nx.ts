@@ -12,15 +12,13 @@ Scans the workspace for any `biome.json` or `biome.jsonc`. For each match (outsi
 bun add -D @nx-devkit/biome
 ```
 
-## Register in `nx.json`
+## Register in nx.json
 
-```json
+```jsonc
 {
   "plugins": ["@nx-devkit/biome"]
 }
 ```
-
-That's it. Every project containing a `biome.json` (or `biome.jsonc`) automatically gains three targets.
 
 ## Targets generated
 
@@ -30,45 +28,24 @@ That's it. Every project containing a `biome.json` (or `biome.jsonc`) automatica
 | same | `format-check` | `npx biome format .` | true |
 | same | `lint` | `npx biome lint .` | true |
 
-All three targets run with `cwd` set to the project root.
+All three targets run with `cwd` set to the project root. Each target's `inputs` array contains `{projectRoot}/biome.json` (or `biome.jsonc`) and `{projectRoot}/**/*`.
 
-## Inputs
+## Skip rules
 
-Each target's `inputs` array contains:
-
-- `{projectRoot}/biome.json` (or `biome.jsonc`)
-- `{projectRoot}/**/*`
-
-## Workspace root is skipped
-
-A `biome.json` at the workspace root is intentionally ignored so the root config does not become its own Nx project.
-
-## Why uncache `format`?
-
-`format --write` mutates the working tree. Nx's cache assumes targets are pure functions of their inputs; side-effecting targets cannot be safely replayed. `format-check` and `lint` are read-only and cacheable.
-
-## Husky pre-commit
-
-This plugin matches the formatter invoked by the repository's husky pre-commit hook (see `openspec/specs/SPEC.md`).
+- The workspace root is skipped (a `biome.json` at `./` is intentionally ignored).
+- `format` MUST NOT be cached because `format --write` mutates the working tree — Nx's cache assumes targets are pure functions of their inputs. `format-check` and `lint` are read-only and cacheable.
 
 ## Options
 
 ```ts
-// nx.json pluginsConfig
-{
-  "@nx-devkit/biome": {
-    "formatCommand": "npx biome format --write .",
-    "formatCheckCommand": "npx biome format .",
-    "lintCommand": "npx biome lint ."
-  }
+export interface NxBiomePluginOptions {
+  /** Run `lint` as part of `nx lint`. Default: false. */
+  checkOnLint?: boolean;
+  /** Reuse biome's internal cache for `format-check`. Default: true. */
+  formatCache?: boolean;
 }
 ```
 
-All three options are optional and default to the values shown above.
+## License
 
-## Build & test
-
-```bash
-bun run build
-bun test
-```
+MIT

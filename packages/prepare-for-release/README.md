@@ -1,16 +1,16 @@
 # @nx-devkit/prepare-for-release
 
-General-purpose Nx tool plugin that bootstraps a workspace of packages onto the npm registry by publishing minimal `0.0.0` placeholders. Built so any Nx monorepo can use it, not just this one.
+Bootstraps a workspace of packages onto the npm registry by publishing minimal `0.0.0` placeholders. Built so any Nx monorepo can use it.
 
 ## What it does
 
 | Surface | Kind | Purpose |
 |---|---|---|
-| `@nx-devkit/prepare-for-release:publish-placeholder` | Executor | Scans `packages/*`, publishes a `0.0.0` placeholder for any package not yet on the registry, returns `{ published, skipped, trustCommands }`. |
+| `@nx-devkit/prepare-for-release:publish-placeholder` | Executor | Scans `packages/*`, publishes a `0.0.0` placeholder for any package not yet on the registry. |
 | `@nx-devkit/prepare-for-release:init` | Generator | Adds the plugin to `nx.json`, creates a `tools` project with a `prepare-for-release` target, prints the post-setup checklist. |
 | `@nx-devkit/prepare-for-release` (createNodesV2) | Plugin | Detects a `tools/project.json` referencing the executor and re-affirms the `prepare-for-release` target. |
 
-The executor never modifies the source `package.json` — the placeholder tarball is built in a temp directory. Use `dryRun: true` to preview.
+The executor is idempotent — already-published packages are skipped — and never modifies the source `package.json` (the placeholder tarball is built in a temp directory). Use `dryRun: true` to preview.
 
 ## Install
 
@@ -20,7 +20,7 @@ bun add -D @nx-devkit/prepare-for-release
 
 ## Register in nx.json
 
-```json
+```jsonc
 {
   "plugins": ["@nx-devkit/prepare-for-release"]
 }
@@ -49,13 +49,13 @@ export interface NxPrepareForReleaseOptions {
   placeholderVersion?: string;  // default: "0.0.0"
   registry?: string;            // default: "https://registry.npmjs.org/"
   dryRun?: boolean;             // default: false
-  trustRepo?: string;           // default: process.env.NPM_TRUST_REPO or "ThePlenkov/nx.ts"
+  trustRepo?: string;           // default: "your-org/your-repo" (override with NPM_TRUST_REPO env var)
 }
 ```
 
 ## Example output
 
-```
+```text
 > nx run tools:prepare-for-release
 
 [@nx-devkit/prepare-for-release] Checking 4 packages
@@ -69,9 +69,9 @@ Skipped:   @nx-devkit/biome
 
 Run these locally (requires MFA) to enable GitHub OIDC trusted publishing:
 
-  npm trust github @nx-devkit/tsdown --file release.yml --repo ThePlenkov/nx.ts --allow-publish
-  npm trust github @nx-devkit/oxlint --file release.yml --repo ThePlenkov/nx.ts --allow-publish
-  npm trust github @nx-devkit/typescript --file release.yml --repo ThePlenkov/nx.ts --allow-publish
+  npm trust github @nx-devkit/tsdown --file release.yml --repo your-org/your-repo --allow-publish
+  npm trust github @nx-devkit/oxlint --file release.yml --repo your-org/your-repo --allow-publish
+  npm trust github @nx-devkit/typescript --file release.yml --repo your-org/your-repo --allow-publish
 ```
 
 ## When to use
@@ -83,13 +83,6 @@ Run these locally (requires MFA) to enable GitHub OIDC trusted publishing:
 ## Why not `bun publish`?
 
 `bun publish` does not yet support npm OIDC trusted publishing. The CI release workflow uses `npx nx release publish` (which uses the npm CLI). The executor also calls the npm CLI directly to keep the bootstrap flow consistent.
-
-## Build & test
-
-```bash
-bun run build
-bun test
-```
 
 ## License
 

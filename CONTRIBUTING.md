@@ -1,70 +1,67 @@
 # Contributing to nx-devkit
 
-## TDD is non-negotiable
+Thanks for your interest in contributing. This guide is for humans opening PRs. AI coding agents operating in this repo should read [`AGENTS.md`](./AGENTS.md) instead — that handbook is the canonical source for scope rules, TDD workflow, and OpenSpec workflow.
 
-Every plugin source change follows:
+## Fork and clone
 
-1. Write a failing `*.spec.ts` (vitest) using `@nx/devkit` testing helpers + `memfs` / tmp dirs / `vi.mock` for child_process.
-2. `bun test` → RED.
-3. Implement the minimum to pass.
-4. `bun run build` → GREEN.
-5. `bun run lint` → must be clean.
-6. `bun run check:spec` → no conflicts.
-7. `bunx openspec validate` → no errors.
-8. Commit. Push. Open draft PR.
+Fork [`nx-devkit/nx.ts`](https://github.com/nx-devkit/nx.ts) to your own GitHub org first, then clone your fork:
 
-## OpenSpec workflow
+```bash
+git clone https://github.com/<your-org>/nx.ts
+cd nx.ts
+bun install
+```
 
-This repo uses [OpenSpec](https://github.com/Fission-AI/OpenSpec) for spec-driven changes.
+Do not branch directly off convoy branches — branch off `main`.
 
-1. `openspec/changes/<change-id>/proposal.md` — what & why.
-2. `openspec/changes/<change-id>/tasks.md` — checklist.
-3. `openspec/changes/<change-id>/specs/<capability>/spec.md` — delta vs `openspec/specs/`.
-4. `openspec validate <change-id> --strict` — must pass.
-5. Once the change ships, run `openspec archive <change-id>` to fold the spec delta into `openspec/specs/`.
+## Branch naming
 
-## Per-package scope
+Use one of:
 
-Each plugin lives in its own directory under `packages/`. **Touch ONLY your assigned files** unless the bead body explicitly covers more. Each `packages/<name>/AGENTS.md` restates:
+- `feat/<slug>` — new plugin, new target, new option
+- `fix/<slug>` — bug fix
+- `docs/<slug>` — documentation only
+- `chore/<slug>` — repo maintenance (CI, deps, tooling)
 
-- File layout
-- Standard options interface
-- Scope rules
-- TDD workflow
-- Verification commands
+Slugs are lowercase kebab-case. Keep them short and descriptive (`feat/biome-format-cache`, `docs/audience-restructure`).
 
-## Spec-conflict detector
+## Commit messages
 
-`bun run check:spec` runs `scripts/spec-check.ts`. It scans `packages/*/src/plugin.ts` and `src/executors/*/schema.json` for:
+Follow [Conventional Commits](https://www.conventionalcommits.org/):
 
-- Two plugins registering the same target name on the same file trigger.
-- Two packages exporting the same module name.
-- Inconsistent option schemas across siblings.
+```
+feat(biome): add formatCache option
+fix(oxlint): skip workspace root correctly on Windows
+docs(readme): split audience-scoped READMEs
+chore(deps): bump @nx/devkit to 22.1.0
+```
 
-Exits non-zero on conflict. CI runs this on every push.
+The scope is usually the package name; omit it for repo-wide changes.
 
 ## PR flow
 
-1. Branch off `main` (do **not** branch off convoy branches).
-2. One bead = one PR. Do not mix unrelated changes.
-3. Push to your fork (`ThePlenkov/nx.ts`).
-4. Open a **DRAFT** PR with `--draft`. The Refinery reviews.
-5. Do not open upstream PRs. The user opens those manually after review.
-6. Do not merge into `main` yourself.
+1. Push your branch to your fork.
+2. Open a **DRAFT** PR against `main` (`gh pr create --draft`). The Refinery reviews the draft.
+3. Address review feedback on the same branch and push again.
+4. Once the Refinery approves, the user opens the upstream PR manually. **Do not open upstream PRs from your fork.**
 
 ## Adding a new plugin
+
+The one-shot bootstrap path is the `init` generator from `@nx-devkit/prepare-for-release`:
 
 ```bash
 bunx nx g @nx-devkit/prepare-for-release:init
 ```
 
-This is the one-shot path:
+This:
 
 - Adds the plugin to `nx.json`.
 - Creates a `tools` project with a `prepare-for-release` target.
 - Prints the post-setup checklist (install → bootstrap → `npm trust github`).
 
-After running it, follow the printed checklist — install the plugin, publish placeholders, run the trust commands locally with MFA, then commit a workflow file and let CI take over forever.
+Follow the printed checklist — install the plugin, publish placeholders, run the `npm trust github` commands locally with MFA, then commit the workflow file. CI takes over from there.
+
+For per-package scope rules, TDD workflow, and verification commands, see [`AGENTS.md`](./AGENTS.md) and the per-package `packages/<name>/AGENTS.md`.
 
 ## Privilege escalation
 
@@ -76,7 +73,7 @@ If you hit any of:
 - `gh` authentication failures
 - OIDC trust failures during CI
 
-**STOP. Do not retry. Mail the mayor via `gt_mail_send` and create an `gt_escalate` bead with full context.** This applies even if the failure looks transient.
+**STOP. Do not retry.** Mail the mayor and create an escalation bead with full context. This applies even if the failure looks transient.
 
 ## Verification before opening a PR
 
@@ -86,7 +83,16 @@ bun run lint
 bun test
 bun run build
 bash scripts/e2e.sh
-bunx nx release --skip-publish --dry-run
+bun run check:spec
 ```
 
 All six must exit 0.
+
+## More
+
+- [`AGENTS.md`](./AGENTS.md) — AI agent handbook (TDD workflow, OpenSpec workflow, scope rules).
+- [`REVIEW.md`](./REVIEW.md) — what reviewers check on each PR.
+
+## License
+
+By contributing, you agree that your contributions will be licensed under the MIT License. See [`LICENSE`](./LICENSE).

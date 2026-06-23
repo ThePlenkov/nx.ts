@@ -95,3 +95,68 @@ Tests: 11/11 pass in `@nx-devkit/prepare-for-release`. `bun run lint` clean for 
 - N14/N15/N16/N17: no change required — all four pre-existing in release.yml (added in commit `ff2b196` / `6777445`).
 
 Tests: 15/15 pass in `@nx-devkit/prepare-for-release` (2 new for isPublished 404-vs-error split). 72/72 pass across all 5 plugin packages. `bun run lint` clean (1 pre-existing warning in `scripts/spec-check.ts:101`). `bun run build` green. `bash scripts/e2e.sh` green. `bun run check:spec` green.
+
+---
+
+## CodeFactor audit — 2026-06-23 (moved from REVIEW.md)
+
+CodeFactor uses Oxlint 1.69.0 for JS/TS analysis. The 152 findings break down into categories that fall into three buckets: real code issues we fixed, test-file noise excluded via `.codefactor.yml`, and stylistic rules suppressed via the CodeFactor dashboard UI.
+
+### Summary
+
+| Decision | Count | Files affected |
+|----------|-------|----------------|
+| fix in code | 8 | generator.ts, plugin.ts, tsdown.config.ts x2 |
+| excluded via .codefactor.yml | 65 | *.spec.ts, *.test.ts (3 spec files) |
+| suppressed via CodeFactor dashboard | 79 | executor.ts, plugin.ts, generator.ts, index.ts |
+
+### Fixed in code
+
+| # | File:Line | Rule | Description | What I did |
+|---|-----------|------|-------------|------------|
+| 1 | generators/init/generator.ts:1-2 | eslint/no-duplicate-imports | Two separate `@nx/devkit` imports | Merged into single import with `type` specifiers |
+| 2 | plugin.ts:1-3 | eslint/sort-imports | Node imports before @nx/devkit | Reordered: @nx/devkit first, then node:* |
+| 3 | plugin.ts:71 | import/no-anonymous-default-export | `export default { ... }` | Named the export: `const plugin = { ... }; export default plugin` |
+| 4 | tsdown.config.ts (prepare-for-release):4-12 | eslint/sort-keys | Object keys not alphabetical | Reordered: clean, dts, entry, format |
+| 5 | tsdown.config.ts (biome):3-11 | eslint/sort-keys | Object keys not alphabetical | Reordered: clean, deps, dts, entry, format |
+
+### Excluded via .codefactor.yml (test files — 65 findings)
+
+| Rule | Count | Why excluded |
+|------|-------|-------------|
+| import/no-nodejs-modules | 9 | Tests need `node:fs`, `node:os`, `node:path` |
+| eslint/no-magic-numbers | 26 | Test assertions use 0, 1, 2, etc. |
+| eslint/func-style | 7 | Tests use function declarations |
+| eslint/id-length | 8 | Test variables `r`, `v`, `w` |
+| eslint/max-statements | 5 | Test setup is verbose |
+| eslint/init-declarations | 5 | Test vars: `let workspace`, `let originalCwd` |
+| eslint/sort-imports | 6 | Test import ordering |
+| unicorn/no-null | 1 | Test null expectations |
+| import/first | 1 | Dynamic import before static type import |
+| import/group-exports | 3 | Schema.d.ts interface exports |
+| eslint/prefer-destructuring | 1 | Test helper chain |
+
+### Suppressed via CodeFactor dashboard UI (79 findings in source files)
+
+These are stylistic rules that conflict with our codebase conventions. Each must be individually suppressed via the CodeFactor dashboard ("Ignore Issues like this") because `.codefactor.yml` does not support rule-level suppression for oxlint rules.
+
+| Rule | Count | Files | Why suppressed |
+|------|-------|-------|----------------|
+| eslint/func-style | 21 | executor.ts, plugin.ts, generator.ts | Codebase uses function declarations consistently |
+| import/no-named-export | 14 | executor.ts, plugin.ts, generator.ts, index.ts | Nx plugin API requires named exports (createNodesV2, executor, generator) |
+| import/no-nodejs-modules | 4 | executor.ts, plugin.ts | Node.js executor/plugin legitimately needs node:fs, node:path, etc. |
+| eslint/no-magic-numbers | 3 | executor.ts | Index access (`stdout.split('\n').pop()`) and regex char codes |
+| unicorn/no-null | 7 | executor.ts, generator.ts | Explicit null used for error handling, not undefined |
+| import/exports-last | 5 | executor.ts, plugin.ts, generator.ts | Named exports precede default export — standard Nx pattern |
+| import/group-exports | 2 | plugin.ts | Intentionally separate re-export blocks |
+| eslint/sort-imports | 2 | executor.ts | Import ordering already handled by biome |
+| eslint/no-ternary | 3 | executor.ts, generator.ts | Ternaries used for readability in short expressions |
+| eslint/no-continue | 3 | plugin.ts | Continue used in for-loop for early filter |
+| eslint/id-length | 2 | plugin.ts | Short var `r` in regex test |
+| eslint/sort-keys | 3 | tsdown.config.ts, generator.ts | Key order intentional for readability |
+| eslint/no-await-in-loop | 1 | executor.ts | Sequential npm operations must be ordered |
+| import/no-anonymous-default-export | 0 | — | Fixed in code |
+| eslint/max-statements | 6 | executor.ts, generator.ts | Complex orchestration functions |
+| eslint/max-params | 1 | executor.ts | buildPlaceholderTarball needs 4 params |
+| eslint/default-param-last | 1 | plugin.ts | Default param before required — existing pattern |
+| eslint/prefer-named-capture-group | 1 | executor.ts | Regex already clear without named groups |

@@ -1,42 +1,34 @@
 # AGENTS.md — nx-devkit master handbook
 
-This document is the master agent handbook for the `nx-devkit-plugins` workspace. Every polecat and human contributor reads it first.
+This document is the master agent handbook for the `nx-devkit-plugins` workspace. Every polecat and humans-as-agent reads it first. For human-contributor rules (fork, branch naming, PR flow) see [`CONTRIBUTING.md`](./CONTRIBUTING.md). For npm-consumer usage see each `packages/*/README.md`.
 
 ## What this repo is
 
-A monorepo of **zero-config Nx inference plugins** under the `@nx-devkit` scope. Each plugin inspects a config file already present in a TypeScript project and auto-injects a matching Nx target via `createNodesV2`. Consumers do not write `project.json`; targets are derived from files they already keep (`tsdown.config.ts`, `tsconfig.json`, `.oxlintrc.json`, `biome.json`, `vitest.config.ts`).
+A monorepo of **zero-config Nx inference plugins** under the `@nx-devkit` scope. Each plugin inspects a config file already present in a TypeScript project and auto-injects a matching Nx target via `createNodesV2`. Consumers do not write `project.json`; targets are derived from files they already keep.
 
-We **extend Nx**, we do not replace it. See `skills/nx-vs-nx/SKILL.md`.
+## Plugin matrix (scope ownership)
 
-## Plugin matrix
+| Package | Owns directory | Touch-allowed-for-beads |
+|---|---|---|
+| `packages/tsdown` | `packages/tsdown/**` | beads scoped to tsdown only |
+| `packages/oxlint` | `packages/oxlint/**` | beads scoped to oxlint only |
+| `packages/biome` | `packages/biome/**` | beads scoped to biome only |
+| `packages/typescript-preset` | `packages/typescript-preset/**` | beads scoped to typescript-preset only |
+| `packages/prepare-for-release` | `packages/prepare-for-release/**` | beads scoped to prepare-for-release only |
 
-| Package | Scope | Kind | Trigger file | Inferred targets | Options |
-|---|---|---|---|---|---|
-| `packages/tsdown` | `@nx-devkit/tsdown` | Tool | `**/tsdown.config.ts` | `build` | `NxTsdownPluginOptions {}` |
-| `packages/oxlint` | `@nx-devkit/oxlint` | Tool | `**/.oxlintrc.*` | `lint` | `NxOxlintPluginOptions { configFile? }` |
-| `packages/biome` | `@nx-devkit/biome` | Tool | `**/biome.json{,c}` | `format`, `format-check`, `lint` | `NxBiomePluginOptions { checkOnLint?, formatCache? }` |
-| `packages/typescript-preset` | `@nx-devkit/typescript` | Preset | `**/tsconfig.json` + `**/vitest.config.*` | `typecheck`, `test`, `test:watch`, `test:coverage` | `NxTypecheckPluginOptions { tsgo?, configFile?, clean? }` |
-| `packages/prepare-for-release` | `@nx-devkit/prepare-for-release` | Tool | (executor + generator + plugin) | `prepare-for-release` on the `tools` project | `NxPrepareForReleaseOptions { scope?, placeholderTag?, placeholderVersion?, registry?, dryRun? }` |
+Per-package options interfaces, file layout, and TDD workflow are in each `packages/<name>/AGENTS.md` — read the one for your package before touching its directory.
 
 ## Scope rules (global)
 
-- One bead = one PR. Do not mix plugin-source changes with documentation changes unless the bead body explicitly covers both.
-- Touch ONLY your assigned files. Root `nx.json` and root `package.json` are owned by a single dedicated bead — check the bead body.
-- Do not open upstream PRs. The user does that after fork PR review.
-- Do not merge into `main` yourself.
-- Never edit `node_modules/`, `dist/`, `coverage/`, `.nx/`, `.nx-cache/`, or `bun.lock` entries for dependencies you didn't actually add.
-
-## Per-package scope
-
-Read `packages/<name>/AGENTS.md` before touching that directory. Each one restates:
-
-- File layout
-- Standard options interface
-- Scope rules
-- TDD workflow
-- Verification commands
+- **One bead = one PR.** Do not mix plugin-source changes with documentation changes unless the bead body explicitly covers both.
+- **Touch ONLY your assigned files.** Root `nx.json` and root `package.json` are owned by a single dedicated bead — check the bead body.
+- **Do not open upstream PRs.** The user does that after fork PR review.
+- **Do not merge into `main` yourself.**
+- **Never edit** `node_modules/`, `dist/`, `coverage/`, `.nx/`, `.nx-cache/`, or `bun.lock` entries for dependencies you didn't actually add.
 
 ## TDD workflow (canonical)
+
+This is the agent-execution checklist. The human-readable summary is in [`CONTRIBUTING.md`](./CONTRIBUTING.md).
 
 1. Write a failing `*.spec.ts` (vitest) using `@nx/devkit` testing helpers + `memfs` / tmp dirs / `vi.mock` for child_process.
 2. `bun test` → RED.
@@ -44,7 +36,7 @@ Read `packages/<name>/AGENTS.md` before touching that directory. Each one restat
 4. Refactor only after GREEN.
 5. `bun run build` → must succeed.
 6. `bun run lint` and `bun run format:check` → must be clean.
-7. `bun run spec:check` → no conflicts.
+7. `bun run check:spec` → no conflicts.
 8. `bunx openspec validate` → no errors.
 9. Commit. Push. Open draft PR.
 
@@ -78,7 +70,7 @@ bun run lint
 bun test
 bun run build
 bash scripts/e2e.sh
-bunx nx release --skip-publish --dry-run
+bun run check:spec
 ```
 
 All six must exit 0 before pushing.

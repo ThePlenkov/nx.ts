@@ -6,9 +6,7 @@ A preset Nx plugin that infers `typecheck` and `test` targets for any project th
 
 For every `tsconfig.json` (outside the workspace root) the plugin infers a `typecheck` target. If a `vitest.config.*` is also present, it additionally infers `test`, `test:watch`, and `test:coverage` targets.
 
-## Why a "preset" plugin?
-
-Per-tool plugins (`@nx-devkit/tsdown`, `@nx-devkit/oxlint`, `@nx-devkit/biome`, …) only own the target logic for the tool they wrap. Type-checking and test-running are cross-cutting concerns that almost every TypeScript project needs. Instead of each per-tool plugin re-implementing the same `typecheck` / `test` inference, they delegate to this single preset.
+This is a "preset" plugin: it owns the cross-cutting `typecheck` and `test` logic that most TypeScript projects need, so per-tool plugins don't have to re-implement it.
 
 ## Install
 
@@ -18,7 +16,7 @@ bun add -D @nx-devkit/typescript
 
 Peer dependency: `@nx/devkit` >= 22.
 
-## Register in `nx.json`
+## Register in nx.json
 
 ```jsonc
 {
@@ -28,7 +26,7 @@ Peer dependency: `@nx/devkit` >= 22.
 
 The plugin needs no other setup. By default it scans every `tsconfig.json` in the workspace.
 
-## Targets inferred
+## Targets generated
 
 ### `typecheck` — always inferred when `tsconfig.json` is present
 
@@ -81,6 +79,14 @@ When `vitest.config.{ts,js,mts,mjs,cts,cjs}` exists alongside `tsconfig.json`, t
 `test:watch` is non-cached and uses `npx vitest` (no `run`).
 `test:coverage` adds `--coverage` and uses the same outputs.
 
+For a project at `packages/foo/` with a `tsconfig.json`:
+
+```bash
+npx nx show project packages/foo
+```
+
+lists `typecheck` (and `test` if a `vitest.config.*` is present).
+
 ## Options
 
 Pass options via the inline plugin tuple in `nx.json`:
@@ -100,11 +106,11 @@ Pass options via the inline plugin tuple in `nx.json`:
 }
 ```
 
-| Option       | Type      | Default            | Notes                                                                          |
-| ------------ | --------- | ------------------ | ------------------------------------------------------------------------------ |
-| `tsgo`       | `boolean` | `true`             | `true` uses `tsgo` and external-deps `@typescript/native-preview`; `false` uses `tsc` and external-deps `typescript`. |
-| `configFile` | `string`  | `"tsconfig.json"`  | The trigger file basename. Use e.g. `"tsconfig.lib.json"` for lib projects.    |
-| `clean`      | `boolean` | `false`            | When `true`, a `tsgo/tsc --build --clean <configFile>` runs first, chained with `&&`, so a full clean rebuild happens before the normal typecheck. |
+| Option | Type | Default | Notes |
+|---|---|---|---|
+| `tsgo` | `boolean` | `true` | `true` uses `tsgo` and external-deps `@typescript/native-preview`; `false` uses `tsc` and external-deps `typescript`. |
+| `configFile` | `string` | `"tsconfig.json"` | The trigger file basename. Use e.g. `"tsconfig.lib.json"` for lib projects. |
+| `clean` | `boolean` | `false` | When `true`, a `tsgo/tsc --build --clean <configFile>` runs first, chained with `&&`, so a full clean rebuild happens before the normal typecheck. |
 
 ## Skip rules
 
@@ -132,3 +138,7 @@ import {
 - `NX_VERBOSE_LOGGING=true` is set in the environment or the workspace `.env`.
 
 Messages are prefixed with `[nx-typescript]`.
+
+## License
+
+MIT
