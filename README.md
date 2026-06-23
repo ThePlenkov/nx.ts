@@ -36,7 +36,7 @@ See each plugin's README for options and per-tool behavior. `prepare-for-release
 ## Try it locally
 
 ```bash
-git clone https://github.com/nx-devkit/nx.ts
+git clone https://github.com/ThePlenkov/nx.ts
 cd nx.ts
 bun install
 bun run build

@@ -4,7 +4,7 @@ Thanks for your interest in contributing. This guide is for humans opening PRs. 
 
 ## Fork and clone
 
-Fork [`nx-devkit/nx.ts`](https://github.com/nx-devkit/nx.ts) to your own GitHub org first, then clone your fork:
+Fork [`ThePlenkov/nx.ts`](https://github.com/ThePlenkov/nx.ts) to your own GitHub org first, then clone your fork:
 
 ```bash
 git clone https://github.com/<your-org>/nx.ts
