@@ -7,10 +7,16 @@ This file is read by the mayor and any coordinator agent **before** slinging any
 1. **Pull the actual PR state** with `gh` and GraphQL. Never trust memory, never trust previous conversation, never infer from a "looks like the same issue" pattern.
 
    ```bash
+   REPO="ThePlenkov/nx.ts"
    PR_NUMBER=18
-   gh pr view "$PR_NUMBER" --repo ThePlenkov/nx.ts --json state,mergeable,statusCheckRollup
-   gh api graphql -F number="$PR_NUMBER" -f query='query($number: Int!) { repository(owner:"ThePlenkov", name:"nx.ts") { pullRequest(number:$number) { reviewDecision state url reviewThreads(first:30) { nodes { id isResolved isOutdated comments(first:1) { nodes { author { login } body path line } } } } } } }'
+   gh pr view "$PR_NUMBER" --repo "$REPO" --json state,mergeable,statusCheckRollup
+   gh api graphql -F number="$PR_NUMBER" -f query='query($number: Int!) { repository(owner:"ThePlenkov", name:"nx.ts") { pullRequest(number:$number) { reviewDecision state url reviewThreads(first:100) { nodes { id isResolved isOutdated comments(last:5) { nodes { author { login } body path line } } } } } } }'
    ```
+
+   Notes:
+   - `REPO` and `PR_NUMBER` are exported once per run; replace the literal `18` with the target PR.
+   - `first:100` covers the GitHub `first:N` cap for a single page; if the PR has more than 100 threads, paginate with `after: <endCursor>`.
+   - `comments(last:5)` returns the most recent replies in each thread, which is what a coordinator needs to judge whether the latest agent already addressed the feedback.
 
 2. **Check whether the work is already done.** Look at the branch head and recent commits:
    ```bash
