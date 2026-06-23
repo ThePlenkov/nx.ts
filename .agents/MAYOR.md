@@ -7,13 +7,15 @@ This file is read by the mayor and any coordinator agent **before** slinging any
 1. **Pull the actual PR state** with `gh` and GraphQL. Never trust memory, never trust previous conversation, never infer from a "looks like the same issue" pattern.
 
    ```bash
-   gh pr view <N> --repo ThePlenkov/nx.ts --json state,mergeable,statusCheckRollup
-   gh api graphql -f query='query { repository(owner:"ThePlenkov", name:"nx.ts") { pullRequest(number:<N>) { reviewDecision state url reviewThreads(first:30) { nodes { id isResolved isOutdated comments(first:1) { nodes { author { login } body path line } } } } } } }'
+   PR_NUMBER=18
+   gh pr view "$PR_NUMBER" --repo ThePlenkov/nx.ts --json state,mergeable,statusCheckRollup
+   gh api graphql -F number="$PR_NUMBER" -f query='query($number: Int!) { repository(owner:"ThePlenkov", name:"nx.ts") { pullRequest(number:$number) { reviewDecision state url reviewThreads(first:30) { nodes { id isResolved isOutdated comments(first:1) { nodes { author { login } body path line } } } } } } }'
    ```
 
 2. **Check whether the work is already done.** Look at the branch head and recent commits:
    ```bash
-   gh api repos/ThePlenkov/nx.ts/commits?sha=<branch>&per_page=5 --jq '.[] | "\(.sha[0:7]) \(.commit.message | split("\n")[0])"'
+   BRANCH="branch-name"
+   gh api "repos/ThePlenkov/nx.ts/commits?sha=${BRANCH}&per_page=5" --jq '.[] | "\(.sha[0:7]) \(.commit.message | split("\n")[0])"'
    ```
    If the fix is already committed and pushed, do NOT sling a fix bead. Either close prior failed beads, or sling a "verify and resolve threads" bead instead.
 
@@ -30,7 +32,7 @@ The body MUST contain, verbatim:
    - One-paragraph summary of the claim
    - **Investigation step** — exact file/grep to run to verify the claim against the code
    - **Required reply** — a template for what to post in the thread, with placeholders for the actual answer
-   - **Resolve command** — `gh api graphql -f query='mutation { resolveReviewThread(input:{threadId:"<ID>"}) { thread { isResolved } } }'`
+   - **Resolve command** — `gh api graphql -F id="$THREAD_ID" -f query='mutation($id: ID!) { resolveReviewThread(input:{threadId:$id}) { thread { isResolved } } }'`
 3. **Hard constraints section** — explicit "do not touch" list (executor.ts, package.json, nx.json, .github/workflows/*, lockfiles, anything not in this PR).
 4. **Escalation section** — what to do if gh/api/permissions fail, or if the investigation reveals a code bug outside scope: stop and mail the mayor, do not loop.
 5. **Done criteria** — exact commands to run after all threads are resolved, including a final `gh pr view N` to confirm `reviewDecision` is non-null.
