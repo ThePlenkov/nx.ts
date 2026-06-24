@@ -6,11 +6,14 @@ This file is read by the mayor and any coordinator agent **before** slinging any
 
 1. **Pull the actual PR state** with `gh` and GraphQL. Never trust memory, never trust previous conversation, never infer from a "looks like the same issue" pattern.
 
-   ```bash
+```bash
    REPO="ThePlenkov/nx.ts"
    PR_NUMBER=18
+   OWNER="${REPO%%/*}"
+   NAME="${REPO##*/}"
    gh pr view "$PR_NUMBER" --repo "$REPO" --json state,mergeable,statusCheckRollup
-   gh api graphql -F number="$PR_NUMBER" -f query='query($number: Int!) { repository(owner:"ThePlenkov", name:"nx.ts") { pullRequest(number:$number) { reviewDecision state url reviewThreads(first:100) { nodes { id isResolved isOutdated comments(last:5) { nodes { author { login } body path line } } } } } } }'
+   gh api graphql -F number="$PR_NUMBER" -F owner="$OWNER" -F name="$NAME" \
+       -f query='query($number: Int!, $owner: String!, $name: String!) { repository(owner:$owner, name:$name) { pullRequest(number:$number) { reviewDecision state url reviewThreads(first:100) { nodes { id isResolved isOutdated comments(last:5) { nodes { author { login } body path line } } } } } }'
    ```
 
    Notes:

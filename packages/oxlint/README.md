@@ -30,7 +30,7 @@ The `cwd` of the lint command is the project root (relative to the workspace roo
 
 ## Options
 
-This plugin accepts no options. The discovery glob is fixed; rename the trigger file if you need to restrict it.
+This plugin currently accepts no options. A `configFile` override is documented in `packages/oxlint/AGENTS.md` but not yet implemented. The discovery glob is fixed; rename the trigger file if you need to restrict it.
 
 ## Skip rules
 

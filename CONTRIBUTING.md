@@ -1,6 +1,6 @@
 # Contributing to nx-devkit
 
-Thanks for your interest in contributing. This guide is for humans opening PRs. AI coding agents operating in this repo should read [`AGENTS.md`](./AGENTS.md) instead — that handbook is the canonical source for scope rules, TDD workflow, and OpenSpec workflow.
+Thanks for your interest in contributing. This guide is for humans opening PRs. AI coding agents operating in this repo should read [`AGENTS.md`](AGENTS.md) instead — that handbook is the canonical source for scope rules, TDD workflow, and OpenSpec workflow.
 
 ## Fork and clone
 
@@ -61,7 +61,7 @@ This:
 
 Follow the printed checklist — install the plugin, publish placeholders, run the `npm trust github` commands locally with MFA, then commit the workflow file. CI takes over from there.
 
-For per-package scope rules, TDD workflow, and verification commands, see [`AGENTS.md`](./AGENTS.md) and the per-package `packages/<name>/AGENTS.md`.
+For per-package scope rules, TDD workflow, and verification commands, see [`AGENTS.md`](AGENTS.md) and the per-package `packages/<name>/AGENTS.md`.
 
 ## Privilege escalation
 
@@ -90,7 +90,7 @@ All six must exit 0.
 
 ## More
 
-- [`AGENTS.md`](./AGENTS.md) — AI agent handbook (TDD workflow, OpenSpec workflow, scope rules).
+- [`AGENTS.md`](AGENTS.md) — AI agent handbook (TDD workflow, OpenSpec workflow, scope rules).
 - [`REVIEW.md`](./REVIEW.md) — what reviewers check on each PR.
 
 ## License

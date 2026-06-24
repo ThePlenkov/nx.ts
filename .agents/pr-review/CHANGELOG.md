@@ -100,15 +100,15 @@ Tests: 15/15 pass in `@nx-devkit/prepare-for-release` (2 new for isPublished 404
 
 ## CodeFactor audit — 2026-06-23 (moved from REVIEW.md)
 
-CodeFactor uses Oxlint 1.69.0 for JS/TS analysis. The 152 findings break down into categories that fall into three buckets: real code issues we fixed, test-file noise excluded via `.codefactor.yml`, and stylistic rules suppressed via the CodeFactor dashboard UI.
+CodeFactor uses Oxlint 1.69.0 for JS/TS analysis. The 157 findings break down into categories that fall into three buckets: real code issues we fixed, test-file noise excluded via `.codefactor.yml`, and stylistic rules suppressed via the CodeFactor dashboard UI.
 
 ### Summary
 
 | Decision | Count | Files affected |
 |----------|-------|----------------|
 | fix in code | 5 | generator.ts, plugin.ts, tsdown.config.ts x2 |
-| excluded via .codefactor.yml | 65 | *.spec.ts, *.test.ts (3 spec files) |
-| suppressed via CodeFactor dashboard | 79 | executor.ts, plugin.ts, generator.ts, index.ts |
+| excluded via .codefactor.yml | 72 | *.spec.ts, *.test.ts (3 spec files) |
+| suppressed via CodeFactor dashboard | 80 | executor.ts, plugin.ts, generator.ts, index.ts |
 
 ### Fixed in code
 
@@ -120,7 +120,7 @@ CodeFactor uses Oxlint 1.69.0 for JS/TS analysis. The 152 findings break down in
 | 4 | tsdown.config.ts (prepare-for-release):4-12 | eslint/sort-keys | Object keys not alphabetical | Reordered: clean, dts, entry, format |
 | 5 | tsdown.config.ts (biome):3-11 | eslint/sort-keys | Object keys not alphabetical | Reordered: clean, deps, dts, entry, format |
 
-### Excluded via .codefactor.yml (test files — 65 findings)
+### Excluded via .codefactor.yml (test files — 72 findings)
 
 | Rule | Count | Why excluded |
 |------|-------|-------------|
@@ -136,7 +136,7 @@ CodeFactor uses Oxlint 1.69.0 for JS/TS analysis. The 152 findings break down in
 | import/group-exports | 3 | Schema.d.ts interface exports |
 | eslint/prefer-destructuring | 1 | Test helper chain |
 
-### Suppressed via CodeFactor dashboard UI (79 findings in source files)
+### Suppressed via CodeFactor dashboard UI (80 findings in source files)
 
 These are stylistic rules that conflict with our codebase conventions. Each must be individually suppressed via the CodeFactor dashboard ("Ignore Issues like this") because `.codefactor.yml` does not support rule-level suppression for oxlint rules.
 

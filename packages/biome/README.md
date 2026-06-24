@@ -38,11 +38,13 @@ All three targets run with `cwd` set to the project root. Each target's `inputs`
 ## Options
 
 ```ts
-export interface NxBiomePluginOptions {
-  /** Run `lint` as part of `nx lint`. Default: false. */
-  checkOnLint?: boolean;
-  /** Reuse biome's internal cache for `format-check`. Default: true. */
-  formatCache?: boolean;
+export interface BiomePluginOptions {
+  /** Override the `format` target command. Default: `npx biome format --write .` */
+  formatCommand?: string;
+  /** Override the `format-check` target command. Default: `npx biome format .` */
+  formatCheckCommand?: string;
+  /** Override the `lint` target command. Default: `npx biome lint .` */
+  lintCommand?: string;
 }
 ```
 
