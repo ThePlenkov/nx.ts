@@ -72,7 +72,11 @@ After any modification, verify with `tail`, `head`, or `git diff --stat` before 
 This rig uses a fork architecture. Your worktree's `origin` points to the **upstream** repo (`ThePlenkov/nx.ts`). You MUST push to a separate `fork` remote (`nx-devkit/nx.ts`). Add it if missing:
 
 ```bash
-git remote add fork https://x-access-token:$(gh auth token)@github.com/nx-devkit/nx.ts.git 2>/dev/null || true
+# Configure git to use the GitHub CLI as a credential helper — never embed
+# tokens in remote URLs (they land in .git/config and shell history in
+# plaintext).
+gh auth setup-git
+git remote add fork https://github.com/nx-devkit/nx.ts.git 2>/dev/null || true
 git push fork <branch-name>    # NEVER `git push origin`
 gh pr create --repo nx-devkit/nx.ts --draft --head nx-devkit:<branch-name> --base main ...
 ```
