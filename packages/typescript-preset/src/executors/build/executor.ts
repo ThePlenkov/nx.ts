@@ -13,7 +13,8 @@ export interface BuildExecutorResult {
 
 interface NxExecutorContext {
   root: string
-  projectConfig?: { root?: string }
+  projectName?: string
+  projectsConfigurations?: { projects?: Record<string, { root?: string }> }
 }
 
 /**
@@ -32,7 +33,8 @@ export async function buildExecutor(
 ): Promise<BuildExecutorResult> {
   const watch = options.watch ?? false
   const workspaceRoot = context.root
-  const projectRoot = context.projectConfig?.root ?? ''
+  const projectName = context.projectName ?? ''
+  const projectRoot = context.projectsConfigurations?.projects?.[projectName]?.root ?? ''
   const absProjectRoot = resolve(workspaceRoot, projectRoot)
 
   const configNames = [
