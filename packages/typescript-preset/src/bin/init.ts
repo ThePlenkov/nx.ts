@@ -47,13 +47,7 @@ function main(): void {
   // Pass through any args after "init" to the generator
   const genArgs = args.filter((a) => a !== 'init').join(' ')
   const nxBin =
-    pm === 'bun'
-      ? 'bunx nx'
-      : pm === 'pnpm'
-        ? 'pnpm exec nx'
-        : pm === 'yarn'
-          ? 'yarn nx'
-          : 'npx nx'
+    pm === 'bun' ? 'bunx nx' : pm === 'pnpm' ? 'pnpm exec nx' : pm === 'yarn' ? 'yarn nx' : 'npx nx'
 
   const cmd = `${nxBin} g @nx-devkit/typescript:init ${genArgs}`.trim()
   console.log(`Running: ${cmd}`)

@@ -181,10 +181,7 @@ const DEP_VERSIONS: Record<string, string> = {
   typescript: '^6.0.3',
 }
 
-function getMissingDevDeps(
-  tree: Tree,
-  configs: DetectedConfigs[],
-): Record<string, string> {
+function getMissingDevDeps(tree: Tree, configs: DetectedConfigs[]): Record<string, string> {
   const pkg = readJson(tree, 'package.json') ?? {}
   const existing = {
     ...(pkg.dependencies as Record<string, string> | undefined),
@@ -196,9 +193,11 @@ function getMissingDevDeps(
 
   if (hasAny('tsdown') && !('tsdown' in existing)) needed['tsdown'] = DEP_VERSIONS['tsdown']
   if (hasAny('oxlint') && !('oxlint' in existing)) needed['oxlint'] = DEP_VERSIONS['oxlint']
-  if (hasAny('biome') && !('@biomejs/biome' in existing)) needed['@biomejs/biome'] = DEP_VERSIONS['@biomejs/biome']
+  if (hasAny('biome') && !('@biomejs/biome' in existing))
+    needed['@biomejs/biome'] = DEP_VERSIONS['@biomejs/biome']
   if (hasAny('vitest') && !('vitest' in existing)) needed['vitest'] = DEP_VERSIONS['vitest']
-  if (hasAny('tsconfig') && !('typescript' in existing)) needed['typescript'] = DEP_VERSIONS['typescript']
+  if (hasAny('tsconfig') && !('typescript' in existing))
+    needed['typescript'] = DEP_VERSIONS['typescript']
 
   return needed
 }

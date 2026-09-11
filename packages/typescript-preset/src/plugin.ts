@@ -1,9 +1,5 @@
 import { basename, dirname, relative, resolve } from 'node:path'
-import type {
-  CreateNodesResult,
-  CreateNodesV2,
-  TargetConfiguration,
-} from '@nx/devkit'
+import type { CreateNodesResult, CreateNodesV2, TargetConfiguration } from '@nx/devkit'
 
 import type { NxDevkitTypescriptOptions } from './types.js'
 import { shouldSkipPath, logDebug, isVerbose, resetCachedEnv } from '@nx-devkit/internal'
