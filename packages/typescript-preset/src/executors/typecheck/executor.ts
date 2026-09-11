@@ -55,10 +55,15 @@ export async function typecheckExecutor(
   // This does NOT build — it only cleans.
   if (clean) {
     await new Promise<void>((resolvePromise) => {
-      execFile(bin, ['--build', '--clean', configFile], { cwd: absProjectRoot, shell: false }, () => {
-        // Clean may fail if no build info exists yet — that's fine
-        resolvePromise()
-      })
+      execFile(
+        bin,
+        ['--build', '--clean', configFile],
+        { cwd: absProjectRoot, shell: false },
+        () => {
+          // Clean may fail if no build info exists yet — that's fine
+          resolvePromise()
+        },
+      )
     })
   }
 
