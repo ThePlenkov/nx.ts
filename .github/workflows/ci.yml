@@ -29,4 +29,4 @@ jobs:
           cd packages/typescript-preset && bun run build
           cd ../skill && bun run build
       - name: Lint, Build, Test, Typecheck (Nx inferred targets)
-        run: bun --bun node_modules/.bin/nx run-many -t lint,build,test,typecheck
+        run: bun --bun node_modules/.bin/nx run-many -t lint,build,test,typecheck --verbose
