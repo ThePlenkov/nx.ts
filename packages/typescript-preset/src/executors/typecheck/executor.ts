@@ -15,6 +15,11 @@ export interface TypecheckExecutorResult {
   success: boolean
 }
 
+interface NxExecutorContext {
+  root: string
+  projectConfig?: { root?: string }
+}
+
 /**
  * Typecheck executor for `@nx-devkit/typescript:typecheck`.
  *
@@ -27,14 +32,14 @@ export interface TypecheckExecutorResult {
  */
 export async function typecheckExecutor(
   options: TypecheckExecutorOptions,
-  context: { projectRoot: string; workspaceRoot: string },
+  context: NxExecutorContext,
 ): Promise<TypecheckExecutorResult> {
   const tsgo = options.tsgo ?? true
   const configFile = options.configFile ?? 'tsconfig.json'
   const clean = options.clean ?? false
 
-  const projectRoot = context.projectRoot
-  const workspaceRoot = context.workspaceRoot
+  const workspaceRoot = context.root
+  const projectRoot = context.projectConfig?.root ?? ''
   const absProjectRoot = resolve(workspaceRoot, projectRoot)
   const configPath = join(absProjectRoot, configFile)
 

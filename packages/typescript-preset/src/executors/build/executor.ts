@@ -11,6 +11,11 @@ export interface BuildExecutorResult {
   success: boolean
 }
 
+interface NxExecutorContext {
+  root: string
+  projectConfig?: { root?: string }
+}
+
 /**
  * Build executor for `@nx-devkit/typescript:build`.
  *
@@ -23,11 +28,11 @@ export interface BuildExecutorResult {
  */
 export async function buildExecutor(
   options: BuildExecutorOptions,
-  context: { projectRoot: string; workspaceRoot: string },
+  context: NxExecutorContext,
 ): Promise<BuildExecutorResult> {
   const watch = options.watch ?? false
-  const projectRoot = context.projectRoot
-  const workspaceRoot = context.workspaceRoot
+  const workspaceRoot = context.root
+  const projectRoot = context.projectConfig?.root ?? ''
   const absProjectRoot = resolve(workspaceRoot, projectRoot)
 
   const configNames = [
