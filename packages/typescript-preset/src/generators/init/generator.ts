@@ -153,9 +153,9 @@ function findNestedProjectRoots(tree: Tree): string[] {
   // Try common monorepo directory patterns
   const commonDirs = ['packages', 'apps', 'libs', 'projects']
   for (const dir of commonDirs) {
-    if (!tree.exists(dir) && !tree.children) continue
     try {
       const children = tree.children(dir)
+      if (children.length === 0) continue
       for (const child of children) {
         const childPath = `${dir}/${child}`
         // A project root is a directory with a package.json or tsconfig.json
@@ -202,6 +202,15 @@ function getMissingDevDeps(tree: Tree, configs: DetectedConfigs[]): Record<strin
   return needed
 }
 
+// --- Package manager detection ---
+
+function detectPackageManagerFromTree(tree: Tree): 'bun' | 'npm' | 'pnpm' | 'yarn' {
+  if (tree.exists('bun.lock')) return 'bun'
+  if (tree.exists('pnpm-lock.yaml')) return 'pnpm'
+  if (tree.exists('yarn.lock')) return 'yarn'
+  return 'npm'
+}
+
 // --- Summary printing ---
 
 function targetLabel(configs: DetectedConfigs): string[] {
@@ -222,11 +231,20 @@ function printSummary(
   rootConfigs: DetectedConfigs,
   projectConfigs: Array<{ root: string; configs: DetectedConfigs }>,
   installedDeps: Record<string, string>,
+  packageManager: 'bun' | 'npm' | 'pnpm' | 'yarn' = 'bun',
 ): void {
   const isLocalPath = pluginPath.startsWith('.') || pluginPath.startsWith('/')
+  const installCmd =
+    packageManager === 'bun'
+      ? 'bun add -D'
+      : packageManager === 'pnpm'
+        ? 'pnpm add -D'
+        : packageManager === 'yarn'
+          ? 'yarn add -D'
+          : 'npm install -D'
   const installStep = isLocalPath
     ? `1. The plugin is registered from a local path: ${pluginPath}`
-    : `1. Install the plugin: bun add -D ${pluginPath}`
+    : `1. Install the plugin: ${installCmd} ${pluginPath}`
 
   console.log(installStep)
   console.log('')
@@ -262,7 +280,15 @@ function printSummary(
     for (const [name, version] of Object.entries(installedDeps)) {
       console.log(`  ${name}: ${version}`)
     }
-    console.log('Run `bun install` to install them.')
+    const installDepsCmd =
+      packageManager === 'bun'
+        ? 'bun install'
+        : packageManager === 'pnpm'
+          ? 'pnpm install'
+          : packageManager === 'yarn'
+            ? 'yarn install'
+            : 'npm install'
+    console.log(`Run \`${installDepsCmd}\` to install them.`)
   }
 }
 
@@ -306,7 +332,8 @@ export async function initGenerator(
   }
 
   // 6. Print summary
-  printSummary(pluginPath, rootConfigs, projectConfigs, installedDeps)
+  const packageManager = detectPackageManagerFromTree(tree)
+  printSummary(pluginPath, rootConfigs, projectConfigs, installedDeps, packageManager)
 
   return () => {
     installCallback()

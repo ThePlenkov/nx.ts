@@ -9,10 +9,7 @@
 
 import { existsSync } from 'node:fs'
 import { execSync } from 'node:child_process'
-import { dirname, join } from 'node:path'
-import { fileURLToPath } from 'node:url'
-
-const __dirname = dirname(fileURLToPath(import.meta.url))
+import { join } from 'node:path'
 
 function hasNx(): boolean {
   return existsSync(join(process.cwd(), 'node_modules', 'nx', 'package.json'))
@@ -40,7 +37,15 @@ function main(): void {
           : pm === 'yarn'
             ? 'yarn add -D nx @nx/devkit'
             : 'npm install -D nx @nx/devkit'
-    execSync(installCmd, { stdio: 'inherit', cwd: process.cwd() })
+    try {
+      execSync(installCmd, { stdio: 'inherit', cwd: process.cwd() })
+    } catch (error) {
+      console.error('Failed to install nx + @nx/devkit. Please install them manually.')
+      if (error instanceof Error && error.message) {
+        console.error(`Error: ${error.message}`)
+      }
+      process.exit(1)
+    }
   }
 
   // Build the generator command
@@ -51,7 +56,15 @@ function main(): void {
 
   const cmd = `${nxBin} g @nx-devkit/typescript:init ${genArgs}`.trim()
   console.log(`Running: ${cmd}`)
-  execSync(cmd, { stdio: 'inherit', cwd: process.cwd() })
+  try {
+    execSync(cmd, { stdio: 'inherit', cwd: process.cwd() })
+  } catch (error) {
+    console.error('Failed to run the init generator.')
+    if (error instanceof Error && error.message) {
+      console.error(`Error: ${error.message}`)
+    }
+    process.exit(1)
+  }
 }
 
 main()
