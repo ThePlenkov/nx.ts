@@ -19,13 +19,27 @@
     "./generators/init": {
       "types": "./dist/generators/init/generator.d.mts",
       "default": "./dist/generators/init/generator.mjs"
+    },
+    "./executors/typecheck": {
+      "types": "./dist/executors/typecheck/executor.d.mts",
+      "default": "./dist/executors/typecheck/executor.mjs"
+    },
+    "./executors/build": {
+      "types": "./dist/executors/build/executor.d.mts",
+      "default": "./dist/executors/build/executor.mjs"
     }
   },
   "generators": "./generators.json",
+  "executors": "./executors.json",
   "files": [
     "dist",
     "generators.json",
+    "executors.json",
+    "migrations.json",
+    "migrations",
     "src/generators/init/schema.json",
+    "src/executors/typecheck/schema.json",
+    "src/executors/build/schema.json",
     "README.md"
   ],
   "scripts": {

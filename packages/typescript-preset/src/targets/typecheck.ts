@@ -5,18 +5,12 @@ export function inferTypecheckTarget(
   options: Required<Pick<NxDevkitTypescriptOptions, 'tsgo' | 'configFile' | 'clean'>>,
   hasNativePreview = true,
 ): {
-  executor: 'nx:run-commands'
-  options: { command: string; cwd: string }
+  executor: string
+  options: { tsgo: boolean; configFile: string; clean: boolean }
   cache: true
   inputs: (string | { externalDependencies: string[] })[]
 } {
-  const executorCommand = options.tsgo ? 'tsgo' : 'tsc'
   const externalDependency = options.tsgo ? '@typescript/native-preview' : 'typescript'
-
-  const buildCommand = `${executorCommand} --build ${options.configFile}`
-  const command = options.clean
-    ? `${executorCommand} --build --clean ${options.configFile} && ${buildCommand}`
-    : buildCommand
 
   const inputs: (string | { externalDependencies: string[] })[] = [
     `{projectRoot}/src/**/*.ts`,
@@ -29,10 +23,11 @@ export function inferTypecheckTarget(
   }
 
   return {
-    executor: 'nx:run-commands',
+    executor: '@nx-devkit/typescript:typecheck',
     options: {
-      command,
-      cwd: projectRoot,
+      tsgo: options.tsgo,
+      configFile: options.configFile,
+      clean: options.clean,
     },
     cache: true,
     inputs,

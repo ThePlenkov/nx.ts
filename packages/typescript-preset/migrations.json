@@ -1,0 +1,20 @@
+{
+  "name": "@nx-devkit/typescript",
+  "version": "1.0.0",
+  "migrations": [
+    {
+      "version": "1.0.0",
+      "description": "Replace nx:run-commands with @nx-devkit/typescript:typecheck executor for typecheck targets",
+      "implementation": "./migrations/update-1-0-0/replace-typecheck-executor",
+      "package": "@nx-devkit/typescript",
+      "name": "replace-typecheck-executor"
+    },
+    {
+      "version": "1.0.0",
+      "description": "Replace nx:run-commands with @nx-devkit/typescript:build executor for build targets",
+      "implementation": "./migrations/update-1-0-0/replace-build-executor",
+      "package": "@nx-devkit/typescript",
+      "name": "replace-build-executor"
+    }
+  ]
+}

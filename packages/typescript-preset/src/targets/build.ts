@@ -1,17 +1,14 @@
-export function inferTsdownBuildTarget(projectRoot: string): {
-  executor: 'nx:run-commands'
-  options: { command: string; cwd: string }
+export function inferTsdownBuildTarget(_projectRoot: string): {
+  executor: string
+  options: Record<string, never>
   outputs: string[]
   cache: true
   inputs: string[]
   dependsOn: string[]
 } {
   return {
-    executor: 'nx:run-commands',
-    options: {
-      command: 'tsdown',
-      cwd: projectRoot,
-    },
+    executor: '@nx-devkit/typescript:build',
+    options: {},
     outputs: ['{projectRoot}/dist'],
     cache: true,
     inputs: [
@@ -24,19 +21,16 @@ export function inferTsdownBuildTarget(projectRoot: string): {
   }
 }
 
-export function inferTsdownWatchTarget(projectRoot: string): {
-  executor: 'nx:run-commands'
-  options: { command: string; cwd: string }
+export function inferTsdownWatchTarget(_projectRoot: string): {
+  executor: string
+  options: { watch: true }
   cache: false
   inputs: string[]
   dependsOn: string[]
 } {
   return {
-    executor: 'nx:run-commands',
-    options: {
-      command: 'tsdown --watch',
-      cwd: projectRoot,
-    },
+    executor: '@nx-devkit/typescript:build',
+    options: { watch: true },
     cache: false,
     inputs: [
       '{projectRoot}/src/**/*',

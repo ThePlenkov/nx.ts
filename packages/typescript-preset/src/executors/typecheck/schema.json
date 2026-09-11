@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/schema",
+  "type": "object",
+  "properties": {
+    "tsgo": {
+      "type": "boolean",
+      "description": "Use @typescript/native-preview (tsgo) instead of tsc. Default: true.",
+      "default": true
+    },
+    "configFile": {
+      "type": "string",
+      "description": "Name of the tsconfig file to build. Default: \"tsconfig.json\".",
+      "default": "tsconfig.json"
+    },
+    "clean": {
+      "type": "boolean",
+      "description": "Pre-clean the tsbuildinfo before building. Default: false.",
+      "default": false
+    }
+  },
+  "additionalProperties": false
+}

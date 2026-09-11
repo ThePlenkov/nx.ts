@@ -1,4 +1,5 @@
-import { existsSync, readFileSync } from 'node:fs'
+import { access } from 'node:fs/promises'
+import { readFile } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
 
 export const VITEST_CONFIG_NAMES = [
@@ -43,35 +44,45 @@ export const TSDOWN_CONFIG_NAMES = [
   'tsdown.config.cjs',
 ]
 
-export function findConfigFile(
+export async function findConfigFile(
   projectRoot: string,
   workspaceRoot: string,
   candidates: string[],
-): string | null {
+): Promise<string | null> {
   const absProjectRoot = resolve(workspaceRoot, projectRoot)
   for (const name of candidates) {
     const candidate = join(absProjectRoot, name)
-    // eslint-disable-next-line security/detect-non-literal-fs-filename -- candidate names are fixed config basenames joined to an Nx project root
-    if (existsSync(candidate)) {
+    try {
+      // eslint-disable-next-line security/detect-non-literal-fs-filename -- candidate names are fixed config basenames joined to an Nx project root
+      await access(candidate)
       return candidate
+    } catch {
+      continue
     }
   }
   return null
 }
 
-export function findVitestConfig(projectRoot: string, workspaceRoot: string): string | null {
+export function findVitestConfig(
+  projectRoot: string,
+  workspaceRoot: string,
+): Promise<string | null> {
   return findConfigFile(projectRoot, workspaceRoot, VITEST_CONFIG_NAMES)
 }
 
 /**
  * Check if @typescript/native-preview is listed in the project's package.json.
  */
-export function checkNativePreview(projectRoot: string, workspaceRoot: string): boolean {
+export async function checkNativePreview(
+  projectRoot: string,
+  workspaceRoot: string,
+): Promise<boolean> {
   const absProjectRoot = resolve(workspaceRoot, projectRoot)
   const pkgPath = join(absProjectRoot, 'package.json')
   try {
     // eslint-disable-next-line security/detect-non-literal-fs-filename -- path is the project's own package.json under an Nx project root
-    const pkg = JSON.parse(readFileSync(pkgPath, 'utf8')) as Record<string, unknown>
+    const content = await readFile(pkgPath, 'utf8')
+    const pkg = JSON.parse(content) as Record<string, unknown>
     const allDeps = {
       ...(pkg.dependencies as Record<string, string> | undefined),
       ...(pkg.devDependencies as Record<string, string> | undefined),

@@ -1,13 +1,13 @@
-import { globSync, statSync } from 'node:fs'
+import { glob, stat } from 'node:fs/promises'
 import { join } from 'node:path'
 
 /**
  * Check if any file in `rootDir` matches the given glob pattern.
- * Uses Node.js built-in `fs.globSync` (Node 22+).
+ * Uses Node.js built-in `fs.promises.glob` (Node 22+) with async I/O.
  */
-export function globMatch(rootDir: string, pattern: string): boolean {
+export async function globMatch(rootDir: string, pattern: string): Promise<boolean> {
   try {
-    const matches = globSync(pattern, {
+    const matches = glob(pattern, {
       cwd: rootDir,
       // `exclude` receives path strings (withFileTypes is unsupported on
       // some runtimes). node_modules is pruned at any depth (vendored
@@ -21,20 +21,21 @@ export function globMatch(rootDir: string, pattern: string): boolean {
         )
       },
     })
-    // globSync can return directories that match the pattern (e.g. a
+    // glob can return directories that match the pattern (e.g. a
     // `foo.test.ts/` directory). Only count real files as matches so we
     // don't infer a native test target for a matching directory name.
-    return matches.some((m) => {
+    for await (const m of matches) {
       try {
-        // eslint-disable-next-line security/detect-non-literal-fs-filename -- match paths are produced by globSync under the project root
-        return statSync(join(rootDir, m)).isFile()
+        // eslint-disable-next-line security/detect-non-literal-fs-filename -- match paths are produced by glob under the project root
+        if ((await stat(join(rootDir, m))).isFile()) return true
       } catch {
-        return false
+        continue
       }
-    })
+    }
+    return false
   } catch (error) {
     // Only swallow ENOENT (directory missing). Surface other errors
-    // (permission denied, invalid pattern, missing fs.globSync) so
+    // (permission denied, invalid pattern, missing fs.promises.glob) so
     // callers don't silently treat real failures as "no test files".
     if (error instanceof Error && 'code' in error && (error as { code: string }).code === 'ENOENT') {
       return false
@@ -46,7 +47,7 @@ export function globMatch(rootDir: string, pattern: string): boolean {
 // --- Backward-compat re-exports for the old hand-rolled glob engine ---
 // These are preserved so consumers importing `globToRegExp` or
 // `expandBraces` from `@nx-devkit/typescript` continue to work. The
-// preset itself now uses `fs.globSync` internally.
+// preset itself now uses `fs.promises.glob` internally.
 
 const MAX_BRACE_DEPTH = 3
 const MAX_BRACE_OPTIONS = 20
