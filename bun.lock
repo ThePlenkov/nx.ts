@@ -46,6 +46,10 @@
         "@nx/devkit": "22.7.1",
       },
     },
+    "packages/internal": {
+      "name": "@nx-devkit/internal",
+      "version": "0.0.0",
+    },
     "packages/oxlint": {
       "name": "@nx-devkit/oxlint",
       "version": "0.0.1",
@@ -83,6 +87,7 @@
       "name": "@nx-devkit/skill",
       "version": "0.0.1",
       "devDependencies": {
+        "@nx-devkit/internal": "workspace:*",
         "@nx/devkit": "22.7.1",
         "@types/node": "^26.0.0",
         "memfs": "^4.50.0",
@@ -98,6 +103,7 @@
       "name": "@nx-devkit/skillspector",
       "version": "0.0.1",
       "devDependencies": {
+        "@nx-devkit/internal": "workspace:*",
         "@nx/devkit": "22.7.1",
         "@types/node": "^26.0.0",
         "memfs": "^4.50.0",
@@ -116,6 +122,7 @@
         "tsdown": "^0.22.3",
       },
       "devDependencies": {
+        "@nx-devkit/internal": "workspace:*",
         "@nx/devkit": "^22.7.1",
         "@types/node": "^26.0.0",
         "memfs": "^4.50.0",
@@ -444,6 +451,8 @@
     "@nx-devkit/biome": ["@nx-devkit/biome@workspace:packages/biome"],
 
     "@nx-devkit/demo-workspace": ["@nx-devkit/demo-workspace@workspace:apps/demo"],
+
+    "@nx-devkit/internal": ["@nx-devkit/internal@workspace:packages/internal"],
 
     "@nx-devkit/oxlint": ["@nx-devkit/oxlint@workspace:packages/oxlint"],
 
