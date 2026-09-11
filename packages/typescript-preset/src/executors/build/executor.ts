@@ -46,6 +46,7 @@ export async function buildExecutor(
 
   const hasConfig = configNames.some((name) => existsSync(join(absProjectRoot, name)))
   if (!hasConfig) {
+    console.error(`[nx-devkit/build] No tsdown.config.* found in ${absProjectRoot}`)
     return { success: false }
   }
 
@@ -60,6 +61,8 @@ export async function buildExecutor(
         { cwd: absProjectRoot, shell: false },
         (err) => {
           if (err) {
+            console.error(`[nx-devkit/build] tsdown ${args.join(' ')} failed in ${absProjectRoot}`)
+            console.error(`[nx-devkit/build] error: ${err.message}`)
             resolvePromise({ success: false })
           }
         },
@@ -68,15 +71,20 @@ export async function buildExecutor(
       child.on('spawn', () => {
         resolvePromise({ success: true })
       })
-      child.on('error', () => {
+      child.on('error', (err) => {
+        console.error(`[nx-devkit/build] spawn error: ${err.message}`)
         resolvePromise({ success: false })
       })
     })
   }
 
   return new Promise<BuildExecutorResult>((resolvePromise) => {
-    execFile('tsdown', args, { cwd: absProjectRoot, shell: false }, (err) => {
+    execFile('tsdown', args, { cwd: absProjectRoot, shell: false }, (err, stdout, stderr) => {
       if (err) {
+        console.error(`[nx-devkit/build] tsdown ${args.join(' ')} failed in ${absProjectRoot}`)
+        console.error(`[nx-devkit/build] error: ${err.message}`)
+        if (stdout) console.error(`[nx-devkit/build] stdout: ${stdout}`)
+        if (stderr) console.error(`[nx-devkit/build] stderr: ${stderr}`)
         resolvePromise({ success: false })
         return
       }

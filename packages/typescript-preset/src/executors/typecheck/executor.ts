@@ -44,6 +44,7 @@ export async function typecheckExecutor(
   const configPath = join(absProjectRoot, configFile)
 
   if (!existsSync(configPath)) {
+    console.error(`[nx-devkit/typecheck] Config not found: ${configPath}`)
     return { success: false }
   }
 
@@ -74,8 +75,12 @@ export async function typecheckExecutor(
 
   // Build phase: `tsc --build` compiles the project.
   return new Promise<TypecheckExecutorResult>((resolvePromise) => {
-    execFile(bin, ['--build', configFile], { cwd: absProjectRoot, shell: false }, (err) => {
+    execFile(bin, ['--build', configFile], { cwd: absProjectRoot, shell: false }, (err, stdout, stderr) => {
       if (err) {
+        console.error(`[nx-devkit/typecheck] ${bin} --build ${configFile} failed in ${absProjectRoot}`)
+        console.error(`[nx-devkit/typecheck] error: ${err.message}`)
+        if (stdout) console.error(`[nx-devkit/typecheck] stdout: ${stdout}`)
+        if (stderr) console.error(`[nx-devkit/typecheck] stderr: ${stderr}`)
         resolvePromise({ success: false })
         return
       }
