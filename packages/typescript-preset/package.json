@@ -52,8 +52,7 @@
   "devDependencies": {
     "@nx-devkit/internal": "workspace:*",
     "tsdown": "^0.22.3",
-    "vitest": "^4.1.9",
-    "@nx-devkit/internal": "workspace:*"
+    "vitest": "^4.1.9"
   },
   "repository": {
     "type": "git",
