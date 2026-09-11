@@ -4,31 +4,42 @@ Zero-config Nx inference plugins for TypeScript projects. Add a plugin to `nx.js
 
 ## Why nx-devkit?
 
+- **One command.** `npx @nx-devkit/typescript init` bootstraps the full preset into any project.
 - **Zero config.** Targets are inferred from `tsdown.config.ts`, `tsconfig.json`, `.oxlintrc.*`, `biome.json{,c}`, and `vitest.config.*` already in your project.
-- **Inference-based.** Each plugin uses Nx's `createNodesV2` to discover projects at graph-creation time.
+- **Inference-based.** The preset uses Nx's `createNodesV2` to discover projects at graph-creation time.
 - **Extend, don't replace.** nx-devkit adds targets alongside anything Nx already provides.
-- **One monorepo, focused tools.** Pick the plugins you need; each ships as its own npm package under `@nx-devkit/*`.
+- **One plugin, all tools.** Register only `@nx-devkit/typescript` — it auto-detects and orchestrates everything.
 
 ## Plugin matrix
 
 | Plugin | npm package | Trigger file | Inferred targets |
 |---|---|---|---|
-| tsdown | [`@nx-devkit/tsdown`](./packages/tsdown/README.md) | `**/tsdown.config.ts` | `build` |
-| oxlint | [`@nx-devkit/oxlint`](./packages/oxlint/README.md) | `**/.oxlintrc.*` | `lint` |
-| biome | [`@nx-devkit/biome`](./packages/biome/README.md) | `**/biome.json{,c}` | `format`, `format-check`, `lint` |
-| typescript | [`@nx-devkit/typescript`](./packages/typescript-preset/README.md) | `**/tsconfig.json` + `vitest.config.*` | `typecheck`, `test`, `test:watch`, `test:coverage` |
+| **typescript (preset)** | [`@nx-devkit/typescript`](./packages/typescript-preset/README.md) | `**/tsconfig.json` + `vitest.config.*` | `typecheck`, `test`, `test:watch`, `test:coverage`, `lint`, `format`, `format-check`, `build`, `build:watch` |
+| tsdown (standalone) | [`@nx-devkit/tsdown`](./packages/tsdown/README.md) | `**/tsdown.config.ts` | `build` |
+| oxlint (standalone) | [`@nx-devkit/oxlint`](./packages/oxlint/README.md) | `**/.oxlintrc.*` | `lint` |
+| biome (standalone) | [`@nx-devkit/biome`](./packages/biome/README.md) | `**/biome.json{,c}` | `format`, `format-check`, `lint` |
 | prepare-for-release | [`@nx-devkit/prepare-for-release`](./packages/prepare-for-release/README.md) | `tools/project.json` referencing its executor | `prepare-for-release` |
+
+The **typescript preset** is the recommended entry point — it subsumes tsdown, oxlint, and biome. Standalone plugins remain available for granular use.
 
 ## Install
 
 ```bash
-bun add -D @nx-devkit/tsdown tsdown @nx-devkit/oxlint @nx-devkit/biome @nx-devkit/typescript
+npx @nx-devkit/typescript init
+```
+
+This registers the preset as the sole plugin, detects your config files, installs missing peer deps, and prints a summary of inferred targets.
+
+### Manual setup
+
+```bash
+bun add -D @nx-devkit/typescript
 ```
 
 Register in `nx.json`:
 
 ```jsonc
-{ "plugins": ["@nx-devkit/tsdown", "@nx-devkit/oxlint", "@nx-devkit/biome", "@nx-devkit/typescript"] }
+{ "plugins": ["@nx-devkit/typescript"] }
 ```
 
 See each plugin's README for options and per-tool behavior. `prepare-for-release` has its own install command — see [its README](./packages/prepare-for-release/README.md).

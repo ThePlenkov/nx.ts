@@ -4,7 +4,7 @@
     "init": {
       "factory": "./dist/generators/init/generator.mjs",
       "schema": "./src/generators/init/schema.json",
-      "description": "Register @nx-devkit/typescript in nx.json and print a post-setup checklist.",
+      "description": "One-command bootstrap: registers @nx-devkit/typescript as the sole preset plugin, removes standalone @nx-devkit/* entries, detects config files, installs missing peer deps, and prints an inferred-targets summary.",
       "aliases": ["ng-add"]
     }
   }

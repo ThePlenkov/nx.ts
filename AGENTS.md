@@ -75,6 +75,63 @@ bun run check:spec
 
 All six must exit 0 before pushing.
 
+## Nx version migration
+
+Run `nx migrate latest` **before** starting any new feature work — working on an outdated Nx baseline means re-doing changes after migration.
+
+```bash
+# 1. Generate migration migrations.json
+bun --bun node_modules/.bin/nx migrate latest
+
+# 2. Review migrations.json — it lists package.json bumps + file migrations
+
+# 3. Apply migrations
+bun --bun node_modules/.bin/nx migrate --run-migrations=migrations.json
+
+# 4. Install updated deps
+bun install
+
+# 5. Verify everything still works
+bun run lint && bun test && bun run build
+```
+
+**Rules:**
+- `nx migrate latest` fetches registry metadata and can take 2–5 minutes — run it in the background (`timeout=0`) and continue with other work.
+- Never skip `--run-migrations` — package.json bumps alone don't apply codemods.
+- If a migration fails, read the error, fix the specific file, and re-run `--run-migrations`.
+- After migration, check that `createNodesV2` signatures still match — Nx has changed this API between major versions.
+- Commit the migration separately from feature work: `chore: nx migrate to <version>`.
+
+## Preset-as-orchestrator architecture
+
+The `@nx-devkit/typescript` preset is the **single recommended entry point** for consumers. It auto-detects all config files and infers every target:
+
+| Config file detected | Inferred target(s) |
+|---|---|
+| `tsconfig.json` | `typecheck` |
+| `vitest.config.*` | `test`, `test:watch`, `test:coverage` |
+| `*.test.ts` / `*.spec.ts` (no vitest) | `test` (native Node runner) |
+| `.oxlintrc.*` | `lint` (oxlint, highest precedence) |
+| `eslint.config.*` | `lint` (eslint, fallback) |
+| `biome.json` | `format`, `format-check`, `lint` (fallback) |
+| `tsdown.config.*` | `build`, `build:watch` |
+
+**Consumer nx.json should only register the preset:**
+
+```jsonc
+{ "plugins": ["@nx-devkit/typescript"] }
+```
+
+Standalone plugins (`@nx-devkit/tsdown`, `@nx-devkit/oxlint`, `@nx-devkit/biome`) remain available for consumers who want only one tool, but the preset subsumes all of them.
+
+**One-command bootstrap:**
+
+```bash
+npx @nx-devkit/typescript init
+```
+
+This registers the preset, removes any existing `@nx-devkit/*` standalone entries, detects config files, installs missing peer deps, and prints a summary of inferred targets.
+
 ## OpenSpec workflow
 
 This repo uses [OpenSpec](https://github.com/Fission-AI/OpenSpec) for spec-driven changes:

@@ -4,10 +4,13 @@
   "license": "MIT",
   "private": false,
   "type": "module",
-  "description": "Preset Nx plugin that infers typecheck and vitest test targets from tsconfig.json and vitest.config.* without any project.json.",
+  "description": "Preset Nx plugin that infers typecheck, test, lint, format, and build targets from config files you already keep — no project.json required. One-command bootstrap: npx @nx-devkit/typescript init",
   "main": "./src/plugin.ts",
   "module": "./src/plugin.ts",
   "types": "./src/plugin.ts",
+  "bin": {
+    "nx-devkit-typescript": "./dist/bin/init.mjs"
+  },
   "exports": {
     ".": {
       "types": "./src/plugin.ts",
@@ -49,7 +52,8 @@
   "devDependencies": {
     "@nx-devkit/internal": "workspace:*",
     "tsdown": "^0.22.3",
-    "vitest": "^4.1.9"
+    "vitest": "^4.1.9",
+    "@nx-devkit/internal": "workspace:*"
   },
   "repository": {
     "type": "git",

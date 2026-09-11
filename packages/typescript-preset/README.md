@@ -2,24 +2,35 @@
 
 A preset Nx plugin that infers `typecheck`, `test`, `lint`, `format`, and `build` targets for any project that has a `tsconfig.json`, without requiring a `project.json`.
 
-## What it does
+## One-command bootstrap
 
-For every `tsconfig.json` (outside the workspace root) the plugin infers a `typecheck` target. Depending on which configuration files are present in the project, it also infers:
+```bash
+npx @nx-devkit/typescript init
+```
 
-- **Vitest test targets** (`test`, `test:watch`, `test:coverage`) when a `vitest.config.*` exists
-- **Native Node test runner targets** (`test`, optionally `test:tap` and `test:coverage`) when test/spec files exist but no vitest config
-- **Oxlint lint** target when `.oxlintrc.*` exists
-- **ESLint lint** target when `eslint.config.*` exists (fallback when no oxlint config)
-- **Biome format/format-check/lint** targets when `biome.json` or `biome.jsonc` exists
-- **Tsdown build** target when `tsdown.config.ts` exists
+This single command:
+1. Registers `@nx-devkit/typescript` as the **sole plugin** in `nx.json` (removes any existing `@nx-devkit/*` standalone entries)
+2. Detects config files in your workspace (`tsconfig.json`, `vitest.config.*`, `.oxlintrc.*`, `biome.json`, `tsdown.config.*`)
+3. Installs missing peer dependencies (`tsdown`, `oxlint`, `@biomejs/biome`, `vitest`, `typescript`)
+4. Prints a summary of detected projects and inferred targets
 
-This is a "mega-preset" plugin: it owns the cross-cutting `typecheck`, `test`, `lint`, `format`, and `build` logic that most TypeScript projects need, so per-tool plugins don't have to re-implement it.
+If your project doesn't have Nx yet, the bootstrap installs `nx` + `@nx/devkit` automatically.
 
-## Install
+### Manual setup (without the bootstrap command)
 
 ```bash
 bun add -D @nx-devkit/typescript
 ```
+
+Then add to `nx.json`:
+
+```jsonc
+{
+  "plugins": ["@nx-devkit/typescript"]
+}
+```
+
+That's it — one plugin entry. The preset auto-detects everything else.
 
 Peer dependency: `@nx/devkit` >= 22.
 
@@ -31,17 +42,18 @@ bun add -D typescript vitest oxlint @biomejs/biome tsdown
 bun add -D @typescript/native-preview
 ```
 
-For example, a project with only `tsconfig.json` + `vitest.config.ts` needs just `typescript` and `vitest`; the lint/format/build targets are only inferred when the matching config file exists.
+## What it does
 
-## Register in nx.json
+For every `tsconfig.json` (outside the workspace root) the plugin infers a `typecheck` target. Depending on which configuration files are present in the project, it also infers:
 
-```jsonc
-{
-  "plugins": ["@nx-devkit/typescript"]
-}
-```
+- **Vitest test targets** (`test`, `test:watch`, `test:coverage`) when a `vitest.config.*` exists
+- **Native Node test runner targets** (`test`, optionally `test:tap` and `test:coverage`) when test/spec files exist but no vitest config
+- **Oxlint lint** target when `.oxlintrc.*` exists
+- **ESLint lint** target when `eslint.config.*` exists (fallback when no oxlint config)
+- **Biome format/format-check/lint** targets when `biome.json` or `biome.jsonc` exists
+- **Tsdown build** target when `tsdown.config.ts` exists
 
-The plugin needs no other setup. By default it scans every `tsconfig.json` in the workspace.
+This is a "mega-preset" plugin: it owns the cross-cutting `typecheck`, `test`, `lint`, `format`, and `build` logic that most TypeScript projects need, so per-tool plugins don't have to re-implement it. Standalone plugins (`@nx-devkit/tsdown`, `@nx-devkit/oxlint`, `@nx-devkit/biome`) remain available for consumers who want only one tool.
 
 ## Targets generated
 
@@ -74,7 +86,7 @@ The plugin needs no other setup. By default it scans every `tsconfig.json` in th
   "test": {
     "executor": "nx:run-commands",
     "options": {
-      "command": "vitest run",
+      "command": "npx vitest run",
       "cwd": "{projectRoot}"
     },
     "outputs": ["{projectRoot}/coverage"],
@@ -91,7 +103,7 @@ The plugin needs no other setup. By default it scans every `tsconfig.json` in th
 }
 ```
 
-`test:watch` is non-cached and uses `vitest` (no `run`).
+`test:watch` is non-cached and uses `npx vitest` (no `run`).
 `test:coverage` adds `--coverage` and uses the same outputs.
 
 ### Native Node test runner — when test files exist but NO vitest config
@@ -166,7 +178,7 @@ When `coverage: true`, a `test:coverage` target is also inferred:
   "lint": {
     "executor": "nx:run-commands",
     "options": {
-      "command": "oxlint .",
+      "command": "npx oxlint .",
       "cwd": "{projectRoot}"
     },
     "cache": true,
@@ -186,7 +198,7 @@ When `coverage: true`, a `test:coverage` target is also inferred:
   "format": {
     "executor": "nx:run-commands",
     "options": {
-      "command": "biome format --write .",
+      "command": "npx biome format --write .",
       "cwd": "{projectRoot}"
     },
     "cache": false,
@@ -200,7 +212,7 @@ When `coverage: true`, a `test:coverage` target is also inferred:
   "format-check": {
     "executor": "nx:run-commands",
     "options": {
-      "command": "biome format .",
+      "command": "npx biome format .",
       "cwd": "{projectRoot}"
     },
     "cache": true,
@@ -225,7 +237,7 @@ When `biome.json` exists but neither oxlint nor ESLint is providing the `lint` t
   "lint": {
     "executor": "nx:run-commands",
     "options": {
-      "command": "biome lint .",
+      "command": "npx biome lint .",
       "cwd": "{projectRoot}"
     },
     "cache": true,
@@ -256,7 +268,7 @@ Biome always provides `format`/`format-check` when `biome.json` exists, regardle
   "build": {
     "executor": "nx:run-commands",
     "options": {
-      "command": "tsdown",
+      "command": "npx tsdown",
       "cwd": "{projectRoot}"
     },
     "outputs": ["{projectRoot}/dist"],
@@ -279,7 +291,7 @@ Biome always provides `format`/`format-check` when `biome.json` exists, regardle
   "build:watch": {
     "executor": "nx:run-commands",
     "options": {
-      "command": "tsdown --watch",
+      "command": "npx tsdown --watch",
       "cwd": "{projectRoot}"
     },
     "cache": false,
@@ -336,10 +348,10 @@ Pass options via the inline plugin tuple in `nx.json`:
 | `clean` | `boolean` | `false` | When `true`, a `tsgo/tsc --build --clean <configFile>` runs first, chained with `&&`, so a full clean rebuild happens before the normal typecheck. |
 | `tap` | `boolean` | `false` | When `true`, infers a `test:tap` target using the native Node test runner with TAP reporter. |
 | `coverage` | `boolean` | `false` | When `true`, infers a `test:coverage` target using the native Node test runner with `--experimental-test-coverage`. |
-| `oxlint` | `boolean` | `true` | When `true` and `.oxlintrc.*` exists, infers a `lint` target via `oxlint .`. |
-| `eslint` | `boolean` | `true` | When `true` and `eslint.config.*` exists (and oxlint is not owning lint), infers a `lint` target via `eslint .`. |
+| `oxlint` | `boolean` | `true` | When `true` and `.oxlintrc.*` exists, infers a `lint` target via `npx oxlint .`. |
+| `eslint` | `boolean` | `true` | When `true` and `eslint.config.*` exists (and oxlint is not owning lint), infers a `lint` target via `npx eslint .`. |
 | `biome` | `boolean` | `true` | When `true` and `biome.json`/`biome.jsonc` exists, infers `format`/`format-check` (and `lint` when neither oxlint nor ESLint is providing it). |
-| `tsdown` | `boolean` | `true` | When `true` and `tsdown.config.ts` exists, infers a `build` target via `tsdown`. |
+| `tsdown` | `boolean` | `true` | When `true` and `tsdown.config.ts` exists, infers a `build` target via `npx tsdown`. |
 | `testGlob` | `string` | `"**/*.test.{ts,js,mts,mjs}"` | Glob pattern for detecting native test files. |
 | `specGlob` | `string` | `"**/*.spec.{ts,js,mts,mjs}"` | Glob pattern for detecting spec files. |
 

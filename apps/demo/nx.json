@@ -30,9 +30,6 @@
     {
       "plugin": "../../packages/typescript-preset/src/plugin.ts",
       "options": { "tsgo": false }
-    },
-    "../../packages/tsdown/src/index.ts",
-    "../../packages/oxlint/src/plugin.ts",
-    "../../packages/biome/src/plugin.ts"
+    }
   ]
 }

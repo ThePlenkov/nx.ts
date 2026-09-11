@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/schema",
   "version": 2,
   "title": "init generator",
-  "description": "Registers @nx-devkit/typescript in nx.json plugins and prints a post-setup checklist.",
+  "description": "One-command bootstrap: registers @nx-devkit/typescript as the sole preset plugin, removes standalone @nx-devkit/* entries, detects config files, installs missing peer deps, and prints an inferred-targets summary.",
   "type": "object",
   "properties": {
     "pluginPath": {
@@ -10,6 +10,11 @@
       "minLength": 1,
       "description": "Module specifier for the plugin in nx.json plugins[]. Use a relative path or package name.",
       "default": "@nx-devkit/typescript"
+    },
+    "skipInstall": {
+      "type": "boolean",
+      "description": "Skip adding dependencies to package.json. Default: false.",
+      "default": false
     }
   },
   "additionalProperties": false
