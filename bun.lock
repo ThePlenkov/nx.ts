@@ -137,6 +137,7 @@
       "name": "@nx-devkit/typescript",
       "version": "0.0.1",
       "devDependencies": {
+        "@nx-devkit/internal": "workspace:*",
         "tsdown": "^0.22.3",
         "vitest": "^4.1.9",
       },

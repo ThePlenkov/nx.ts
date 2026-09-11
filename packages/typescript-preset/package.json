@@ -34,6 +34,7 @@
     "@nx/devkit": "^22.0.0"
   },
   "devDependencies": {
+    "@nx-devkit/internal": "workspace:*",
     "tsdown": "^0.22.3",
     "vitest": "^4.1.9"
   },
