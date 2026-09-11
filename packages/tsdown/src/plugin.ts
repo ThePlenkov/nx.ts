@@ -1,48 +1,10 @@
-import { existsSync, readFileSync } from 'node:fs'
-import { dirname, join, relative, resolve } from 'node:path'
-import { type CreateNodesV2, logger, workspaceRoot } from '@nx/devkit'
+import { dirname, relative, resolve } from 'node:path'
+import { type CreateNodesV2, logger } from '@nx/devkit'
+import { isVerbose, logDebug } from '@nx-devkit/internal'
 
-let cachedEnv: { exists: boolean; verbose: boolean } | null = null
+export { isVerbose }
 
-function readEnv(): { exists: boolean; verbose: boolean } {
-  if (cachedEnv) return cachedEnv
-  try {
-    const envPath = join(workspaceRoot, '.env')
-    if (!existsSync(envPath)) {
-      cachedEnv = { exists: false, verbose: false }
-      return cachedEnv
-    }
-    const content = readFileSync(envPath, 'utf-8')
-    const verbose = content
-      .split('\n')
-      .some(
-        (line) =>
-          !line.trimStart().startsWith('#') &&
-          /^\s*NX_VERBOSE_LOGGING\s*=\s*["']?true["']?\s*$/.test(line),
-      )
-    cachedEnv = { exists: true, verbose }
-    return cachedEnv
-  } catch {
-    cachedEnv = { exists: false, verbose: false }
-    return cachedEnv
-  }
-}
-
-export function isVerbose(): boolean {
-  if (process.argv.includes('--verbose')) {
-    return true
-  }
-  if (process.env.NX_VERBOSE_LOGGING === 'true') {
-    return true
-  }
-  return readEnv().verbose
-}
-
-function logDebug(message: string): void {
-  if (isVerbose()) {
-    logger.info(`[nx-devkit/tsdown] ${message}`)
-  }
-}
+const PLUGIN_SCOPE = 'nx-devkit/tsdown'
 
 export const createNodesV2: CreateNodesV2 = [
   '**/tsdown.config.ts',
@@ -50,7 +12,7 @@ export const createNodesV2: CreateNodesV2 = [
     const verbose = isVerbose()
     const workspaceRootAbs = context.workspaceRoot
     if (verbose) {
-      logger.info(`[nx-devkit/tsdown] Processing ${configFiles.length} tsdown config files`)
+      logger.info(`[${PLUGIN_SCOPE}] Processing ${configFiles.length} tsdown config files`)
     }
 
     return configFiles
@@ -61,12 +23,12 @@ export const createNodesV2: CreateNodesV2 = [
           return null
         }
         const projectRoot = relative(workspaceRootAbs, dirAbs).replace(/\\/g, '/')
-        logDebug(`Found tsdown.config.ts in ${projectRoot}`)
+        logDebug(PLUGIN_SCOPE, `Found tsdown.config.ts in ${projectRoot}`)
 
         const buildTarget = {
           executor: 'nx:run-commands',
           options: {
-            command: 'npx tsdown',
+            command: 'tsdown',
             cwd: projectRoot,
           },
           outputs: [`{projectRoot}/dist`],

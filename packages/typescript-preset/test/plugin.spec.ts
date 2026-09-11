@@ -5,8 +5,6 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import type { NxDevkitTypescriptOptions } from '../src/plugin.js'
 import {
   createNodesV2,
-  expandBraces,
-  globToRegExp,
   inferEslintTarget,
   inferTypecheckTarget,
   inferVitestTargets,
@@ -124,7 +122,7 @@ describe('inferTypecheckTarget', () => {
       configFile: 'tsconfig.json',
       clean: false,
     })
-    expect(t.options.command).toBe('npx tsc --build tsconfig.json')
+    expect(t.options.command).toBe('tsc --build tsconfig.json')
     const ext = t.inputs.find((i) => typeof i === 'object') as
       | { externalDependencies: string[] }
       | undefined
@@ -182,7 +180,7 @@ describe('inferVitestTargets', () => {
   it('test target caches and outputs coverage', () => {
     const t = inferVitestTargets('/w/p', 'vitest.config.ts').test
     expect(t.executor).toBe('nx:run-commands')
-    expect(t.options.command).toBe('npx vitest run')
+    expect(t.options.command).toBe('vitest run')
     expect(t.options.cwd).toBe('/w/p')
     expect(t.cache).toBe(true)
     expect(t.outputs).toEqual(['{projectRoot}/coverage'])
@@ -201,12 +199,12 @@ describe('inferVitestTargets', () => {
   it('test:watch disables cache', () => {
     const w = inferVitestTargets('/w/p', 'vitest.config.ts')['test:watch']
     expect(w.cache).toBe(false)
-    expect(w.options.command).toBe('npx vitest')
+    expect(w.options.command).toBe('vitest')
   })
 
   it('test:coverage adds --coverage and outputs', () => {
     const c = inferVitestTargets('/w/p', 'vitest.config.ts')['test:coverage']
-    expect(c.options.command).toBe('npx vitest run --coverage')
+    expect(c.options.command).toBe('vitest run --coverage')
     expect(c.outputs).toEqual(['{projectRoot}/coverage'])
     expect(c.cache).toBe(true)
   })
@@ -355,7 +353,7 @@ describe('native Node test runner inference', () => {
       const proj = firstProject(result, 'packages/foo')
       const test = proj.targets?.test as Record<string, unknown>
       const opts = test.options as Record<string, unknown>
-      expect(opts.command).toBe('npx vitest run')
+      expect(opts.command).toBe('vitest run')
       expect(proj.targets?.['test:tap']).toBeUndefined()
     } finally {
       rmSync(root, { recursive: true, force: true })
@@ -425,58 +423,6 @@ describe('native Node test runner inference', () => {
     } finally {
       rmSync(root, { recursive: true, force: true })
     }
-  })
-})
-
-// ---------------------------------------------------------------------------
-// Mega-preset: brace expansion ReDoS protection
-// ---------------------------------------------------------------------------
-
-describe('expandBraces ReDoS protection', () => {
-  it('expands simple brace patterns', () => {
-    const result = expandBraces('**/*.test.{ts,js}')
-    expect(result).toEqual(expect.arrayContaining(['**/*.test.ts', '**/*.test.js']))
-  })
-
-  it('caps nested brace depth to prevent exponential blowup', () => {
-    // 5 levels of nesting — each level has 4 options = 4^5 = 1024 if uncapped.
-    // With MAX_BRACE_DEPTH=3 the expansion should bail out and return a
-    // small number of results rather than 1024.
-    const deep = '{a,b,c,d}{a,b,c,d}{a,b,c,d}{a,b,c,d}{a,b,c,d}'
-    const result = expandBraces(deep)
-    expect(result.length).toBeLessThan(100)
-  })
-
-  it('caps the number of options per brace group', () => {
-    // A single brace group with 25 options — exceeds MAX_BRACE_OPTIONS (20),
-    // so the function should return the original pattern unexpanded.
-    const many = `{${Array.from({ length: 25 }, (_, i) => `opt${i}`).join(',')}}`
-    const result = expandBraces(many)
-    expect(result).toEqual([many])
-  })
-
-  it('returns the pattern unchanged when no braces present', () => {
-    expect(expandBraces('**/*.test.ts')).toEqual(['**/*.test.ts'])
-  })
-})
-
-// ---------------------------------------------------------------------------
-// Mega-preset: globSegmentToRegex metacharacter escaping
-// ---------------------------------------------------------------------------
-
-describe('globSegmentToRegex metacharacter escaping', () => {
-  it('escapes [ ] \\ { } to prevent regex injection', () => {
-    // A pattern with metacharacters should match literally, not as regex syntax.
-    const regex = globToRegExp('foo[bar].ts')
-    // Should match the literal string "foo[bar].ts", not "foo" + char class
-    expect(regex.test('foo[bar].ts')).toBe(true)
-    expect(regex.test('fooa.ts')).toBe(false)
-  })
-
-  it('escapes backslash to prevent regex injection', () => {
-    const regex = globToRegExp('foo\\bar')
-    expect(regex.test('foo\\bar')).toBe(true)
-    expect(regex.test('foobar')).toBe(false)
   })
 })
 
@@ -555,7 +501,7 @@ describe('eslint lint delegation', () => {
   it('inferEslintTarget produces a cached lint target', () => {
     const t = inferEslintTarget('/w/packages/foo')
     expect(t.executor).toBe('nx:run-commands')
-    expect(t.options.command).toBe('npx eslint .')
+    expect(t.options.command).toBe('eslint .')
     expect(t.options.cwd).toBe('/w/packages/foo')
     expect(t.cache).toBe(true)
     expect(t.inputs).toEqual(
@@ -748,7 +694,7 @@ describe('tsdown build delegation', () => {
       const watch = proj.targets?.['build:watch'] as Record<string, unknown>
       expect(watch.executor).toBe('nx:run-commands')
       const opts = watch.options as Record<string, unknown>
-      expect(opts.command).toBe('npx tsdown --watch')
+      expect(opts.command).toBe('tsdown --watch')
       expect(opts.cwd).toBe('packages/foo')
       expect(watch.cache).toBe(false)
     } finally {

@@ -5,8 +5,9 @@ import {
   type CreateNodesV2,
   type TargetConfiguration,
   logger,
-  workspaceRoot as defaultWorkspaceRoot,
 } from '@nx/devkit'
+import { shouldSkipPath } from '@nx-devkit/internal'
+export { shouldSkipPath }
 
 export interface NxDevkitSkillOptions {
   /** Override the build target name. Default: "build". */
@@ -24,33 +25,6 @@ export interface NxDevkitSkillOptions {
 }
 
 const PLUGIN_SCOPE = 'nx-devkit/skill'
-
-/**
- * Returns true when a project root should be skipped:
- * - the workspace root itself
- * - paths that traverse outside the workspace (..)
- * - paths inside node_modules
- */
-export function shouldSkipPath(
-  projectRoot: string,
-  workspaceRoot: string = defaultWorkspaceRoot,
-): boolean {
-  const absProjectRoot = resolve(workspaceRoot, projectRoot)
-  if (absProjectRoot === workspaceRoot) {
-    return true
-  }
-
-  const rel = relative(workspaceRoot, absProjectRoot)
-  if (!rel || rel.startsWith('..')) {
-    return true
-  }
-
-  if (rel.includes('node_modules')) {
-    return true
-  }
-
-  return false
-}
 
 /**
  * Compute an injective project name from a project root.
@@ -94,7 +68,7 @@ function inferLintTarget() {
     executor: 'nx:run-commands',
     cache: true,
     options: {
-      command: `npx markdownlint-cli2 '{projectRoot}/**/*.md' --config .markdownlint.json`,
+      command: `markdownlint-cli2 '{projectRoot}/**/*.md' --config .markdownlint.json`,
       cwd: '{workspaceRoot}',
     },
     inputs: ['{projectRoot}/**/*.md', '{workspaceRoot}/.markdownlint.json'],
@@ -106,7 +80,7 @@ function inferValidateTarget() {
     executor: 'nx:run-commands',
     cache: true,
     options: {
-      command: 'npx tsx scripts/validate-skill.ts --skill {projectRoot}',
+      command: 'tsx scripts/validate-skill.ts --skill {projectRoot}',
       cwd: '{workspaceRoot}',
     },
     inputs: ['{projectRoot}/SKILL.md', '{projectRoot}/agents/openai.yaml'],
@@ -118,7 +92,7 @@ function inferOsCheckTarget() {
     executor: 'nx:run-commands',
     cache: true,
     options: {
-      command: 'npx tsx scripts/check-os-independence.ts --skill {projectRoot}',
+      command: 'tsx scripts/check-os-independence.ts --skill {projectRoot}',
       cwd: '{workspaceRoot}',
     },
     inputs: ['{projectRoot}/**/*'],
@@ -130,7 +104,7 @@ function inferSizeCheckTarget() {
     executor: 'nx:run-commands',
     cache: true,
     options: {
-      command: 'npx tsx scripts/check-skill-size.ts --skill {projectRoot}',
+      command: 'tsx scripts/check-skill-size.ts --skill {projectRoot}',
       cwd: '{workspaceRoot}',
     },
     inputs: ['{projectRoot}/**/*'],

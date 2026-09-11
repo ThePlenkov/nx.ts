@@ -39,7 +39,7 @@ describe('@nx-devkit/biome createNodesV2', () => {
     const targets = result[0]![1].projects?.['apps/demo']?.targets
     const format = targets!.format!
     expect(format.executor).toBe('nx:run-commands')
-    expect((format.options as { command: string }).command).toBe('npx biome format --write .')
+    expect((format.options as { command: string }).command).toBe('biome format --write .')
     expect((format.options as { cwd: string }).cwd).toBe('apps/demo')
     expect(format.cache).toBe(false)
   })
@@ -49,7 +49,7 @@ describe('@nx-devkit/biome createNodesV2', () => {
     const targets = result[0]![1].projects?.['apps/demo']?.targets
     const check = targets!['format-check']!
     expect(check.executor).toBe('nx:run-commands')
-    expect((check.options as { command: string }).command).toBe('npx biome format .')
+    expect((check.options as { command: string }).command).toBe('biome format .')
     expect((check.options as { cwd: string }).cwd).toBe('apps/demo')
     expect(check.cache).toBe(true)
   })
@@ -59,7 +59,7 @@ describe('@nx-devkit/biome createNodesV2', () => {
     const targets = result[0]![1].projects?.['apps/demo']?.targets
     const lint = targets!.lint!
     expect(lint.executor).toBe('nx:run-commands')
-    expect((lint.options as { command: string }).command).toBe('npx biome lint .')
+    expect((lint.options as { command: string }).command).toBe('biome lint .')
     expect((lint.options as { cwd: string }).cwd).toBe('apps/demo')
     expect(lint.cache).toBe(true)
   })

@@ -36,7 +36,8 @@
     "@types/node": "^26.0.0",
     "memfs": "^4.50.0",
     "typescript": "^6.0.3",
-    "vitest": "^4.1.9"
+    "vitest": "^4.1.9",
+    "@nx-devkit/internal": "workspace:*"
   },
   "repository": {
     "type": "git",

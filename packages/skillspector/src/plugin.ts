@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto'
 import type { CreateNodesV2, ProjectConfiguration, TargetConfiguration } from '@nx/devkit'
+import { shouldSkipPath } from '@nx-devkit/internal'
 
 export interface NxDevkitSkillspectorOptions {
   /** Target name for the scan target. Default: "scan". */
@@ -19,16 +20,6 @@ export interface NxDevkitSkillspectorOptions {
 }
 
 const SKILL_MD_GLOB = '**/SKILL.md'
-
-/**
- * Skip workspace root, node_modules, and path-traversal segments.
- */
-function shouldSkipPath(projectRoot: string): boolean {
-  if (projectRoot === '' || projectRoot === '.') return true
-  if (projectRoot === 'node_modules' || projectRoot.startsWith('node_modules/')) return true
-  if (projectRoot.split('/').includes('..')) return true
-  return false
-}
 
 /**
  * Compute injective project name: `${slug}-${hash12}` where slug is the
@@ -99,7 +90,7 @@ function inferScanTarget(
 
 export const createNodesV2: CreateNodesV2<NxDevkitSkillspectorOptions> = [
   SKILL_MD_GLOB,
-  async (configFiles, opts = {}, _context) => {
+  async (configFiles, opts = {}, context) => {
     const results: Array<readonly [string, { projects: Record<string, ProjectConfiguration> }]> = []
 
     for (const configFile of configFiles) {
@@ -108,7 +99,7 @@ export const createNodesV2: CreateNodesV2<NxDevkitSkillspectorOptions> = [
         ? normalized.slice(0, normalized.lastIndexOf('/'))
         : ''
 
-      if (shouldSkipPath(projectRoot)) continue
+      if (shouldSkipPath(projectRoot, context.workspaceRoot)) continue
 
       const projectName = computeProjectName(projectRoot)
       const targetName = opts.scanTargetName ?? 'scan'
@@ -137,7 +128,6 @@ export const createNodesV2: CreateNodesV2<NxDevkitSkillspectorOptions> = [
 export default createNodesV2
 
 export const __testing = {
-  shouldSkipPath,
   computeProjectName,
   deriveSarifPath,
   inferScanTarget,

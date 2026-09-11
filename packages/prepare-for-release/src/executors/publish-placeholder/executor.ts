@@ -382,12 +382,12 @@ export async function publishPlaceholderExecutor(
       for (const pkgName of trustTargets) {
         try {
           runTrustFor(pkgName, resolved.trustRepo, resolved.registry)
-        } catch (err) {
-          if (err instanceof Error && /already.*trust|conflict|exists/i.test(err.message)) {
+        } catch (error) {
+          if (error instanceof Error && /already.*trust|conflict|exists/i.test(error.message)) {
             console.log(`  ⊙ ${pkgName} (trust already configured)`)
             continue
           }
-          throw err
+          throw error
         }
       }
     } else {

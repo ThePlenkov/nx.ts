@@ -7,6 +7,7 @@ export default defineConfig({
     'executors/build/executor': 'src/executors/build/executor.ts',
   },
   format: ['esm'],
-  dts: true,
+  dts: { eager: true },
   clean: true,
+  deps: { alwaysBundle: ['@nx-devkit/internal'] },
 })

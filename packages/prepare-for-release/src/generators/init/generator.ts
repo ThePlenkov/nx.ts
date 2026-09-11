@@ -91,10 +91,10 @@ export async function initGenerator(
     '1. Install the plugin in the consuming workspace:',
     '   bun add -D @nx-devkit/prepare-for-release',
     '2. Run the bootstrap target to publish 0.0.0 placeholders:',
-    `   npx nx run ${projectName}:prepare-for-release`,
+    `   nx run ${projectName}:prepare-for-release`,
     '3. For each published placeholder, run the corresponding `npm trust github` command printed by the executor (requires MFA).',
     '4. Wire OIDC trusted publishing in .github/workflows/release.yml (see the template shipped with this plugin).',
-    '5. From then on, releases are automated via `npx nx release`.',
+    '5. From then on, releases are automated via `nx release`.',
   ]
   for (const line of checklist) {
     console.log(line)
