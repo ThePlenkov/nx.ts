@@ -31,7 +31,7 @@
     "@nx/devkit": "^22.0.0 || ^23.0.0"
   },
   "dependencies": {
-    "@nx/devkit": "22.7.1",
+    "@nx/devkit": "23.2.1",
     "tinyglobby": "^0.2.0"
   },
   "devDependencies": {

@@ -32,7 +32,7 @@
     "tsdown": "^0.22.3"
   },
   "devDependencies": {
-    "@nx/devkit": "^22.7.1",
+    "@nx/devkit": "23.2.1",
     "@types/node": "^26.0.0",
     "memfs": "^4.50.0",
     "typescript": "^6.0.3",
