@@ -21,6 +21,9 @@ export interface TypecheckExecutorResult {
  * Runs `tsc --build` or `tsgo --build` via `execFile` (no shell) so the
  * command is not vulnerable to shell injection. Falls back to `tsc`
  * when `tsgo` is requested but not installed.
+ *
+ * When `clean` is true, runs `tsc --build --clean` first (which removes
+ * stale .tsbuildinfo files), then runs `tsc --build` to rebuild.
  */
 export async function typecheckExecutor(
   options: TypecheckExecutorOptions,
@@ -47,23 +50,19 @@ export async function typecheckExecutor(
   }
 
   const bin = useTsgo ? 'tsgo' : 'tsc'
-  const args = ['--build']
+
+  // Clean phase: `tsc --build --clean` removes stale build info.
+  // This does NOT build — it only cleans.
   if (clean) {
-    args.push('--clean')
-    // Run clean first, then build
-    await new Promise<void>((resolvePromise, rejectPromise) => {
-      execFile(bin, [...args, configFile], { cwd: absProjectRoot, shell: false }, (err) => {
-        if (err) {
-          rejectPromise(err)
-          return
-        }
+    await new Promise<void>((resolvePromise) => {
+      execFile(bin, ['--build', '--clean', configFile], { cwd: absProjectRoot, shell: false }, () => {
+        // Clean may fail if no build info exists yet — that's fine
         resolvePromise()
       })
-    }).catch(() => {
-      // Clean may fail if no build info exists yet — that's fine
     })
   }
 
+  // Build phase: `tsc --build` compiles the project.
   return new Promise<TypecheckExecutorResult>((resolvePromise) => {
     execFile(bin, ['--build', configFile], { cwd: absProjectRoot, shell: false }, (err) => {
       if (err) {

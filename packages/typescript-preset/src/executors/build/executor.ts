@@ -1,4 +1,4 @@
-import { execFile } from 'node:child_process'
+import { execFile, type ChildProcess } from 'node:child_process'
 import { existsSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 
@@ -16,6 +16,10 @@ export interface BuildExecutorResult {
  *
  * Runs `tsdown` via `execFile` (no shell) for security. Detects
  * tsdown config in the project root automatically.
+ *
+ * In watch mode, the promise resolves after the process starts
+ * successfully — the process itself runs indefinitely until killed
+ * by Nx when the user stops the watch.
  */
 export async function buildExecutor(
   options: BuildExecutorOptions,
@@ -41,6 +45,29 @@ export async function buildExecutor(
   }
 
   const args = watch ? ['--watch'] : []
+
+  if (watch) {
+    // Watch mode: resolve after process starts, don't wait for exit
+    return new Promise<BuildExecutorResult>((resolvePromise) => {
+      const child: ChildProcess = execFile(
+        'tsdown',
+        args,
+        { cwd: absProjectRoot, shell: false },
+        (err) => {
+          if (err) {
+            resolvePromise({ success: false })
+          }
+        },
+      )
+      // If process starts without immediate error, resolve as success
+      child.on('spawn', () => {
+        resolvePromise({ success: true })
+      })
+      child.on('error', () => {
+        resolvePromise({ success: false })
+      })
+    })
+  }
 
   return new Promise<BuildExecutorResult>((resolvePromise) => {
     execFile('tsdown', args, { cwd: absProjectRoot, shell: false }, (err) => {
