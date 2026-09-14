@@ -28,6 +28,10 @@ function writeJson(tree: Tree, path: string, value: unknown): void {
 
 function getPluginName(entry: unknown): string | null {
   if (typeof entry === 'string') return entry
+  if (Array.isArray(entry) && typeof entry[0] === 'string') {
+    // Nx supports the tuple form [plugin, options]
+    return entry[0]
+  }
   if (typeof entry === 'object' && entry !== null) {
     const plugin = (entry as { plugin?: string }).plugin
     return typeof plugin === 'string' ? plugin : null
@@ -327,7 +331,7 @@ export async function initGenerator(
     installedDeps = getMissingDevDeps(tree, allConfigs)
 
     if (Object.keys(installedDeps).length > 0) {
-      installCallback = await addDependenciesToPackageJson(tree, {}, installedDeps)
+      installCallback = addDependenciesToPackageJson(tree, {}, installedDeps)
     }
   }
 

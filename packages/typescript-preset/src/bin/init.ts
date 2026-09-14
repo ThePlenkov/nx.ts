@@ -8,7 +8,7 @@
  */
 
 import { existsSync } from 'node:fs'
-import { execSync } from 'node:child_process'
+import { execFileSync } from 'node:child_process'
 import { join } from 'node:path'
 
 function hasNx(): boolean {
@@ -22,6 +22,10 @@ function detectPackageManager(): 'bun' | 'npm' | 'pnpm' | 'yarn' {
   return 'npm'
 }
 
+function run(cmd: string, args: string[]): void {
+  execFileSync(cmd, args, { stdio: 'inherit', cwd: process.cwd(), shell: false })
+}
+
 function main(): void {
   const args = process.argv.slice(2)
   const pm = detectPackageManager()
@@ -29,16 +33,16 @@ function main(): void {
   // If nx is not installed, install it first
   if (!hasNx()) {
     console.log('Nx not found. Installing nx + @nx/devkit...')
-    const installCmd =
-      pm === 'bun'
-        ? 'bun add -D nx @nx/devkit'
-        : pm === 'pnpm'
-          ? 'pnpm add -D nx @nx/devkit'
-          : pm === 'yarn'
-            ? 'yarn add -D nx @nx/devkit'
-            : 'npm install -D nx @nx/devkit'
     try {
-      execSync(installCmd, { stdio: 'inherit', cwd: process.cwd() })
+      if (pm === 'bun') {
+        run('bun', ['add', '-D', 'nx', '@nx/devkit'])
+      } else if (pm === 'pnpm') {
+        run('pnpm', ['add', '-D', 'nx', '@nx/devkit'])
+      } else if (pm === 'yarn') {
+        run('yarn', ['add', '-D', 'nx', '@nx/devkit'])
+      } else {
+        run('npm', ['install', '-D', 'nx', '@nx/devkit'])
+      }
     } catch (error) {
       console.error('Failed to install nx + @nx/devkit. Please install them manually.')
       if (error instanceof Error && error.message) {
@@ -48,16 +52,20 @@ function main(): void {
     }
   }
 
-  // Build the generator command
-  // Pass through any args after "init" to the generator
-  const genArgs = args.filter((a) => a !== 'init').join(' ')
-  const nxBin =
-    pm === 'bun' ? 'bunx nx' : pm === 'pnpm' ? 'pnpm exec nx' : pm === 'yarn' ? 'yarn nx' : 'npx nx'
+  // Build the generator command. Pass through any args after "init".
+  const genArgs = args.filter((a) => a !== 'init')
+  const generatorArgs = ['g', '@nx-devkit/typescript:init', ...genArgs]
 
-  const cmd = `${nxBin} g @nx-devkit/typescript:init ${genArgs}`.trim()
-  console.log(`Running: ${cmd}`)
   try {
-    execSync(cmd, { stdio: 'inherit', cwd: process.cwd() })
+    if (pm === 'bun') {
+      run('bunx', ['nx', ...generatorArgs])
+    } else if (pm === 'pnpm') {
+      run('pnpm', ['exec', 'nx', ...generatorArgs])
+    } else if (pm === 'yarn') {
+      run('yarn', ['nx', ...generatorArgs])
+    } else {
+      run('npx', ['nx', ...generatorArgs])
+    }
   } catch (error) {
     console.error('Failed to run the init generator.')
     if (error instanceof Error && error.message) {
