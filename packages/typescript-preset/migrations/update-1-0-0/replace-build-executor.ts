@@ -8,8 +8,8 @@ import { getProjects, updateProjectConfiguration, type Tree } from '@nx/devkit'
  * `nx:run-commands` with tsdown commands, and replaces them with the
  * custom `@nx-devkit/typescript:build` executor.
  */
-export default async function replaceBuildExecutor(tree: Tree): Promise<void> {
-  const projects = await getProjects(tree)
+export default function replaceBuildExecutor(tree: Tree): void {
+  const projects = getProjects(tree)
 
   for (const [projectName, projectConfig] of projects) {
     const build = projectConfig.targets?.build

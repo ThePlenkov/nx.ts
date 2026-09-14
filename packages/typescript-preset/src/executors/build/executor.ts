@@ -34,7 +34,9 @@ export async function buildExecutor(
   const watch = options.watch ?? false
   const workspaceRoot = context.root
   const projectName = context.projectName ?? ''
-  const projectRoot = context.projectsConfigurations?.projects?.[projectName]?.root ?? ''
+  const projects = context.projectsConfigurations?.projects ?? {}
+  const projectConfig = Object.hasOwn(projects, projectName) ? projects[projectName] : undefined
+  const projectRoot = projectConfig?.root ?? ''
   const absProjectRoot = resolve(workspaceRoot, projectRoot)
 
   const configNames = [

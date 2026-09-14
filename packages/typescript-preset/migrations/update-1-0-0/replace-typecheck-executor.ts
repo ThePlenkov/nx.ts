@@ -9,8 +9,8 @@ import { getProjects, updateProjectConfiguration, type Tree } from '@nx/devkit'
  * `nx:run-commands` with tsc/tsgo commands, and replaces them with the
  * custom `@nx-devkit/typescript:typecheck` executor.
  */
-export default async function replaceTypecheckExecutor(tree: Tree): Promise<void> {
-  const projects = await getProjects(tree)
+export default function replaceTypecheckExecutor(tree: Tree): void {
+  const projects = getProjects(tree)
 
   for (const [projectName, projectConfig] of projects) {
     const typecheck = projectConfig.targets?.typecheck
