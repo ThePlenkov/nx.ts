@@ -52,8 +52,7 @@ export async function initGenerator(
   const isLocalPath = pluginPath.startsWith('.') || pluginPath.startsWith('/')
   const installStep = isLocalPath
     ? `1. The plugin is registered from a local path: ${pluginPath}`
-    : '1. Install the plugin in the consuming workspace:\n' +
-      `   bun add -D ${pluginPath}`
+    : `1. Install the plugin in the consuming workspace:\n   bun add -D ${pluginPath}`
 
   const checklist = [
     installStep,
