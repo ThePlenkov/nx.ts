@@ -27,10 +27,13 @@ export function inferBiomeTargets(
       },
       cache: false,
       inputs: [
-        '{projectRoot}/src/**/*',
+        '{projectRoot}/**/*',
         '{projectRoot}/biome.json',
         '{projectRoot}/biome.jsonc',
         '{projectRoot}/package.json',
+        '!{projectRoot}/dist/**',
+        '!{projectRoot}/node_modules/**',
+        '!{projectRoot}/coverage/**',
       ],
     },
     'format-check': {
@@ -41,10 +44,13 @@ export function inferBiomeTargets(
       },
       cache: true,
       inputs: [
-        '{projectRoot}/src/**/*',
+        '{projectRoot}/**/*',
         '{projectRoot}/biome.json',
         '{projectRoot}/biome.jsonc',
         '{projectRoot}/package.json',
+        '!{projectRoot}/dist/**',
+        '!{projectRoot}/node_modules/**',
+        '!{projectRoot}/coverage/**',
       ],
     },
   }
@@ -58,10 +64,13 @@ export function inferBiomeTargets(
       },
       cache: true,
       inputs: [
-        '{projectRoot}/src/**/*',
+        '{projectRoot}/**/*',
         '{projectRoot}/biome.json',
         '{projectRoot}/biome.jsonc',
         '{projectRoot}/package.json',
+        '!{projectRoot}/dist/**',
+        '!{projectRoot}/node_modules/**',
+        '!{projectRoot}/coverage/**',
       ],
     }
   }

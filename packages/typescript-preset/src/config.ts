@@ -64,19 +64,32 @@ export function findVitestConfig(projectRoot: string, workspaceRoot: string): st
 
 /**
  * Check if @typescript/native-preview is listed in the project's package.json.
+ *
+ * Returns `false` when the package.json is absent or does not list the
+ * dependency. Throws when the file exists but cannot be parsed, so callers
+ * can distinguish a missing manifest from a corrupt one.
  */
 export function checkNativePreview(projectRoot: string, workspaceRoot: string): boolean {
   const absProjectRoot = resolve(workspaceRoot, projectRoot)
   const pkgPath = join(absProjectRoot, 'package.json')
+  let raw: string
   try {
-    const pkg = JSON.parse(readFileSync(pkgPath, 'utf8')) as Record<string, unknown>
-    const allDeps = {
-      ...(pkg.dependencies as Record<string, string> | undefined),
-      ...(pkg.devDependencies as Record<string, string> | undefined),
-      ...(pkg.peerDependencies as Record<string, string> | undefined),
-    }
-    return '@typescript/native-preview' in allDeps
+    raw = readFileSync(pkgPath, 'utf8')
   } catch {
     return false
   }
+  let pkg: Record<string, unknown>
+  try {
+    pkg = JSON.parse(raw) as Record<string, unknown>
+  } catch (error) {
+    throw new Error(
+      `Failed to parse ${pkgPath}: ${error instanceof Error ? error.message : String(error)}`,
+    )
+  }
+  const allDeps = {
+    ...(pkg.dependencies as Record<string, string> | undefined),
+    ...(pkg.devDependencies as Record<string, string> | undefined),
+    ...(pkg.peerDependencies as Record<string, string> | undefined),
+  }
+  return '@typescript/native-preview' in allDeps
 }

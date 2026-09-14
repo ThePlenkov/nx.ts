@@ -11,7 +11,14 @@ export function inferOxlintTarget(projectRoot: string): {
       cwd: projectRoot,
     },
     cache: true,
-    inputs: ['{projectRoot}/src/**/*', '{projectRoot}/.oxlintrc.*', '{projectRoot}/package.json'],
+    inputs: [
+      '{projectRoot}/**/*',
+      '{projectRoot}/.oxlintrc.*',
+      '{projectRoot}/package.json',
+      '!{projectRoot}/dist/**',
+      '!{projectRoot}/node_modules/**',
+      '!{projectRoot}/coverage/**',
+    ],
   }
 }
 
