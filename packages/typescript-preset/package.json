@@ -23,6 +23,7 @@
     "dist",
     "generators.json",
     "src/generators/init/schema.json",
+    "src",
     "README.md"
   ],
   "scripts": {
@@ -31,10 +32,12 @@
     "test:watch": "vitest"
   },
   "peerDependencies": {
-    "@nx/devkit": "^22.0.0"
+    "@nx/devkit": "^22.0.0 || ^23.0.0"
+  },
+  "dependencies": {
+    "@nx-devkit/internal": "workspace:*"
   },
   "devDependencies": {
-    "@nx-devkit/internal": "workspace:*",
     "tsdown": "^0.22.3",
     "vitest": "^4.1.9"
   },

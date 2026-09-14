@@ -43,12 +43,12 @@
         "vitest": "^4.1.9",
       },
       "peerDependencies": {
-        "@nx/devkit": "23.2.1",
+        "@nx/devkit": "^22.0.0 || ^23.0.0",
       },
     },
     "packages/internal": {
       "name": "@nx-devkit/internal",
-      "version": "0.0.0",
+      "version": "0.0.1",
     },
     "packages/oxlint": {
       "name": "@nx-devkit/oxlint",
@@ -61,8 +61,8 @@
         "vitest": "^4.1.9",
       },
       "peerDependencies": {
-        "@nx/devkit": "23.2.1",
-        "nx": "22.7.1",
+        "@nx/devkit": "^22.0.0 || ^23.0.0",
+        "nx": "^22.0.0 || ^23.0.0",
       },
     },
     "packages/prepare-for-release": {
@@ -86,8 +86,10 @@
     "packages/skill": {
       "name": "@nx-devkit/skill",
       "version": "0.0.1",
-      "devDependencies": {
+      "dependencies": {
         "@nx-devkit/internal": "workspace:*",
+      },
+      "devDependencies": {
         "@nx/devkit": "23.2.1",
         "@types/node": "^26.0.0",
         "memfs": "^4.50.0",
@@ -102,8 +104,10 @@
     "packages/skillspector": {
       "name": "@nx-devkit/skillspector",
       "version": "0.0.1",
-      "devDependencies": {
+      "dependencies": {
         "@nx-devkit/internal": "workspace:*",
+      },
+      "devDependencies": {
         "@nx/devkit": "23.2.1",
         "@types/node": "^26.0.0",
         "memfs": "^4.50.0",
@@ -119,10 +123,10 @@
       "name": "@nx-devkit/tsdown",
       "version": "0.0.1",
       "dependencies": {
+        "@nx-devkit/internal": "workspace:*",
         "tsdown": "^0.22.3",
       },
       "devDependencies": {
-        "@nx-devkit/internal": "workspace:*",
         "@nx/devkit": "23.2.1",
         "@types/node": "^26.0.0",
         "memfs": "^4.50.0",
@@ -136,13 +140,15 @@
     "packages/typescript-preset": {
       "name": "@nx-devkit/typescript",
       "version": "0.0.1",
-      "devDependencies": {
+      "dependencies": {
         "@nx-devkit/internal": "workspace:*",
+      },
+      "devDependencies": {
         "tsdown": "^0.22.3",
         "vitest": "^4.1.9",
       },
       "peerDependencies": {
-        "@nx/devkit": "^22.0.0",
+        "@nx/devkit": "^22.0.0 || ^23.0.0",
       },
     },
   },

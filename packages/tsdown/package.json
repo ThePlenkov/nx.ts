@@ -19,6 +19,7 @@
   },
   "files": [
     "dist",
+    "src",
     "README.md"
   ],
   "scripts": {
@@ -29,15 +30,15 @@
     "@nx/devkit": "^22.0.0 || ^23.0.0"
   },
   "dependencies": {
-    "tsdown": "^0.22.3"
+    "tsdown": "^0.22.3",
+    "@nx-devkit/internal": "workspace:*"
   },
   "devDependencies": {
     "@nx/devkit": "23.2.1",
     "@types/node": "^26.0.0",
     "memfs": "^4.50.0",
     "typescript": "^6.0.3",
-    "vitest": "^4.1.9",
-    "@nx-devkit/internal": "workspace:*"
+    "vitest": "^4.1.9"
   },
   "repository": {
     "type": "git",
