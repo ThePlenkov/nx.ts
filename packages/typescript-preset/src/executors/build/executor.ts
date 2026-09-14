@@ -18,6 +18,22 @@ interface NxExecutorContext {
 }
 
 /**
+ * Resolve a binary name to an absolute path in the project or workspace
+ * `node_modules/.bin` directory. Falls back to the bare name so the
+ * system PATH can still be used.
+ */
+function resolveBin(name: string, projectRoot: string, workspaceRoot: string): string {
+  const candidates = [
+    join(projectRoot, 'node_modules', '.bin', name),
+    join(workspaceRoot, 'node_modules', '.bin', name),
+  ]
+  for (const candidate of candidates) {
+    if (existsSync(candidate)) return candidate
+  }
+  return name
+}
+
+/**
  * Build executor for `@nx-devkit/typescript:build`.
  *
  * Runs `tsdown` via `execFile` (no shell) for security. Detects
@@ -55,12 +71,13 @@ export async function buildExecutor(
   }
 
   const args = watch ? ['--watch'] : []
+  const binPath = resolveBin('tsdown', absProjectRoot, workspaceRoot)
 
   if (watch) {
     // Watch mode: resolve after process starts, don't wait for exit
     return new Promise<BuildExecutorResult>((resolvePromise) => {
       const child: ChildProcess = execFile(
-        'tsdown',
+        binPath,
         args,
         { cwd: absProjectRoot, shell: false },
         (err) => {
@@ -83,7 +100,7 @@ export async function buildExecutor(
   }
 
   return new Promise<BuildExecutorResult>((resolvePromise) => {
-    execFile('tsdown', args, { cwd: absProjectRoot, shell: false }, (err, stdout, stderr) => {
+    execFile(binPath, args, { cwd: absProjectRoot, shell: false }, (err, stdout, stderr) => {
       if (err) {
         console.error(`[nx-devkit/build] tsdown ${args.join(' ')} failed in ${absProjectRoot}`)
         console.error(`[nx-devkit/build] error: ${err.message}`)
