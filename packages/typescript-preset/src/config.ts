@@ -84,6 +84,7 @@ export function checkNativePreview(projectRoot: string, workspaceRoot: string): 
   } catch (error) {
     throw new Error(
       `Failed to parse ${pkgPath}: ${error instanceof Error ? error.message : String(error)}`,
+      { cause: error },
     )
   }
   const allDeps = {
