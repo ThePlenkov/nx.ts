@@ -251,6 +251,7 @@ function getMissingDevDeps(tree: Tree, configs: DetectedConfigs[]): Record<strin
     ...(pkg.devDependencies as Record<string, string> | undefined),
   }
 
+  // eslint-disable-next-line security/detect-object-injection -- key is a DetectedConfigs union member
   const hasAny = (key: keyof DetectedConfigs) => configs.some((c) => c[key])
   const needed: Record<string, string> = {}
 
