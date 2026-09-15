@@ -18,4 +18,6 @@ export interface NxDevkitTypescriptOptions {
   testGlob?: string
   /** Glob for spec files. Default: double-star-slash-star.spec.ts-js-mts-mjs. */
   specGlob?: string
+  /** Infer targets for the workspace root itself (single-package repos). Default: false. */
+  includeRoot?: boolean
 }

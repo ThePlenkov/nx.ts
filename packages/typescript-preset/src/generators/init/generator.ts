@@ -66,6 +66,7 @@ function getPluginOptions(entry: unknown): Record<string, unknown> {
 function registerPlugin(
   tree: Tree,
   pluginPath: string,
+  defaults: Record<string, unknown> = {},
 ): Record<string, unknown> {
   const nxJson = readJson(tree, 'nx.json') ?? {}
   const plugins = Array.isArray(nxJson.plugins) ? (nxJson.plugins as unknown[]) : []
@@ -73,11 +74,12 @@ function registerPlugin(
   // Remove @nx-devkit/* standalone entries (not the preset — it gets normalized)
   const filtered = plugins.filter((entry) => !isNxDevkitStandalone(entry, pluginPath))
 
-  // Normalize or add the preset in object form, preserving existing options
+  // Normalize or add the preset in object form, preserving existing
+  // options; detected defaults apply only to unset keys.
   const presetIndex = filtered.findIndex((entry) => isPresetEntry(entry, pluginPath))
   // eslint-disable-next-line security/detect-object-injection -- index is a bounded findIndex result
   const existingOptions = presetIndex >= 0 ? getPluginOptions(filtered[presetIndex]) : {}
-  const presetEntry = { options: existingOptions, plugin: pluginPath }
+  const presetEntry = { options: { ...defaults, ...existingOptions }, plugin: pluginPath }
   if (presetIndex >= 0) {
     // eslint-disable-next-line security/detect-object-injection -- index is a bounded findIndex result
     filtered[presetIndex] = presetEntry
@@ -87,7 +89,7 @@ function registerPlugin(
 
   nxJson.plugins = filtered
   writeJson(tree, 'nx.json', nxJson)
-  return existingOptions
+  return presetEntry.options
 }
 
 function ensurePackageJson(tree: Tree): void {
@@ -414,17 +416,26 @@ export async function initGenerator(
   // 1. Ensure package.json exists
   ensurePackageJson(tree)
 
-  // 2. Register plugin (removes standalone @nx-devkit/* entries)
-  const presetOptions = registerPlugin(tree, pluginPath)
-
-  // 3. Detect configs at workspace root
+  // 2. Detect configs at workspace root
   const rootConfigs = detectConfigsAtRoot(tree)
 
-  // 4. Detect configs in nested project directories
+  // 3. Detect configs in nested project directories
   const nestedRoots: string[] = []
   for (const dir of ['packages', 'apps', 'libs', 'projects']) {
     findNestedProjectRoots(tree, dir, 0, nestedRoots)
   }
+
+  // A repo with a root tsconfig but no nested projects is a single
+  // package — the root IS the project, so enable root inference.
+  // registerPlugin merges this as a default: an explicit user option wins.
+  const standalone = nestedRoots.length === 0 && tree.exists('tsconfig.json')
+
+  // 4. Register plugin (removes standalone @nx-devkit/* entries)
+  const presetOptions = registerPlugin(
+    tree,
+    pluginPath,
+    standalone ? { includeRoot: true } : {},
+  )
   const projectConfigs: Array<{ root: string; configs: DetectedConfigs }> = []
   for (const root of nestedRoots) {
     const configs = detectConfigsAtProjectRoot(tree, root)

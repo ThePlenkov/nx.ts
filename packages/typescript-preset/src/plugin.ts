@@ -51,6 +51,7 @@ export const createNodesV2: CreateNodesV2<NxDevkitTypescriptOptions> = [
     const eslint = options.eslint ?? true
     const biome = options.biome ?? true
     const tsdown = options.tsdown ?? true
+    const includeRoot = options.includeRoot ?? false
     const testGlob = options.testGlob ?? '**/*.test.{ts,js,mts,mjs}'
     const specGlob = options.specGlob ?? '**/*.spec.{ts,js,mts,mjs}'
     const workspaceRoot = context.workspaceRoot
@@ -69,8 +70,13 @@ export const createNodesV2: CreateNodesV2<NxDevkitTypescriptOptions> = [
       8,
       async (configFile) => {
         const projectRoot = dirname(configFile)
+        const isWorkspaceRoot =
+          resolve(workspaceRoot, projectRoot) === resolve(workspaceRoot)
 
-        if (shouldSkipPath(projectRoot, workspaceRoot)) {
+        // The workspace root is only a project when `includeRoot` is set
+        // (single-package repos). Other skip reasons (node_modules,
+        // escaping the root) still apply regardless.
+        if (shouldSkipPath(projectRoot, workspaceRoot) && !(includeRoot && isWorkspaceRoot)) {
           logDebug(PLUGIN_SCOPE, `Skipping ${projectRoot}`)
           return null
         }

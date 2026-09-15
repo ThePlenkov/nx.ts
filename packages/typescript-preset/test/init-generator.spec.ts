@@ -326,6 +326,57 @@ describe('initGenerator', () => {
       const preset = nxJson.plugins.find((p) => p.plugin === '@nx-devkit/typescript')
       expect(preset?.options).toEqual({ tap: true })
     })
+
+    it('sets includeRoot for a standalone repo (root tsconfig, no nested projects)', async () => {
+      const { tree, files } = createTree({
+        'nx.json': JSON.stringify({ plugins: [] }),
+        'package.json': JSON.stringify({ name: 'test', version: '0.0.0' }),
+        'tsconfig.json': JSON.stringify({ compilerOptions: {} }),
+      })
+
+      await initGenerator(tree, {})
+
+      const nxJson = readJson(files, 'nx.json') as {
+        plugins: Array<{ plugin: string; options: Record<string, unknown> }>
+      }
+      const preset = nxJson.plugins.find((p) => p.plugin === '@nx-devkit/typescript')
+      expect(preset?.options.includeRoot).toBe(true)
+    })
+
+    it('does not set includeRoot when nested projects exist', async () => {
+      const { tree, files } = createTree({
+        'nx.json': JSON.stringify({ plugins: [] }),
+        'package.json': JSON.stringify({ name: 'test', version: '0.0.0' }),
+        'tsconfig.json': JSON.stringify({ compilerOptions: {} }),
+        'packages/lib/tsconfig.json': JSON.stringify({ compilerOptions: {} }),
+      })
+
+      await initGenerator(tree, {})
+
+      const nxJson = readJson(files, 'nx.json') as {
+        plugins: Array<{ plugin: string; options: Record<string, unknown> }>
+      }
+      const preset = nxJson.plugins.find((p) => p.plugin === '@nx-devkit/typescript')
+      expect(preset?.options.includeRoot).toBeUndefined()
+    })
+
+    it('respects an explicit includeRoot option over detection', async () => {
+      const { tree, files } = createTree({
+        'nx.json': JSON.stringify({
+          plugins: [{ plugin: '@nx-devkit/typescript', options: { includeRoot: false } }],
+        }),
+        'package.json': JSON.stringify({ name: 'test', version: '0.0.0' }),
+        'tsconfig.json': JSON.stringify({ compilerOptions: {} }),
+      })
+
+      await initGenerator(tree, {})
+
+      const nxJson = readJson(files, 'nx.json') as {
+        plugins: Array<{ plugin: string; options: Record<string, unknown> }>
+      }
+      const preset = nxJson.plugins.find((p) => p.plugin === '@nx-devkit/typescript')
+      expect(preset?.options.includeRoot).toBe(false)
+    })
   })
 
   describe('dependency installation', () => {

@@ -255,6 +255,29 @@ describe('createNodesV2 integration', () => {
     }
   })
 
+  it('infers a root project when includeRoot is true', async () => {
+    const root = makeWorkspace()
+    try {
+      const cfg = touch(root, 'tsconfig.json')
+      const result = await callCreateNodes([cfg], { includeRoot: true }, root)
+      const proj = firstProject(result, '.')
+      expect(proj.targets).toHaveProperty('typecheck')
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  it('includeRoot does not rescue node_modules or escaping paths', async () => {
+    const root = makeWorkspace()
+    try {
+      const cfg = touch(root, 'packages/foo/node_modules/x/tsconfig.json')
+      const result = await callCreateNodes([cfg], { includeRoot: true }, root)
+      expect(result).toEqual([])
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
   it('respects options.configFile', async () => {
     const root = makeWorkspace()
     try {
