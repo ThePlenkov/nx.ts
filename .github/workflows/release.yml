@@ -71,6 +71,11 @@ jobs:
         run: bash scripts/e2e.sh
       - name: Verify release versioning intent (dry-run)
         run: npx nx release --skip-publish --dry-run
+      - name: Rewrite workspace: protocols for npm publish
+        # npm rejects the workspace: protocol — the only such dep is the
+        # private, bundled @nx-devkit/internal. Rewrites CI-tree manifests
+        # only; committed sources keep workspace:*.
+        run: bun scripts/rewrite-workspace-protocol.ts
       - name: Publish via nx release (OIDC trust, no NPM_TOKEN)
         run: npx nx release publish
         env:
