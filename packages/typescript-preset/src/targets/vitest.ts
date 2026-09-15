@@ -39,7 +39,6 @@ export function inferVitestTargets(
   ]
   const baseInputs = [
     '{projectRoot}/src/**/*.ts',
-    '{projectRoot}/test/**/*',
     '{projectRoot}/tests/**/*',
     `{projectRoot}/${configName}`,
     '{projectRoot}/package.json',

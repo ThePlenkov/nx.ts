@@ -11,14 +11,7 @@ export function inferOxlintTarget(projectRoot: string): {
       cwd: projectRoot,
     },
     cache: true,
-    inputs: [
-      '{projectRoot}/**/*',
-      '{projectRoot}/.oxlintrc.*',
-      '{projectRoot}/package.json',
-      '!{projectRoot}/dist/**',
-      '!{projectRoot}/node_modules/**',
-      '!{projectRoot}/coverage/**',
-    ],
+    inputs: ['{projectRoot}/src/**/*', '{projectRoot}/.oxlintrc.*', '{projectRoot}/package.json'],
   }
 }
 
@@ -35,10 +28,6 @@ export function inferEslintTarget(projectRoot: string): {
       cwd: projectRoot,
     },
     cache: true,
-    inputs: [
-      '{projectRoot}/**/*',
-      '{projectRoot}/eslint.config.*',
-      '{projectRoot}/package.json',
-    ],
+    inputs: ['{projectRoot}/**/*', '{projectRoot}/eslint.config.*', '{projectRoot}/package.json'],
   }
 }
