@@ -14,12 +14,6 @@ import { readdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 
 const packagesDir = join(import.meta.dir, '..', 'packages')
-const DEP_FIELDS = [
-  'dependencies',
-  'devDependencies',
-  'peerDependencies',
-  'optionalDependencies',
-] as const
 
 interface Manifest {
   name?: string
@@ -60,28 +54,39 @@ for (const { pkg } of manifests.values()) {
 }
 
 let rewritten = 0
+// No dynamic-key writes: deps maps are rebuilt via Object.fromEntries so
+// SAST's prototype-pollution/object-injection rules see only literals.
+const rewriteDeps = (
+  deps: Record<string, string> | undefined,
+  pkgName: string,
+  field: string,
+): Record<string, string> | undefined => {
+  if (!deps) return deps
+  return Object.fromEntries(
+    Object.entries(deps).map(([name, spec]) => {
+      if (!spec.startsWith('workspace:')) return [name, spec]
+      const replacement = localVersions.get(name) ?? '*'
+      rewritten += 1
+      console.log(`${pkgName}: ${field}.${name} ${spec} → ${replacement}`)
+      return [name, replacement]
+    }),
+  )
+}
+
 for (const [dir, { path, pkg }] of manifests) {
-  let changed = false
-  for (const field of DEP_FIELDS) {
-    // eslint-disable-next-line security/detect-object-injection -- field is a literal DEP_FIELDS union member
-    const deps = pkg[field]
-    if (!deps) continue
-    for (const [name, spec] of Object.entries(deps)) {
-      if (typeof spec === 'string' && spec.startsWith('workspace:')) {
-        const replacement = localVersions.get(name) ?? '*'
-        // eslint-disable-next-line security/detect-object-injection -- name is a dependency key from the manifest's own deps table
-        deps[name] = replacement
-        changed = true
-        rewritten += 1
-        console.log(`${pkg.name ?? dir}: ${field}.${name} ${spec} → ${replacement}`)
-      }
-    }
+  const pkgName = pkg.name ?? dir
+  const out: Manifest = {
+    ...pkg,
+    dependencies: rewriteDeps(pkg.dependencies, pkgName, 'dependencies'),
+    devDependencies: rewriteDeps(pkg.devDependencies, pkgName, 'devDependencies'),
+    peerDependencies: rewriteDeps(pkg.peerDependencies, pkgName, 'peerDependencies'),
+    optionalDependencies: rewriteDeps(pkg.optionalDependencies, pkgName, 'optionalDependencies'),
   }
-  if (changed) {
+  if (out !== pkg && JSON.stringify(out) !== JSON.stringify(pkg)) {
     // Atomic write — a partial manifest would break the publish step.
     const tmp = `${path}.tmp`
     // eslint-disable-next-line security/detect-non-literal-fs-filename -- path is built from packages/* directory entries
-    writeFileSync(tmp, `${JSON.stringify(pkg, null, 2)}\n`)
+    writeFileSync(tmp, `${JSON.stringify(out, null, 2)}\n`)
     // eslint-disable-next-line security/detect-non-literal-fs-filename -- same fixed workspace path
     renameSync(tmp, path)
   }
