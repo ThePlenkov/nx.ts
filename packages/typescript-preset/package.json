@@ -5,16 +5,16 @@
   "private": false,
   "type": "module",
   "description": "Preset Nx plugin that infers typecheck, test, lint, format, and build targets from config files you already keep \u2014 no project.json required. One-command bootstrap: npx @nx-devkit/typescript init",
-  "main": "./src/plugin.ts",
-  "module": "./src/plugin.ts",
-  "types": "./src/plugin.ts",
+  "main": "./dist/plugin.mjs",
+  "module": "./dist/plugin.mjs",
+  "types": "./dist/plugin.d.mts",
   "bin": {
     "nx-devkit-typescript": "./dist/bin/init.mjs"
   },
   "exports": {
     ".": {
-      "types": "./src/plugin.ts",
-      "default": "./src/plugin.ts"
+      "types": "./dist/plugin.d.mts",
+      "default": "./dist/plugin.mjs"
     },
     "./generators/init": {
       "types": "./dist/generators/init/generator.d.mts",
@@ -27,7 +27,8 @@
     "./executors/build": {
       "types": "./dist/executors/build/executor.d.mts",
       "default": "./dist/executors/build/executor.mjs"
-    }
+    },
+    "./package.json": "./package.json"
   },
   "generators": "./generators.json",
   "executors": "./executors.json",

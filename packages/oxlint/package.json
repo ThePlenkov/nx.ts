@@ -4,13 +4,13 @@
   "license": "MIT",
   "private": false,
   "type": "module",
-  "main": "./src/plugin.ts",
-  "module": "./src/plugin.ts",
-  "types": "./src/plugin.ts",
+  "main": "./dist/plugin.mjs",
+  "module": "./dist/plugin.mjs",
+  "types": "./dist/plugin.d.mts",
   "exports": {
     ".": {
-      "types": "./src/plugin.ts",
-      "default": "./src/plugin.ts"
+      "types": "./dist/plugin.d.mts",
+      "default": "./dist/plugin.mjs"
     }
   },
   "files": [

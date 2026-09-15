@@ -1,7 +1,7 @@
 {
   "executors": {
     "publish-placeholder": {
-      "implementation": "./dist/executors/publish-placeholder/executor",
+      "implementation": "./dist/executors/publish-placeholder/executor.mjs",
       "schema": "./src/executors/publish-placeholder/schema.json",
       "description": "Publishes a 0.0.0 placeholder tarball to the npm registry for every workspace package that is not yet published. Idempotent."
     }
