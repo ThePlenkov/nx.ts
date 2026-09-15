@@ -48,6 +48,7 @@ export async function typecheckExecutor(
   const workspaceRoot = context.root
   const projectName = context.projectName ?? ''
   const projects = context.projectsConfigurations?.projects ?? {}
+  // eslint-disable-next-line security/detect-object-injection -- projectName comes from the Nx executor context
   const projectConfig = Object.hasOwn(projects, projectName) ? projects[projectName] : undefined
   const projectRoot = projectConfig?.root ?? ''
   const absProjectRoot = resolve(workspaceRoot, projectRoot)

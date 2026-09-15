@@ -86,6 +86,7 @@ export function resolveBinLaunch(
       const pkg = JSON.parse(readFileSync(pkgJsonPath, 'utf8')) as {
         bin?: string | Record<string, string>
       }
+      // eslint-disable-next-line security/detect-object-injection -- name is a fixed tool identifier
       const rel = typeof pkg.bin === 'string' ? pkg.bin : pkg.bin?.[name]
       if (!rel) continue
       const binPath = join(root, 'node_modules', packageName, rel)
@@ -143,10 +144,13 @@ export async function mapWithConcurrency<T, R>(
   async function worker(): Promise<void> {
     while (index < items.length) {
       const current = index++
-      results[current] = await fn(items[current]!)
+      const item = items.at(current)
+      if (item === undefined) continue
+      // eslint-disable-next-line security/detect-object-injection -- index is a bounded array position
+      results[current] = await fn(item)
     }
   }
-  const workers = Array.from({ length: Math.min(limit, items.length) }, worker)
+  const workers = Array.from({ length: Math.min(limit, items.length) }, () => worker())
   await Promise.all(workers)
   return results
 }

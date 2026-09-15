@@ -26,6 +26,7 @@ export default function replaceBuildExecutor(tree: Tree): void {
 
   for (const [projectName, projectConfig] of projects) {
     for (const targetName of ['build', 'build:watch'] as const) {
+      // eslint-disable-next-line security/detect-object-injection -- targetName is a literal union member
       const target = projectConfig.targets?.[targetName]
       if (!target) continue
 

@@ -30,8 +30,7 @@ export function getSingleRunCommand(
   if (!Array.isArray(commands) || commands.length !== 1) return null
   const entry = commands[0]
   if (typeof entry === 'string') return entry
-  if (entry && typeof entry.command === 'string') return entry.command
-  return null
+  return typeof entry?.command === 'string' ? entry.command : null
 }
 
 /**
