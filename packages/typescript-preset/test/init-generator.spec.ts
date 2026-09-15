@@ -401,6 +401,20 @@ describe('initGenerator', () => {
       expect(output).toContain('(workspace root) → typecheck')
     })
 
+    it('discovers nested projects that only carry the configured configFile', async () => {
+      const { tree } = createTree({
+        'nx.json': JSON.stringify({
+          plugins: [{ plugin: '@nx-devkit/typescript', options: { configFile: 'tsconfig.lib.json' } }],
+        }),
+        'package.json': JSON.stringify({ name: 'test', version: '0.0.0' }),
+        'tsconfig.lib.json': JSON.stringify({ compilerOptions: {} }),
+        'packages/lib/tsconfig.lib.json': JSON.stringify({ compilerOptions: {} }),
+      })
+
+      const output = await capturedSummary(tree)
+      expect(output).toContain('packages/lib → typecheck')
+    })
+
     it('respects an explicit includeRoot option over detection', async () => {
       const { tree, files } = createTree({
         'nx.json': JSON.stringify({

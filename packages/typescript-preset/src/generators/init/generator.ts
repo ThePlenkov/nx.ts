@@ -223,7 +223,13 @@ function detectConfigsAtProjectRoot(
   return result
 }
 
-function findNestedProjectRoots(tree: Tree, dir: string, depth: number, roots: string[]): void {
+function findNestedProjectRoots(
+  tree: Tree,
+  dir: string,
+  depth: number,
+  roots: string[],
+  configFile = 'tsconfig.json',
+): void {
   if (depth > 4) return
   let children: string[]
   try {
@@ -234,12 +240,12 @@ function findNestedProjectRoots(tree: Tree, dir: string, depth: number, roots: s
   for (const child of children) {
     if (SKIP_DIRS.has(child)) continue
     const childPath = `${dir}/${child}`
-    // A project root is a directory with a package.json or tsconfig.json —
-    // the preset itself infers a project from either signal.
-    if (tree.exists(`${childPath}/package.json`) || tree.exists(`${childPath}/tsconfig.json`)) {
+    // A project root is a directory with a package.json or the configured
+    // tsconfig name — the preset infers a project from either signal.
+    if (tree.exists(`${childPath}/package.json`) || tree.exists(`${childPath}/${configFile}`)) {
       roots.push(childPath)
     }
-    findNestedProjectRoots(tree, childPath, depth + 1, roots)
+    findNestedProjectRoots(tree, childPath, depth + 1, roots, configFile)
   }
 }
 
@@ -466,7 +472,7 @@ export async function initGenerator(
   // 4. Detect configs in nested project directories
   const nestedRoots: string[] = []
   for (const dir of ['packages', 'apps', 'libs', 'projects']) {
-    findNestedProjectRoots(tree, dir, 0, nestedRoots)
+    findNestedProjectRoots(tree, dir, 0, nestedRoots, configFileName)
   }
   const projectConfigs: Array<{ root: string; configs: DetectedConfigs }> = []
   for (const root of nestedRoots) {
