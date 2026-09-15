@@ -269,6 +269,22 @@ describe('createNodesV2 integration', () => {
     }
   })
 
+  it('skipped paths do not count as nested projects for auto-detection', async () => {
+    // A stray node_modules tsconfig must not suppress root inference —
+    // shouldSkipPath discards it, so it cannot be a "nested project".
+    const root = makeWorkspace()
+    try {
+      const cfg = touch(root, 'tsconfig.json')
+      const nmCfg = touch(root, 'node_modules/some-dep/tsconfig.json')
+      const result = await callCreateNodes([cfg, nmCfg], {}, root)
+      const proj = firstProject(result, '.')
+      expect(proj.targets).toHaveProperty('typecheck')
+      expect(result).toHaveLength(1)
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
   it('respects explicit includeRoot: false in a standalone repo', async () => {
     const root = makeWorkspace()
     try {

@@ -355,7 +355,7 @@ Pass options via the inline plugin tuple in `nx.json`:
 
 ## Skip rules
 
-The plugin ignores any `tsconfig.json` under `node_modules` or outside the workspace. The workspace root is skipped when nested projects exist; in a single-package repo it is inferred automatically (opt out with `includeRoot: false`).
+The plugin ignores any `tsconfig.json` under `node_modules` or outside the workspace. The workspace root is skipped when nested projects exist — unless `includeRoot: true` is set explicitly; in a single-package repo it is inferred automatically (opt out with `includeRoot: false`).
 
 ## Reusable helpers
 

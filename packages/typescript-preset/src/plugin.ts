@@ -64,9 +64,17 @@ export const createNodesV2: CreateNodesV2<NxDevkitTypescriptOptions> = [
     // detected (single-package repo). Auto-mode self-corrects — when
     // nested projects appear later, the root is skipped again without
     // any stale flag left in nx.json. An explicit `false` always wins.
-    const hasNestedProjects = filteredConfigFiles.some(
-      (configFile) => resolve(workspaceRoot, dirname(configFile)) !== resolve(workspaceRoot),
-    )
+    const hasNestedProjects = filteredConfigFiles.some((configFile) => {
+      const projectRoot = dirname(configFile)
+      // Paths that shouldSkipPath discards (node_modules, outside the
+      // workspace) never become projects — they must not count as
+      // "nested" either, or a stray node_modules tsconfig would suppress
+      // root inference and leave a standalone repo with no project.
+      return (
+        resolve(workspaceRoot, projectRoot) !== resolve(workspaceRoot) &&
+        !shouldSkipPath(projectRoot, workspaceRoot)
+      )
+    })
     const effectiveIncludeRoot =
       options.includeRoot === true ||
       (options.includeRoot === undefined && !hasNestedProjects)

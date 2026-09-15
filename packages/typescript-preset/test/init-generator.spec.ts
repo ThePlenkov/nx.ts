@@ -370,6 +370,22 @@ describe('initGenerator', () => {
       expect(output).toContain('(workspace root — no targets, config source) → tsconfig')
     })
 
+    it('treats a tsconfig outside container dirs as a nested project', async () => {
+      // The plugin's tsconfig glob matches any directory — a tools/
+      // tsconfig suppresses root inference even though it is not under
+      // packages/apps/libs/projects. The summary must agree.
+      const { tree } = createTree({
+        'nx.json': JSON.stringify({ plugins: [] }),
+        'package.json': JSON.stringify({ name: 'test', version: '0.0.0' }),
+        'tsconfig.json': JSON.stringify({ compilerOptions: {} }),
+        'tools/tsconfig.json': JSON.stringify({ compilerOptions: {} }),
+      })
+
+      const output = await capturedSummary(tree)
+      expect(output).toContain('(workspace root — no targets, config source) → tsconfig')
+      expect(output).not.toContain('(workspace root) → typecheck')
+    })
+
     it('respects an explicit includeRoot option over detection', async () => {
       const { tree, files } = createTree({
         'nx.json': JSON.stringify({

@@ -239,6 +239,27 @@ function findNestedProjectRoots(tree: Tree, dir: string, depth: number, roots: s
   }
 }
 
+// Mirrors the preset's nested-project check: the plugin glob matches
+// config files in ANY directory, not only the container dirs scanned
+// above — a tools/tsconfig.json suppresses root inference just the same.
+// Skipped dirs never become projects and must not count either.
+function hasNestedConfigFile(tree: Tree, fileName: string, dir = '', depth = 0): boolean {
+  if (depth > 6) return false
+  let children: string[]
+  try {
+    children = tree.children(dir === '' ? '.' : dir)
+  } catch {
+    return false
+  }
+  for (const child of children) {
+    if (SKIP_DIRS.has(child)) continue
+    const path = dir === '' ? child : `${dir}/${child}`
+    if (dir !== '' && child === fileName && tree.exists(path)) return true
+    if (hasNestedConfigFile(tree, fileName, path, depth + 1)) return true
+  }
+  return false
+}
+
 // --- Dependency installation ---
 
 const DEP_VERSIONS: Record<string, string> = {
@@ -339,6 +360,7 @@ function printSummary(
   installedDeps: Record<string, string>,
   packageManager: 'bun' | 'npm' | 'pnpm' | 'yarn' = 'bun',
   presetOptions: Record<string, unknown> = {},
+  hasNestedConfig = false,
 ): void {
   const isLocalPath = pluginPath.startsWith('.') || pluginPath.startsWith('/')
   const installCmd =
@@ -362,14 +384,14 @@ function printSummary(
     .map(([k]) => k)
   if (rootDetected.length > 0) {
     // The workspace root is itself a project when includeRoot is set
-    // explicitly, or when no nested project has a tsconfig — matching the
-    // plugin's single-package auto-detection. Otherwise root configs are
-    // only lint/format fallbacks for nested projects.
+    // explicitly, or when no nested config file exists anywhere — matching
+    // the plugin's single-package auto-detection, which keys off the
+    // tsconfig glob, not only the container dirs. Otherwise root configs
+    // are only lint/format fallbacks for nested projects.
     const rootIsProject =
       rootConfigs.tsconfig &&
       (presetOptions.includeRoot === true ||
-        (presetOptions.includeRoot !== false &&
-          !projectConfigs.some((p) => p.configs.tsconfig)))
+        (presetOptions.includeRoot !== false && !hasNestedConfig))
     const rootTargets = rootIsProject
       ? targetLabel(rootConfigs, rootConfigs, presetOptions)
       : []
@@ -461,6 +483,8 @@ export async function initGenerator(
 
   // 6. Print summary
   const packageManager = detectPackageManagerFromTree(tree)
+  const configFileName =
+    typeof presetOptions.configFile === 'string' ? presetOptions.configFile : 'tsconfig.json'
   printSummary(
     pluginPath,
     rootConfigs,
@@ -468,6 +492,7 @@ export async function initGenerator(
     installedDeps,
     packageManager,
     presetOptions,
+    hasNestedConfigFile(tree, configFileName),
   )
 
   return () => installCallback()
