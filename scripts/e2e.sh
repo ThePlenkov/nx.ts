@@ -12,4 +12,4 @@ echo "==> Installing dependencies in apps/demo"
 bun install
 
 echo "==> Running nx run-many against demo workspace"
-bun --bun node_modules/.bin/nx run-many -t build typecheck lint format-check test
+node node_modules/nx/bin/nx.js run-many -t build typecheck lint format-check test

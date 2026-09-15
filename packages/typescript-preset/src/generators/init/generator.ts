@@ -63,7 +63,10 @@ function getPluginOptions(entry: unknown): Record<string, unknown> {
   return {}
 }
 
-function registerPlugin(tree: Tree, pluginPath: string): void {
+function registerPlugin(
+  tree: Tree,
+  pluginPath: string,
+): Record<string, unknown> {
   const nxJson = readJson(tree, 'nx.json') ?? {}
   const plugins = Array.isArray(nxJson.plugins) ? (nxJson.plugins as unknown[]) : []
 
@@ -84,6 +87,7 @@ function registerPlugin(tree: Tree, pluginPath: string): void {
 
   nxJson.plugins = filtered
   writeJson(tree, 'nx.json', nxJson)
+  return existingOptions
 }
 
 function ensurePackageJson(tree: Tree): void {
@@ -149,7 +153,10 @@ interface DetectedConfigs {
   tests: boolean
 }
 
-const TEST_FILE_PATTERN = /\.(test|spec)\.(ts|js|mts|mjs|cts|cjs)$/
+// Keep in sync with the preset's default testGlob/specGlob
+// (**/*.{test,spec}.{ts,js,mts,mjs}) — cts/cjs files are not detected
+// as native test targets by the plugin, so init must not report them.
+const TEST_FILE_PATTERN = /\.(test|spec)\.(ts|js|mts|mjs)$/
 const SKIP_DIRS = new Set(['node_modules', '.git', 'dist', 'coverage'])
 
 function detectConfigs(
@@ -244,7 +251,11 @@ const DEP_VERSIONS: Record<string, string> = {
   '@typescript/native-preview': '^7.0.0-dev.20260621.1',
 }
 
-function getMissingDevDeps(tree: Tree, configs: DetectedConfigs[]): Record<string, string> {
+function getMissingDevDeps(
+  tree: Tree,
+  configs: DetectedConfigs[],
+  presetOptions: Record<string, unknown> = {},
+): Record<string, string> {
   const pkg = readJson(tree, 'package.json') ?? {}
   const existing = {
     ...(pkg.dependencies as Record<string, string> | undefined),
@@ -261,16 +272,21 @@ function getMissingDevDeps(tree: Tree, configs: DetectedConfigs[]): Record<strin
   const DEP_RULES: ReadonlyArray<{
     when: keyof DetectedConfigs
     dep: keyof typeof DEP_VERSIONS
+    /** Preset option that disables this tool when explicitly false. */
+    option?: string
   }> = [
-    { when: 'tsdown', dep: 'tsdown' },
-    { when: 'oxlint', dep: 'oxlint' },
-    { when: 'eslint', dep: 'eslint' },
-    { when: 'biome', dep: '@biomejs/biome' },
+    { when: 'tsdown', dep: 'tsdown', option: 'tsdown' },
+    { when: 'oxlint', dep: 'oxlint', option: 'oxlint' },
+    { when: 'eslint', dep: 'eslint', option: 'eslint' },
+    { when: 'biome', dep: '@biomejs/biome', option: 'biome' },
     { when: 'vitest', dep: 'vitest' },
     { when: 'tsconfig', dep: 'typescript' },
-    { when: 'tsconfig', dep: '@typescript/native-preview' },
+    { when: 'tsconfig', dep: '@typescript/native-preview', option: 'tsgo' },
   ]
-  for (const { when, dep } of DEP_RULES) {
+  for (const { when, dep, option } of DEP_RULES) {
+    // An existing preset registration may disable a tool — don't
+    // install its dependency (matches what the preset will infer).
+    if (option !== undefined && presetOptions[option] === false) continue
     // eslint-disable-next-line security/detect-object-injection -- dep keys come from the literal DEP_RULES table
     if (hasAny(when) && !(dep in existing)) needed[dep] = DEP_VERSIONS[dep]
   }
@@ -289,12 +305,17 @@ function detectPackageManagerFromTree(tree: Tree): 'bun' | 'npm' | 'pnpm' | 'yar
 
 // --- Summary printing ---
 
-function targetLabel(configs: DetectedConfigs, rootConfigs?: DetectedConfigs): string[] {
+function targetLabel(
+  configs: DetectedConfigs,
+  rootConfigs?: DetectedConfigs,
+  presetOptions: Record<string, unknown> = {},
+): string[] {
+  const enabled = (option: string) => presetOptions[option] !== false
   // Lint-family configs fall back to the workspace root, matching the
   // preset's root-config fallback for lint/format inference.
-  const hasOxlint = configs.oxlint || (rootConfigs?.oxlint ?? false)
-  const hasEslint = configs.eslint || (rootConfigs?.eslint ?? false)
-  const hasBiome = configs.biome || (rootConfigs?.biome ?? false)
+  const hasOxlint = enabled('oxlint') && (configs.oxlint || (rootConfigs?.oxlint ?? false))
+  const hasEslint = enabled('eslint') && (configs.eslint || (rootConfigs?.eslint ?? false))
+  const hasBiome = enabled('biome') && (configs.biome || (rootConfigs?.biome ?? false))
 
   const targets: string[] = []
   if (configs.tsconfig) targets.push('typecheck')
@@ -305,7 +326,7 @@ function targetLabel(configs: DetectedConfigs, rootConfigs?: DetectedConfigs): s
     targets.push('format', 'format-check')
     if (!hasOxlint && !hasEslint) targets.push('lint')
   }
-  if (configs.tsdown) targets.push('build', 'build:watch')
+  if (enabled('tsdown') && configs.tsdown) targets.push('build', 'build:watch')
   return targets
 }
 
@@ -315,6 +336,7 @@ function printSummary(
   projectConfigs: Array<{ root: string; configs: DetectedConfigs }>,
   installedDeps: Record<string, string>,
   packageManager: 'bun' | 'npm' | 'pnpm' | 'yarn' = 'bun',
+  presetOptions: Record<string, unknown> = {},
 ): void {
   const isLocalPath = pluginPath.startsWith('.') || pluginPath.startsWith('/')
   const installCmd =
@@ -344,7 +366,7 @@ function printSummary(
   }
 
   for (const { root, configs } of projectConfigs) {
-    const targets = targetLabel(configs, rootConfigs)
+    const targets = targetLabel(configs, rootConfigs, presetOptions)
     if (targets.length > 0) {
       console.log(`  ${root} → ${targets.join(', ')}`)
     }
@@ -391,7 +413,7 @@ export async function initGenerator(
   ensurePackageJson(tree)
 
   // 2. Register plugin (removes standalone @nx-devkit/* entries)
-  registerPlugin(tree, pluginPath)
+  const presetOptions = registerPlugin(tree, pluginPath)
 
   // 3. Detect configs at workspace root
   const rootConfigs = detectConfigsAtRoot(tree)
@@ -415,7 +437,7 @@ export async function initGenerator(
 
   if (!skipInstall) {
     const allConfigs = [rootConfigs, ...projectConfigs.map((p) => p.configs)]
-    installedDeps = getMissingDevDeps(tree, allConfigs)
+    installedDeps = getMissingDevDeps(tree, allConfigs, presetOptions)
 
     if (Object.keys(installedDeps).length > 0) {
       installCallback = addDependenciesToPackageJson(tree, {}, installedDeps)
@@ -424,7 +446,14 @@ export async function initGenerator(
 
   // 6. Print summary
   const packageManager = detectPackageManagerFromTree(tree)
-  printSummary(pluginPath, rootConfigs, projectConfigs, installedDeps, packageManager)
+  printSummary(
+    pluginPath,
+    rootConfigs,
+    projectConfigs,
+    installedDeps,
+    packageManager,
+    presetOptions,
+  )
 
   return () => installCallback()
 }

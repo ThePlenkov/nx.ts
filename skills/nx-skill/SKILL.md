@@ -19,9 +19,9 @@ Scans for `**/SKILL.md` and infers 5 targets per skill:
 | `os-check` | Checks OS-independence (no hardcoded paths, no platform-specific commands) | `nx:run-commands` |
 | `size-check` | Checks skill size is within limits | `nx:run-commands` |
 
-### Injective project naming
+### Collision-resistant project naming
 
-Each skill gets a unique project name: `${slug}-${sha256(projectRoot).slice(0,12)}` where slug is the path with `/` → `-`. This guarantees `skills/a-b` and `skills/a/b` get distinct names.
+Each skill gets a project name: `${slug}-${sha256(projectRoot).slice(0,12)}` where slug is the path with `/` → `-`. The 48-bit hash suffix keeps `skills/a-b` and `skills/a/b` distinct — collision-resistant, not formally injective (birthday bound ~1 in 10^5 for a collision among ~65k skills).
 
 ### Install
 

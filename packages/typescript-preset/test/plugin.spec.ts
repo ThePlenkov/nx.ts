@@ -463,6 +463,57 @@ describe('oxlint lint delegation', () => {
     }
   })
 
+  it('falls back to a workspace-root .oxlintrc and adds it to cache inputs', () => {
+    const root = makeWorkspace()
+    try {
+      const ts = touch(root, 'packages/foo/tsconfig.json')
+      touch(root, '.oxlintrc.json')
+      const result = callCreateNodes([ts], {}, root)
+      const proj = firstProject(result, 'packages/foo')
+      const lint = proj.targets?.lint as Record<string, unknown> | undefined
+      expect(lint).toBeDefined()
+      const opts = lint?.options as Record<string, unknown>
+      expect(opts.command).toContain('oxlint')
+      expect(lint?.inputs).toContain('{workspaceRoot}/.oxlintrc.*')
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  it('falls back to a workspace-root eslint.config and adds it to cache inputs', () => {
+    const root = makeWorkspace()
+    try {
+      const ts = touch(root, 'packages/foo/tsconfig.json')
+      touch(root, 'eslint.config.js')
+      const result = callCreateNodes([ts], {}, root)
+      const proj = firstProject(result, 'packages/foo')
+      const lint = proj.targets?.lint as Record<string, unknown> | undefined
+      expect(lint).toBeDefined()
+      const opts = lint?.options as Record<string, unknown>
+      expect(opts.command).toContain('eslint')
+      expect(lint?.inputs).toContain('{workspaceRoot}/eslint.config.*')
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  it('falls back to a workspace-root biome.json for format and adds it to cache inputs', () => {
+    const root = makeWorkspace()
+    try {
+      const ts = touch(root, 'packages/foo/tsconfig.json')
+      touch(root, 'biome.json')
+      const result = callCreateNodes([ts], {}, root)
+      const proj = firstProject(result, 'packages/foo')
+      const formatCheck = proj.targets?.['format-check'] as
+        | Record<string, unknown>
+        | undefined
+      expect(formatCheck).toBeDefined()
+      expect(formatCheck?.inputs).toContain('{workspaceRoot}/biome.json')
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
   it('infers lint target when .oxlintrc.yaml exists', () => {
     const root = makeWorkspace()
     try {

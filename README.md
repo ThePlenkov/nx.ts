@@ -28,7 +28,7 @@ The **typescript preset** is the recommended entry point — it subsumes tsdown,
 npx @nx-devkit/typescript init
 ```
 
-This registers the preset as the sole plugin, detects your config files, installs missing peer deps, and prints a summary of inferred targets.
+This registers the preset in `nx.json` (removing standalone `@nx-devkit/*` plugin entries, leaving other plugins untouched), detects your config files, adds devDependencies for the detected tools, and prints a summary of inferred targets.
 
 ### Manual setup
 

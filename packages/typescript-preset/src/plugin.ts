@@ -106,30 +106,58 @@ export const createNodesV2: CreateNodesV2<NxDevkitTypescriptOptions> = [
         // Lint-family configs fall back to the workspace root: a root
         // .oxlintrc/eslint.config/biome.json applies lint/format to every
         // project (the tools themselves walk up for config discovery).
+        // When the fallback is used, the root config becomes a cache
+        // input so edits invalidate the lint/format caches.
+        const projectOxlintrc = findConfigFile(projectRoot, workspaceRoot, OXLINTRC_NAMES)
         const oxlintrcPath =
-          findConfigFile(projectRoot, workspaceRoot, OXLINTRC_NAMES) ??
-          findConfigFile('.', workspaceRoot, OXLINTRC_NAMES)
+          projectOxlintrc ?? findConfigFile('.', workspaceRoot, OXLINTRC_NAMES)
         const oxlintOwnsLint = oxlint && oxlintrcPath !== null
         if (oxlintOwnsLint) {
           targets.lint = inferOxlintTarget(relProjectRoot)
+          if (!projectOxlintrc) {
+            targets.lint.inputs.push('{workspaceRoot}/.oxlintrc.*')
+          }
         }
 
         if (!oxlintOwnsLint && eslint) {
+          const projectEslintConfig = findConfigFile(
+            projectRoot,
+            workspaceRoot,
+            ESLINT_CONFIG_NAMES,
+          )
           const eslintConfigPath =
-            findConfigFile(projectRoot, workspaceRoot, ESLINT_CONFIG_NAMES) ??
-            findConfigFile('.', workspaceRoot, ESLINT_CONFIG_NAMES)
+            projectEslintConfig ?? findConfigFile('.', workspaceRoot, ESLINT_CONFIG_NAMES)
           if (eslintConfigPath) {
             targets.lint = inferEslintTarget(relProjectRoot)
+            if (!projectEslintConfig) {
+              targets.lint.inputs.push('{workspaceRoot}/eslint.config.*')
+            }
           }
         }
 
         if (biome) {
+          const projectBiomeConfig = findConfigFile(
+            projectRoot,
+            workspaceRoot,
+            BIOME_CONFIG_NAMES,
+          )
           const biomeConfigPath =
-            findConfigFile(projectRoot, workspaceRoot, BIOME_CONFIG_NAMES) ??
-            findConfigFile('.', workspaceRoot, BIOME_CONFIG_NAMES)
+            projectBiomeConfig ?? findConfigFile('.', workspaceRoot, BIOME_CONFIG_NAMES)
           if (biomeConfigPath) {
             const biomeProvidesLint = !oxlintOwnsLint && !('lint' in targets && targets.lint)
-            Object.assign(targets, inferBiomeTargets(relProjectRoot, biomeProvidesLint))
+            const inferred = inferBiomeTargets(relProjectRoot, biomeProvidesLint)
+            if (!projectBiomeConfig) {
+              // Copy before extending — inferBiomeTargets shares the
+              // module-level BIOME_INPUTS array across targets/projects.
+              for (const t of Object.values(inferred)) {
+                t.inputs = [
+                  ...t.inputs,
+                  '{workspaceRoot}/biome.json',
+                  '{workspaceRoot}/biome.jsonc',
+                ]
+              }
+            }
+            Object.assign(targets, inferred)
           }
         }
 

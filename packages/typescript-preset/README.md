@@ -37,7 +37,7 @@ Peer dependency: `@nx/devkit` >= 22.
 Inferred targets invoke tool binaries directly (`tsc`/`tsgo`, `vitest`, `oxlint`, `eslint`, `biome`, `tsdown`) — Nx `run-commands` resolves them from `node_modules/.bin`. Install only the tools your project configures; each is an optional peer dependency:
 
 ```bash
-bun add -D typescript vitest oxlint @biomejs/biome tsdown
+bun add -D typescript vitest oxlint eslint @biomejs/biome tsdown
 # or, for the native-preview typechecker:
 bun add -D @typescript/native-preview
 ```
