@@ -27,7 +27,8 @@
     "./executors/build": {
       "types": "./dist/executors/build/executor.d.mts",
       "default": "./dist/executors/build/executor.mjs"
-    }
+    },
+    "./package.json": "./package.json"
   },
   "generators": "./generators.json",
   "executors": "./executors.json",
