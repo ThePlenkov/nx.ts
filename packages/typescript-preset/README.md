@@ -34,7 +34,7 @@ That's it — one plugin entry. The preset auto-detects everything else.
 
 Peer dependency: `@nx/devkit` >= 22.
 
-Inferred targets invoke tool binaries directly (`tsc`/`tsgo`, `vitest`, `oxlint`, `eslint`, `biome`, `tsdown`) — Nx `run-commands` resolves them from `node_modules/.bin`. Install only the tools your project configures; each is an optional peer dependency:
+Inferred targets invoke tool binaries (`tsc`/`tsgo`, `vitest`, `oxlint`, `eslint`, `biome`, `tsdown`) resolved from `node_modules` — `typecheck`/`build` use dedicated executors that launch the tool's Node entry directly (shell-free, Windows-safe); other targets use `nx:run-commands`. Install only the tools your project configures; each is an optional peer dependency:
 
 ```bash
 bun add -D typescript vitest oxlint eslint @biomejs/biome tsdown
@@ -62,10 +62,11 @@ This is a "mega-preset" plugin: it owns the cross-cutting `typecheck`, `test`, `
 ```jsonc
 {
   "typecheck": {
-    "executor": "nx:run-commands",
+    "executor": "@nx-devkit/typescript:typecheck",
     "options": {
-      "command": "tsgo --build tsconfig.json",
-      "cwd": "{projectRoot}"
+      "tsgo": true,
+      "configFile": "tsconfig.json",
+      "clean": false
     },
     "cache": true,
     "inputs": [
@@ -266,11 +267,8 @@ Biome always provides `format`/`format-check` when `biome.json` exists, regardle
 ```jsonc
 {
   "build": {
-    "executor": "nx:run-commands",
-    "options": {
-      "command": "npx tsdown",
-      "cwd": "{projectRoot}"
-    },
+    "executor": "@nx-devkit/typescript:build",
+    "options": {},
     "outputs": ["{projectRoot}/dist"],
     "cache": true,
     "inputs": [
@@ -289,10 +287,9 @@ Biome always provides `format`/`format-check` when `biome.json` exists, regardle
 ```jsonc
 {
   "build:watch": {
-    "executor": "nx:run-commands",
+    "executor": "@nx-devkit/typescript:build",
     "options": {
-      "command": "npx tsdown --watch",
-      "cwd": "{projectRoot}"
+      "watch": true
     },
     "cache": false,
     "inputs": [

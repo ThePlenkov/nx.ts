@@ -1,11 +1,54 @@
+import { globSync, statSync } from 'node:fs'
 import { glob, stat } from 'node:fs/promises'
 import { join } from 'node:path'
 
 /**
  * Check if any file in `rootDir` matches the given glob pattern.
- * Uses Node.js built-in `fs.promises.glob` (Node 22+) with async I/O.
+ * Uses Node.js built-in `fs.globSync` (Node 22+).
  */
-export async function globMatch(rootDir: string, pattern: string): Promise<boolean> {
+export function globMatch(rootDir: string, pattern: string): boolean {
+  try {
+    const matches = globSync(pattern, {
+      cwd: rootDir,
+      // `exclude` receives path strings (withFileTypes is unsupported on
+      // some runtimes). node_modules is pruned at any depth (vendored
+      // files are never sources); dist/coverage only at the project
+      // root so legitimately-named source dirs and explicit
+      // testGlob/specGlob paths still match.
+      exclude: (entry) => {
+        const segments = entry.split(/[\\/]/)
+        return (
+          segments.includes('node_modules') || segments[0] === 'dist' || segments[0] === 'coverage'
+        )
+      },
+    })
+    // globSync can return directories that match the pattern (e.g. a
+    // `foo.test.ts/` directory). Only count real files as matches so we
+    // don't infer a native test target for a matching directory name.
+    return matches.some((m) => {
+      try {
+        // eslint-disable-next-line security/detect-non-literal-fs-filename -- match paths are produced by globSync under the project root
+        return statSync(join(rootDir, m)).isFile()
+      } catch {
+        return false
+      }
+    })
+  } catch (error) {
+    // Only swallow ENOENT (directory missing). Surface other errors
+    // (permission denied, invalid pattern, missing fs.globSync) so
+    // callers don't silently treat real failures as "no test files".
+    if (error instanceof Error && 'code' in error && (error as { code: string }).code === 'ENOENT') {
+      return false
+    }
+    throw error
+  }
+}
+
+/**
+ * Async variant of {@link globMatch} using `fs.promises.glob`, for
+ * `createNodesV2` where async I/O avoids blocking the event loop.
+ */
+export async function globMatchAsync(rootDir: string, pattern: string): Promise<boolean> {
   try {
     const matches = glob(pattern, {
       cwd: rootDir,

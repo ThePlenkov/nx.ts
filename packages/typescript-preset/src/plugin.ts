@@ -2,8 +2,14 @@ import { basename, dirname, relative, resolve } from 'node:path'
 import type { CreateNodesResult, CreateNodesV2, TargetConfiguration } from '@nx/devkit'
 
 import type { NxDevkitTypescriptOptions } from './types.js'
-import { shouldSkipPath, logDebug, isVerbose, resetCachedEnv } from '@nx-devkit/internal'
-import { globMatch } from './glob.js'
+import {
+  shouldSkipPath,
+  logDebug,
+  isVerbose,
+  resetCachedEnv,
+  mapWithConcurrency,
+} from '@nx-devkit/internal'
+import { globMatchAsync } from './glob.js'
 import {
   BIOME_CONFIG_NAMES,
   ESLINT_CONFIG_NAMES,
@@ -23,7 +29,7 @@ import { inferTsdownBuildTarget, inferTsdownWatchTarget } from './targets/build.
 // Re-export everything for backward compatibility
 export type { NxDevkitTypescriptOptions }
 export { shouldSkipPath, isVerbose, resetCachedEnv, logDebug }
-export { globMatch, globToRegExp, expandBraces } from './glob.js'
+export { globMatch, globMatchAsync, globToRegExp, expandBraces } from './glob.js'
 export { inferTypecheckTarget } from './targets/typecheck.js'
 export { inferVitestTargets } from './targets/vitest.js'
 export { inferNativeTestTargets } from './targets/native-test.js'
@@ -55,8 +61,13 @@ export const createNodesV2: CreateNodesV2<NxDevkitTypescriptOptions> = [
 
     logDebug(PLUGIN_SCOPE, `Detected ${filteredConfigFiles.length} ${configFileName} files`)
 
-    const results = await Promise.all(
-      filteredConfigFiles.map(async (configFile) => {
+    // Bound concurrency: each project issues several fs probes and up to
+    // two recursive glob scans, so an unbounded Promise.all over every
+    // detected tsconfig would flood the fs on a large monorepo.
+    const results = await mapWithConcurrency(
+      filteredConfigFiles,
+      8,
+      async (configFile) => {
         const projectRoot = dirname(configFile)
 
         if (shouldSkipPath(projectRoot, workspaceRoot)) {
@@ -94,8 +105,8 @@ export const createNodesV2: CreateNodesV2<NxDevkitTypescriptOptions> = [
         } else {
           const absProjectRoot = resolve(workspaceRoot, projectRoot)
           const hasTestFiles =
-            (await globMatch(absProjectRoot, testGlob)) ||
-            (await globMatch(absProjectRoot, specGlob))
+            (await globMatchAsync(absProjectRoot, testGlob)) ||
+            (await globMatchAsync(absProjectRoot, specGlob))
           if (hasTestFiles) {
             Object.assign(
               targets,
@@ -190,7 +201,7 @@ export const createNodesV2: CreateNodesV2<NxDevkitTypescriptOptions> = [
           },
         ]
         return result
-      }),
+      },
     )
 
     return results.filter((r): r is [string, CreateNodesResult] => r !== null)

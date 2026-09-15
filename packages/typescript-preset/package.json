@@ -4,7 +4,7 @@
   "license": "MIT",
   "private": false,
   "type": "module",
-  "description": "Preset Nx plugin that infers typecheck, test, lint, format, and build targets from config files you already keep — no project.json required. One-command bootstrap: npx @nx-devkit/typescript init",
+  "description": "Preset Nx plugin that infers typecheck, test, lint, format, and build targets from config files you already keep \u2014 no project.json required. One-command bootstrap: npx @nx-devkit/typescript init",
   "main": "./src/plugin.ts",
   "module": "./src/plugin.ts",
   "types": "./src/plugin.ts",
@@ -36,7 +36,6 @@
     "generators.json",
     "executors.json",
     "migrations.json",
-    "migrations",
     "src/generators/init/schema.json",
     "src/executors/typecheck/schema.json",
     "src/executors/build/schema.json",
@@ -57,11 +56,21 @@
     "vitest": "^4.0.0"
   },
   "peerDependenciesMeta": {
-    "@biomejs/biome": { "optional": true },
-    "eslint": { "optional": true },
-    "oxlint": { "optional": true },
-    "tsdown": { "optional": true },
-    "vitest": { "optional": true }
+    "@biomejs/biome": {
+      "optional": true
+    },
+    "eslint": {
+      "optional": true
+    },
+    "oxlint": {
+      "optional": true
+    },
+    "tsdown": {
+      "optional": true
+    },
+    "vitest": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@nx-devkit/internal": "workspace:*",

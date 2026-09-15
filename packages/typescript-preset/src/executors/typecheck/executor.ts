@@ -1,6 +1,7 @@
 import { execFile } from 'node:child_process'
 import { existsSync } from 'node:fs'
 import { join, resolve } from 'node:path'
+import { resolveBinLaunch } from '@nx-devkit/internal'
 
 export interface TypecheckExecutorOptions {
   /** Use @typescript/native-preview (tsgo) instead of tsc. Default: true. */
@@ -21,23 +22,10 @@ interface NxExecutorContext {
   projectsConfigurations?: { projects?: Record<string, { root?: string }> }
 }
 
-/**
- * Resolve a binary name to an absolute path in the project or workspace
- * `node_modules/.bin` directory. Falls back to the bare name so the
- * system PATH can still be used. This avoids relying on Nx's PATH
- * augmentation, which is not present when an executor is invoked
- * directly (as opposed to via `nx:run-commands`).
- */
-function resolveBin(name: string, projectRoot: string, workspaceRoot: string): string {
-  const candidates = [
-    join(projectRoot, 'node_modules', '.bin', name),
-    join(workspaceRoot, 'node_modules', '.bin', name),
-  ]
-  for (const candidate of candidates) {
-    if (existsSync(candidate)) return candidate
-  }
-  return name
-}
+// tsc can emit more than execFile's 1 MiB default maxBuffer of
+// diagnostics on a failed typecheck — truncating the output would hide
+// the real compiler errors.
+const MAX_BUFFER = 16 * 1024 * 1024
 
 /**
  * Typecheck executor for `@nx-devkit/typescript:typecheck`.
@@ -47,7 +35,7 @@ function resolveBin(name: string, projectRoot: string, workspaceRoot: string): s
  * when `tsgo` is requested but not installed.
  *
  * When `clean` is true, runs `tsc --build --clean` first (which removes
- * stale .tsbuildinfo files), then runs `tsc --build` to rebuild.
+ * stale .tsbuildinfo files without building), then `tsc --build`.
  */
 export async function typecheckExecutor(
   options: TypecheckExecutorOptions,
@@ -65,6 +53,7 @@ export async function typecheckExecutor(
   const absProjectRoot = resolve(workspaceRoot, projectRoot)
   const configPath = join(absProjectRoot, configFile)
 
+  // eslint-disable-next-line security/detect-non-literal-fs-filename -- config filename comes from executor schema options joined to the project root
   if (!existsSync(configPath)) {
     console.error(`[nx-devkit/typecheck] Config not found: ${configPath}`)
     return { success: false }
@@ -76,27 +65,38 @@ export async function typecheckExecutor(
   if (useTsgo) {
     const workspaceNativePkg = join(workspaceRoot, 'node_modules', '@typescript', 'native-preview')
     const projectNativePkg = join(absProjectRoot, 'node_modules', '@typescript', 'native-preview')
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- fixed package path under node_modules
     useTsgo = existsSync(workspaceNativePkg) || existsSync(projectNativePkg)
   }
 
   const bin = useTsgo ? 'tsgo' : 'tsc'
+  const packageName = useTsgo ? '@typescript/native-preview' : 'typescript'
 
-  // Resolve the compiler from the project or workspace node_modules/.bin
-  // so it is found even when Nx invokes the executor directly (without the
-  // nx:run-commands PATH augmentation). Falls back to the bare name so the
-  // system PATH can still be used.
-  const binPath = resolveBin(bin, absProjectRoot, workspaceRoot)
+  // Resolve the compiler through the owning package's `bin` field and
+  // launch Node scripts via process.execPath — `.bin` shims are shell
+  // scripts / `.cmd` wrappers that cannot run with `shell: false`
+  // (and cannot run at all on Windows). Falls back to the bare name so
+  // the system PATH can still be used.
+  const launch = resolveBinLaunch(bin, packageName, absProjectRoot, workspaceRoot)
 
   // Clean phase: `tsc --build --clean` removes stale build info.
   // This does NOT build — it only cleans.
   if (clean) {
     await new Promise<void>((resolvePromise) => {
       execFile(
-        binPath,
-        ['--build', '--clean', configFile],
-        { cwd: absProjectRoot, shell: false },
-        () => {
-          // Clean may fail if no build info exists yet — that's fine
+        launch.command,
+        [...launch.prependArgs, '--build', '--clean', configFile],
+        { cwd: absProjectRoot, shell: false, maxBuffer: MAX_BUFFER },
+        (err, _stdout, stderr) => {
+          if (err) {
+            // A non-zero clean is usually "no build info yet", but
+            // surface it so real problems (bad tsconfig, permissions,
+            // missing binary) aren't silently masked.
+            console.error(
+              `[nx-devkit/typecheck] clean phase failed in ${absProjectRoot}: ${err.message} — continuing to build`,
+            )
+            if (stderr) console.error(`[nx-devkit/typecheck] stderr: ${stderr}`)
+          }
           resolvePromise()
         },
       )
@@ -106,9 +106,9 @@ export async function typecheckExecutor(
   // Build phase: `tsc --build` compiles the project.
   return new Promise<TypecheckExecutorResult>((resolvePromise) => {
     execFile(
-      binPath,
-      ['--build', configFile],
-      { cwd: absProjectRoot, shell: false },
+      launch.command,
+      [...launch.prependArgs, '--build', configFile],
+      { cwd: absProjectRoot, shell: false, maxBuffer: MAX_BUFFER },
       (err, stdout, stderr) => {
         if (err) {
           console.error(

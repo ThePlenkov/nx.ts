@@ -1,4 +1,5 @@
 import { getProjects, updateProjectConfiguration, type Tree } from '@nx/devkit'
+import { cwdResolvesToProjectRoot, getSingleRunCommand, getTargetCwd } from '../utils.js'
 
 /**
  * Migration: replace nx:run-commands with @nx-devkit/typescript:typecheck
@@ -14,9 +15,11 @@ import { getProjects, updateProjectConfiguration, type Tree } from '@nx/devkit'
  *   - `tsgo --build <config>`
  *   - `tsc --build --clean <config>` (and reverse order)
  *
- * Commands with additional flags, shell composition (&&, |, ;), or a
- * cwd different from the project root are skipped to avoid silently
- * changing behavior.
+ * Commands with additional flags or shell composition (&&, |, ;) are
+ * skipped to avoid silently changing behavior. A target is only
+ * rewritten when its `cwd` explicitly resolves to the project root —
+ * `nx:run-commands` defaults `cwd` to the workspace root, so rewriting
+ * an unset/mismatched cwd would silently change which tsconfig is built.
  */
 export default function replaceTypecheckExecutor(tree: Tree): void {
   const projects = getProjects(tree)
@@ -25,10 +28,7 @@ export default function replaceTypecheckExecutor(tree: Tree): void {
     const typecheck = projectConfig.targets?.typecheck
     if (!typecheck) continue
 
-    if (typecheck.executor !== 'nx:run-commands') continue
-
-    const options = typecheck.options as { command?: string; cwd?: string } | undefined
-    const command = options?.command
+    const command = getSingleRunCommand(typecheck)
     if (!command) continue
 
     // Skip shell composition — the executor runs a single command
@@ -50,11 +50,7 @@ export default function replaceTypecheckExecutor(tree: Tree): void {
     const configFile = m[2]
     const hasClean = Boolean(match?.[0]?.includes('--clean') ?? matchCleanFirst)
 
-    // Skip if the target sets a cwd different from the project root —
-    // the executor always resolves config relative to the project root.
-    if (options?.cwd && options.cwd !== projectConfig.root && options.cwd !== '.') {
-      continue
-    }
+    if (!cwdResolvesToProjectRoot(getTargetCwd(typecheck), projectConfig)) continue
 
     typecheck.executor = '@nx-devkit/typescript:typecheck'
     typecheck.options = {

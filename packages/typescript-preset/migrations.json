@@ -5,14 +5,14 @@
     {
       "version": "1.0.0",
       "description": "Replace nx:run-commands with @nx-devkit/typescript:typecheck executor for typecheck targets",
-      "implementation": "./migrations/update-1-0-0/replace-typecheck-executor",
+      "implementation": "./dist/migrations/update-1-0-0/replace-typecheck-executor.mjs",
       "package": "@nx-devkit/typescript",
       "name": "replace-typecheck-executor"
     },
     {
       "version": "1.0.0",
       "description": "Replace nx:run-commands with @nx-devkit/typescript:build executor for build targets",
-      "implementation": "./migrations/update-1-0-0/replace-build-executor",
+      "implementation": "./dist/migrations/update-1-0-0/replace-build-executor.mjs",
       "package": "@nx-devkit/typescript",
       "name": "replace-build-executor"
     }
