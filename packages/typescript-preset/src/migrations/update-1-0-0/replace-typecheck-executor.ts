@@ -36,11 +36,14 @@ export default function replaceTypecheckExecutor(tree: Tree): void {
 
     const trimmed = command.trim()
 
-    // Match: <bin> --build [--clean] <config>  (or --clean before --build)
+    // Match: <bin> --build [--clean] <config>  (or --clean before --build).
+    // The config token is a literal relative path — shell expansions
+    // ($VAR, globs, backticks, quotes) would resolve differently under
+    // execFile's shell:false, so they are rejected here.
     // eslint-disable-next-line security/detect-unsafe-regex -- bounded input (a single command line); alternation is literal
-    const RE_BUILD = /^(tsc|tsgo)\s+--build(?:\s+--clean)?\s+(\S+\.json)$/
+    const RE_BUILD = /^(tsc|tsgo)\s+--build(?:\s+--clean)?\s+([\w./-]+\.json)$/
     // eslint-disable-next-line security/detect-unsafe-regex -- bounded input (a single command line); alternation is literal
-    const RE_CLEAN_FIRST = /^(tsc|tsgo)\s+--clean\s+--build\s+(\S+\.json)$/
+    const RE_CLEAN_FIRST = /^(tsc|tsgo)\s+--clean\s+--build\s+([\w./-]+\.json)$/
     const match = trimmed.match(RE_BUILD)
     const matchCleanFirst = trimmed.match(RE_CLEAN_FIRST)
     const m = match ?? matchCleanFirst

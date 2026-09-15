@@ -1,4 +1,4 @@
-import { execFile, type ChildProcess } from 'node:child_process'
+import { execFile, spawn, type ChildProcess } from 'node:child_process'
 import { existsSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { resolveBinLaunch } from '@nx-devkit/internal'
@@ -21,6 +21,9 @@ interface NxExecutorContext {
 // Bundler/compiler output on failure can exceed execFile's 1 MiB
 // default maxBuffer — truncating it would hide the real errors.
 const MAX_BUFFER = 16 * 1024 * 1024
+// Bound non-watch builds so a stalled tsdown can't pend the Nx task
+// forever. Watch mode is long-running by design and gets no timeout.
+const EXEC_TIMEOUT = 10 * 60 * 1000
 
 /**
  * Build executor for `@nx-devkit/typescript:build`.
@@ -73,7 +76,9 @@ export async function buildExecutor(
     // treats the task as long-running. Inherit stdio for live rebuild
     // output; Nx kills the process when the user interrupts.
     return new Promise<BuildExecutorResult>((resolvePromise) => {
-      const child: ChildProcess = execFile(launch.command, fullArgs, {
+      // spawn (not execFile) — execFile ignores options.stdio on some
+      // Node versions and buffers piped output up to maxBuffer.
+      const child: ChildProcess = spawn(launch.command, fullArgs, {
         cwd: absProjectRoot,
         shell: false,
         stdio: 'inherit',
@@ -92,7 +97,7 @@ export async function buildExecutor(
     execFile(
       launch.command,
       fullArgs,
-      { cwd: absProjectRoot, shell: false, maxBuffer: MAX_BUFFER },
+      { cwd: absProjectRoot, shell: false, maxBuffer: MAX_BUFFER, timeout: EXEC_TIMEOUT },
       (err, stdout, stderr) => {
         if (err) {
           console.error(`[nx-devkit/build] tsdown ${args.join(' ')} failed in ${absProjectRoot}`)

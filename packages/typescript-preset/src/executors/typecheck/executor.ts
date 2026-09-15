@@ -26,6 +26,9 @@ interface NxExecutorContext {
 // diagnostics on a failed typecheck — truncating the output would hide
 // the real compiler errors.
 const MAX_BUFFER = 16 * 1024 * 1024
+// Bound each compiler launch so a stalled tsc/tsgo can't pend the Nx
+// task forever.
+const EXEC_TIMEOUT = 10 * 60 * 1000
 
 /**
  * Typecheck executor for `@nx-devkit/typescript:typecheck`.
@@ -87,7 +90,7 @@ export async function typecheckExecutor(
       execFile(
         launch.command,
         [...launch.prependArgs, '--build', '--clean', configFile],
-        { cwd: absProjectRoot, shell: false, maxBuffer: MAX_BUFFER },
+        { cwd: absProjectRoot, shell: false, maxBuffer: MAX_BUFFER, timeout: EXEC_TIMEOUT },
         (err, _stdout, stderr) => {
           if (err) {
             // A non-zero clean is usually "no build info yet", but
@@ -109,7 +112,7 @@ export async function typecheckExecutor(
     execFile(
       launch.command,
       [...launch.prependArgs, '--build', configFile],
-      { cwd: absProjectRoot, shell: false, maxBuffer: MAX_BUFFER },
+      { cwd: absProjectRoot, shell: false, maxBuffer: MAX_BUFFER, timeout: EXEC_TIMEOUT },
       (err, stdout, stderr) => {
         if (err) {
           console.error(
