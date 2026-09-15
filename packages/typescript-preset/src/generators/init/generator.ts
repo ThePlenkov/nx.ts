@@ -286,6 +286,7 @@ function getMissingDevDeps(
   for (const { when, dep, option } of DEP_RULES) {
     // An existing preset registration may disable a tool — don't
     // install its dependency (matches what the preset will infer).
+    // eslint-disable-next-line security/detect-object-injection -- option is a literal DEP_RULES field
     if (option !== undefined && presetOptions[option] === false) continue
     // eslint-disable-next-line security/detect-object-injection -- dep keys come from the literal DEP_RULES table
     if (hasAny(when) && !(dep in existing)) needed[dep] = DEP_VERSIONS[dep]
@@ -310,6 +311,7 @@ function targetLabel(
   rootConfigs?: DetectedConfigs,
   presetOptions: Record<string, unknown> = {},
 ): string[] {
+  // eslint-disable-next-line security/detect-object-injection -- option is a literal preset-option name
   const enabled = (option: string) => presetOptions[option] !== false
   // Lint-family configs fall back to the workspace root, matching the
   // preset's root-config fallback for lint/format inference.
