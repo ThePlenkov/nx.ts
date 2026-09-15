@@ -209,8 +209,10 @@ describe('initGenerator', () => {
         'package.json': JSON.stringify({ name: 'test', version: '0.0.0' }),
       })
 
+      // Standalone repo: root tsconfig + no nested projects → includeRoot
+      // is enabled, so the summary renders the root as a real project.
       const output = await capturedSummary(tree)
-      expect(output).toContain('(workspace root — no targets, config source) → tsconfig')
+      expect(output).toContain('(workspace root) → typecheck')
     })
 
     it('detects vitest.config.ts and reports test targets', async () => {
