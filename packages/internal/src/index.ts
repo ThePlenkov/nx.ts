@@ -1,5 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs'
-import { join, relative, resolve } from 'node:path'
+import { basename, dirname, join, relative, resolve } from 'node:path'
 import { logger } from '@nx/devkit'
 
 export function isVerbose(): boolean {
@@ -75,10 +75,16 @@ export function resolveBinLaunch(
   projectRoot: string,
   workspaceRoot: string,
 ): BinLaunch {
+  // Node module resolution walks up from projectRoot through every
+  // ancestor node_modules — a nested workspace (apps/demo inside a
+  // monorepo) finds tools hoisted to the outer repo root. workspaceRoot
+  // lies on that chain in any normal layout.
+  const dirs = [...nodeModulesDirs(projectRoot), ...nodeModulesDirs(workspaceRoot)]
+
   // 1. Resolve via the owning package's `bin` field — exact and
   //    cross-platform (no shim involved).
-  for (const root of [projectRoot, workspaceRoot]) {
-    const pkgJsonPath = join(root, 'node_modules', packageName, 'package.json')
+  for (const nmDir of dirs) {
+    const pkgJsonPath = join(nmDir, packageName, 'package.json')
     // eslint-disable-next-line security/detect-non-literal-fs-filename -- package name is a fixed tool identifier resolved under node_modules
     if (!existsSync(pkgJsonPath)) continue
     try {
@@ -89,7 +95,7 @@ export function resolveBinLaunch(
       // eslint-disable-next-line security/detect-object-injection -- name is a fixed tool identifier
       const rel = typeof pkg.bin === 'string' ? pkg.bin : pkg.bin?.[name]
       if (!rel) continue
-      const binPath = join(root, 'node_modules', packageName, rel)
+      const binPath = join(nmDir, packageName, rel)
       // eslint-disable-next-line security/detect-non-literal-fs-filename -- bin path comes from the package's own bin field
       if (!existsSync(binPath)) continue
       if (isNodeScript(binPath)) {
@@ -104,8 +110,8 @@ export function resolveBinLaunch(
   // 2. `.bin` probe — POSIX symlinks resolve to the real JS entry.
   //    If the target is a Node script, launch it through process.execPath;
   //    otherwise execFile it directly (native binary).
-  for (const root of [projectRoot, workspaceRoot]) {
-    const shim = join(root, 'node_modules', '.bin', name)
+  for (const nmDir of dirs) {
+    const shim = join(nmDir, '.bin', name)
     // eslint-disable-next-line security/detect-non-literal-fs-filename -- shim name is a fixed tool identifier under .bin
     if (!existsSync(shim)) continue
     if (isNodeScript(shim)) {
@@ -116,6 +122,22 @@ export function resolveBinLaunch(
 
   // 3. Bare name — let PATH resolution handle it.
   return { command: name, prependArgs: [] }
+}
+
+/**
+ * Ancestor `node_modules` directories in Node resolution order:
+ * `<dir>/node_modules`, `<dir>/../node_modules`, ... up to `/node_modules`.
+ * Mirrors Node's algorithm — a directory named `node_modules` is skipped
+ * so resolution inside one does not recurse.
+ */
+function* nodeModulesDirs(start: string): Generator<string> {
+  let dir = resolve(start)
+  while (true) {
+    if (basename(dir) !== 'node_modules') yield join(dir, 'node_modules')
+    const parent = dirname(dir)
+    if (parent === dir) return
+    dir = parent
+  }
 }
 
 function isNodeScript(path: string): boolean {
