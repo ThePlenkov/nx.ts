@@ -204,22 +204,32 @@ function hasTestFiles(
 
 const PROJECT_CONTAINER_DIRS = new Set(['packages', 'apps', 'libs', 'projects'])
 
-function detectConfigsAtRoot(tree: Tree): DetectedConfigs {
-  const result = detectConfigs(tree, CONFIG_FILES, '')
+function detectConfigsAtRoot(tree: Tree, configFile = 'tsconfig.json'): DetectedConfigs {
+  const result = detectConfigs(tree, { ...CONFIG_FILES, tsconfig: [configFile] }, '')
   // Scan root for test files but skip the project container dirs — their
   // tests belong to the nested projects, not the root.
   result.tests = hasTestFiles(tree, '', 0, PROJECT_CONTAINER_DIRS)
   return result
 }
 
-function detectConfigsAtProjectRoot(tree: Tree, projectRoot: string): DetectedConfigs {
+function detectConfigsAtProjectRoot(
+  tree: Tree,
+  projectRoot: string,
+  configFile = 'tsconfig.json',
+): DetectedConfigs {
   const prefix = projectRoot.endsWith('/') ? projectRoot : `${projectRoot}/`
-  const result = detectConfigs(tree, CONFIG_FILES, prefix)
+  const result = detectConfigs(tree, { ...CONFIG_FILES, tsconfig: [configFile] }, prefix)
   result.tests = hasTestFiles(tree, projectRoot)
   return result
 }
 
-function findNestedProjectRoots(tree: Tree, dir: string, depth: number, roots: string[]): void {
+function findNestedProjectRoots(
+  tree: Tree,
+  dir: string,
+  depth: number,
+  roots: string[],
+  configFile = 'tsconfig.json',
+): void {
   if (depth > 4) return
   let children: string[]
   try {
@@ -230,13 +240,35 @@ function findNestedProjectRoots(tree: Tree, dir: string, depth: number, roots: s
   for (const child of children) {
     if (SKIP_DIRS.has(child)) continue
     const childPath = `${dir}/${child}`
-    // A project root is a directory with a package.json or tsconfig.json —
-    // the preset itself infers a project from either signal.
-    if (tree.exists(`${childPath}/package.json`) || tree.exists(`${childPath}/tsconfig.json`)) {
+    // A project root is a directory with a package.json or the configured
+    // tsconfig name — the preset infers a project from either signal.
+    if (tree.exists(`${childPath}/package.json`) || tree.exists(`${childPath}/${configFile}`)) {
       roots.push(childPath)
     }
-    findNestedProjectRoots(tree, childPath, depth + 1, roots)
+    findNestedProjectRoots(tree, childPath, depth + 1, roots, configFile)
   }
+}
+
+// Mirrors the preset's nested-project check: the plugin glob matches
+// config files in ANY directory at ANY depth, not only the container
+// dirs scanned above — a tools/tsconfig.json suppresses root inference
+// just the same. Skipped dirs never become projects and must not count
+// either. Deliberately unbounded: a depth cap would diverge from the
+// plugin and misreport root targets in the summary.
+function hasNestedConfigFile(tree: Tree, fileName: string, dir = ''): boolean {
+  let children: string[]
+  try {
+    children = tree.children(dir === '' ? '.' : dir)
+  } catch {
+    return false
+  }
+  for (const child of children) {
+    if (SKIP_DIRS.has(child)) continue
+    const path = dir === '' ? child : `${dir}/${child}`
+    if (dir !== '' && child === fileName && tree.exists(path)) return true
+    if (hasNestedConfigFile(tree, fileName, path)) return true
+  }
+  return false
 }
 
 // --- Dependency installation ---
@@ -339,6 +371,7 @@ function printSummary(
   installedDeps: Record<string, string>,
   packageManager: 'bun' | 'npm' | 'pnpm' | 'yarn' = 'bun',
   presetOptions: Record<string, unknown> = {},
+  hasNestedConfig = false,
 ): void {
   const isLocalPath = pluginPath.startsWith('.') || pluginPath.startsWith('/')
   const installCmd =
@@ -361,10 +394,23 @@ function printSummary(
     .filter(([, v]) => v)
     .map(([k]) => k)
   if (rootDetected.length > 0) {
-    // The preset skips the workspace root itself — root configs only
-    // contribute lint/format fallbacks for nested projects and drive
-    // dependency installation.
-    console.log(`  . (workspace root — no targets, config source) → ${rootDetected.join(', ')}`)
+    // The workspace root is itself a project when includeRoot is set
+    // explicitly, or when no nested config file exists anywhere — matching
+    // the plugin's single-package auto-detection, which keys off the
+    // tsconfig glob, not only the container dirs. Otherwise root configs
+    // are only lint/format fallbacks for nested projects.
+    const rootIsProject =
+      rootConfigs.tsconfig &&
+      (presetOptions.includeRoot === true ||
+        (presetOptions.includeRoot !== false && !hasNestedConfig))
+    const rootTargets = rootIsProject
+      ? targetLabel(rootConfigs, rootConfigs, presetOptions)
+      : []
+    if (rootTargets.length > 0) {
+      console.log(`  . (workspace root) → ${rootTargets.join(', ')}`)
+    } else {
+      console.log(`  . (workspace root — no targets, config source) → ${rootDetected.join(', ')}`)
+    }
   }
 
   for (const { root, configs } of projectConfigs) {
@@ -414,20 +460,23 @@ export async function initGenerator(
   // 1. Ensure package.json exists
   ensurePackageJson(tree)
 
-  // 2. Register plugin (removes standalone @nx-devkit/* entries)
+  // 2. Register plugin first (removes standalone @nx-devkit/* entries) —
+  // preserved options like `configFile` steer detection below.
   const presetOptions = registerPlugin(tree, pluginPath)
+  const configFileName =
+    typeof presetOptions.configFile === 'string' ? presetOptions.configFile : 'tsconfig.json'
 
   // 3. Detect configs at workspace root
-  const rootConfigs = detectConfigsAtRoot(tree)
+  const rootConfigs = detectConfigsAtRoot(tree, configFileName)
 
   // 4. Detect configs in nested project directories
   const nestedRoots: string[] = []
   for (const dir of ['packages', 'apps', 'libs', 'projects']) {
-    findNestedProjectRoots(tree, dir, 0, nestedRoots)
+    findNestedProjectRoots(tree, dir, 0, nestedRoots, configFileName)
   }
   const projectConfigs: Array<{ root: string; configs: DetectedConfigs }> = []
   for (const root of nestedRoots) {
-    const configs = detectConfigsAtProjectRoot(tree, root)
+    const configs = detectConfigsAtProjectRoot(tree, root, configFileName)
     if (Object.values(configs).some(Boolean)) {
       projectConfigs.push({ root, configs })
     }
@@ -455,6 +504,7 @@ export async function initGenerator(
     installedDeps,
     packageManager,
     presetOptions,
+    hasNestedConfigFile(tree, configFileName),
   )
 
   return () => installCallback()

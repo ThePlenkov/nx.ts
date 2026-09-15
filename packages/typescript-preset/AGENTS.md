@@ -46,6 +46,8 @@ export interface NxDevkitTypescriptOptions {
   testGlob?: string;
   /** Glob for spec files. Default: "**/*.spec.{ts,js,mts,mjs}". */
   specGlob?: string;
+  /** Workspace root as a project: true = always, false = never, unset = only when it is the sole project (single-package repos). */
+  includeRoot?: boolean;
 }
 ```
 

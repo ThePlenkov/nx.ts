@@ -59,6 +59,26 @@ export const createNodesV2: CreateNodesV2<NxDevkitTypescriptOptions> = [
       (configFile) => basename(configFile) === configFileName,
     )
 
+    // Root project semantics: the workspace root is a real project when
+    // `includeRoot` is set, or automatically when it is the only config
+    // detected (single-package repo). Auto-mode self-corrects — when
+    // nested projects appear later, the root is skipped again without
+    // any stale flag left in nx.json. An explicit `false` always wins.
+    const hasNestedProjects = filteredConfigFiles.some((configFile) => {
+      const projectRoot = dirname(configFile)
+      // Paths that shouldSkipPath discards (node_modules, outside the
+      // workspace) never become projects — they must not count as
+      // "nested" either, or a stray node_modules tsconfig would suppress
+      // root inference and leave a standalone repo with no project.
+      return (
+        resolve(workspaceRoot, projectRoot) !== resolve(workspaceRoot) &&
+        !shouldSkipPath(projectRoot, workspaceRoot)
+      )
+    })
+    const effectiveIncludeRoot =
+      options.includeRoot === true ||
+      (options.includeRoot === undefined && !hasNestedProjects)
+
     logDebug(PLUGIN_SCOPE, `Detected ${filteredConfigFiles.length} ${configFileName} files`)
 
     // Bound concurrency: each project issues several fs probes and up to
@@ -69,8 +89,13 @@ export const createNodesV2: CreateNodesV2<NxDevkitTypescriptOptions> = [
       8,
       async (configFile) => {
         const projectRoot = dirname(configFile)
+        const isWorkspaceRoot =
+          resolve(workspaceRoot, projectRoot) === resolve(workspaceRoot)
 
-        if (shouldSkipPath(projectRoot, workspaceRoot)) {
+        // The workspace root is only a project when includeRoot applies
+        // (explicit or single-package auto). Other skip reasons
+        // (node_modules, escaping the root) still apply regardless.
+        if (shouldSkipPath(projectRoot, workspaceRoot) && !(effectiveIncludeRoot && isWorkspaceRoot)) {
           logDebug(PLUGIN_SCOPE, `Skipping ${projectRoot}`)
           return null
         }

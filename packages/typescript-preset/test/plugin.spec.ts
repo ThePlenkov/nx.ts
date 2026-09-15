@@ -244,11 +244,81 @@ describe('createNodesV2 integration', () => {
     }
   })
 
-  it('ignores tsconfig.json at the workspace root', async () => {
+  it('auto-infers a root project when it is the only tsconfig (standalone repo)', async () => {
     const root = makeWorkspace()
     try {
       const cfg = touch(root, 'tsconfig.json')
       const result = await callCreateNodes([cfg], {}, root)
+      const proj = firstProject(result, '.')
+      expect(proj.targets).toHaveProperty('typecheck')
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  it('skips the workspace root when nested projects exist', async () => {
+    const root = makeWorkspace()
+    try {
+      const rootCfg = touch(root, 'tsconfig.json')
+      const nestedCfg = touch(root, 'packages/foo/tsconfig.json')
+      const result = await callCreateNodes([rootCfg, nestedCfg], {}, root)
+      expect(result).toHaveLength(1)
+      expect(result[0]![1].projects).toHaveProperty('packages/foo')
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  it('skipped paths do not count as nested projects for auto-detection', async () => {
+    // A stray node_modules tsconfig must not suppress root inference —
+    // shouldSkipPath discards it, so it cannot be a "nested project".
+    const root = makeWorkspace()
+    try {
+      const cfg = touch(root, 'tsconfig.json')
+      const nmCfg = touch(root, 'node_modules/some-dep/tsconfig.json')
+      const result = await callCreateNodes([cfg, nmCfg], {}, root)
+      const proj = firstProject(result, '.')
+      expect(proj.targets).toHaveProperty('typecheck')
+      expect(result).toHaveLength(1)
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  it('respects explicit includeRoot: false in a standalone repo', async () => {
+    const root = makeWorkspace()
+    try {
+      const cfg = touch(root, 'tsconfig.json')
+      const result = await callCreateNodes([cfg], { includeRoot: false }, root)
+      expect(result).toEqual([])
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  it('respects explicit includeRoot: true alongside nested projects', async () => {
+    const root = makeWorkspace()
+    try {
+      const rootCfg = touch(root, 'tsconfig.json')
+      const nestedCfg = touch(root, 'packages/foo/tsconfig.json')
+      const result = await callCreateNodes([rootCfg, nestedCfg], { includeRoot: true }, root)
+      expect(result).toHaveLength(2)
+      const keys = result.map(([, r]) => Object.keys(r.projects ?? {})).flat()
+      expect(keys).toContain('.')
+      expect(keys).toContain('packages/foo')
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  it('includeRoot does not rescue node_modules or escaping paths', async () => {
+    const root = makeWorkspace()
+    try {
+      const nmCfg = touch(root, 'packages/foo/node_modules/x/tsconfig.json')
+      // A config path outside the workspace stays skipped — includeRoot
+      // only widens the root itself, never paths escaping it.
+      const outsideCfg = join(root, '..', 'outside-escape', 'tsconfig.json')
+      const result = await callCreateNodes([nmCfg, outsideCfg], { includeRoot: true }, root)
       expect(result).toEqual([])
     } finally {
       rmSync(root, { recursive: true, force: true })
