@@ -1,10 +1,8 @@
 # @nx-devkit/biome
 
-Nx plugin that infers `format`, `format-check`, and `lint` targets from a project's `biome.json` or `biome.jsonc`. Zero `project.json` required.
+Standalone Nx plugin: any `biome.json` or `biome.jsonc` becomes a project with `format`, `format-check`, and `lint` targets. No `project.json` needed.
 
-## What it does
-
-Scans the workspace for any `biome.json` or `biome.jsonc`. For each match (outside the workspace root), it injects three targets: `format` (uncached — has side effects), `format-check` (cached), and `lint` (cached).
+Part of [nx-devkit](https://github.com/nx-devkit/nx.ts). If you want the full TypeScript toolchain (typecheck, test, lint, format, build), use the [`@nx-devkit/typescript`](../typescript-preset/README.md) preset instead — it includes everything this plugin does.
 
 ## Install
 
@@ -12,41 +10,65 @@ Scans the workspace for any `biome.json` or `biome.jsonc`. For each match (outsi
 bun add -D @nx-devkit/biome @biomejs/biome
 ```
 
-The inferred targets invoke the `biome` binary directly (Nx `run-commands` resolves `node_modules/.bin`), so `@biomejs/biome` must be installed in the consuming workspace. It is declared as a peer dependency.
+Requires `nx`, `@nx/devkit` `^22 || ^23`, and `@biomejs/biome` `^2` — all declared peers.
 
-## Register in nx.json
+## Register
 
 ```jsonc
-{
-  "plugins": ["@nx-devkit/biome"]
-}
+// nx.json
+{ "plugins": ["@nx-devkit/biome"] }
 ```
 
-## Targets generated
+## What it infers
 
-| Trigger | Target | Command | Cache |
+<!-- target table consistent with src/plugin.ts infer* targets -->
+
+| Target | Default command | Cacheable | Inputs |
 |---|---|---|---|
-| `**/biome.json` or `**/biome.jsonc` | `format` | `biome format --write .` | **false** (side effect: writes files) |
-| same | `format-check` | `biome format .` | true |
-| same | `lint` | `biome lint .` | true |
+| `format` | `biome format --write .` | no (mutates source) | `biome.json{,c}`, `**/*` |
+| `format-check` | `biome format .` | yes | `biome.json{,c}`, `**/*` |
+| `lint` | `biome lint .` | yes | `biome.json{,c}`, `**/*` |
 
-All three targets run with `cwd` set to the project root. Each target's `inputs` array contains `{projectRoot}/biome.json` (or `biome.jsonc`) and `{projectRoot}/**/*`.
+All run via `nx:run-commands` with `cwd` = the project root.
 
-## Skip rules
+## Inspect
 
-- The workspace root is skipped (a `biome.json` at `./` is intentionally ignored).
-- `format` MUST NOT be cached because `format --write` mutates the working tree — Nx's cache assumes targets are pure functions of their inputs. `format-check` and `lint` are read-only and cacheable.
+```bash
+npx nx show projects
+npx nx show project <name>
+npx nx run <name>:format-check
+```
 
 ## Options
 
-```ts
-export interface NxBiomePluginOptions {
-  /** Run `lint` as part of `nx lint`. Default: false. */
-  checkOnLint?: boolean;
-  /** Reuse biome's internal cache for `format-check`. Default: true. */
-  formatCache?: boolean;
+<!-- option reference consistent with src/plugin.ts BiomePluginOptions -->
+
+Pass via the plugin tuple in `nx.json`. Each option overrides the command string for one target:
+
+```jsonc
+{
+  "plugins": [
+    ["@nx-devkit/biome", {
+      "formatCommand": "biome format --write .",
+      "formatCheckCommand": "biome format .",
+      "lintCommand": "biome lint ."
+    }]
+  ]
 }
 ```
+
+| Option | Default | Effect |
+|---|---|---|
+| `formatCommand` | `biome format --write .` | Command for the `format` target. |
+| `formatCheckCommand` | `biome format .` | Command for the `format-check` target. |
+| `lintCommand` | `biome lint .` | Command for the `lint` target. |
+
+## Skip rules
+
+- Both `biome.json` and `biome.jsonc` are recognized.
+- Configs inside `node_modules` are skipped.
+- Configs that escape the workspace root are skipped.
+- The workspace-root `biome.json{,c}` is skipped — the plugin is for nested project roots.
 
 ## License
 

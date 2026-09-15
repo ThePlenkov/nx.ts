@@ -1,10 +1,8 @@
 # @nx-devkit/skillspector
 
-Zero-config Nx plugin that infers a `scan` target from `SKILL.md` files and runs SkillSpector security scans on skills.
+Nx plugin for [SkillSpector](https://github.com/skilllens/skillspector) security scanning: any directory containing `SKILL.md` becomes a project with a `scan` target that analyzes skill code for vulnerabilities, secrets, and risky patterns. No `project.json` needed.
 
-## What it does
-
-Scans the workspace for any file matching `**/SKILL.md`. For each match (outside the workspace root and `node_modules`), it injects a `scan` target into the project graph that runs `skillspector scan` with JSON output, writes SARIF reports, and emits GitHub workflow annotations for code findings.
+Part of [nx-devkit](https://github.com/nx-devkit/nx.ts).
 
 ## Install
 
@@ -12,69 +10,76 @@ Scans the workspace for any file matching `**/SKILL.md`. For each match (outside
 bun add -D @nx-devkit/skillspector
 ```
 
-## Register in nx.json
+Requires `@nx/devkit` `^22 || ^23` (peer) and a `skillspector` binary reachable on `PATH` — or point the `skillspectorBin` option at any install.
+
+## Register
 
 ```jsonc
-{
-  "plugins": ["@nx-devkit/skillspector"]
-}
+// nx.json
+{ "plugins": ["@nx-devkit/skillspector"] }
 ```
 
-## Targets generated
+## What it infers
 
-| Trigger file | Target | Executor | Cache | Outputs |
-|---|---|---|---|---|
-| `**/SKILL.md` | `scan` | `@nx-devkit/skillspector:scan` | `!annotations && noLlm` | SARIF path + `findings-${projectName}.json` (when annotations disabled) |
+<!-- target table consistent with src/plugin.ts createNodesV2 and executors.json -->
 
-Each skill directory gets an injective project name: `${slug}-${hash12}` where `slug` is the relative path with `/` replaced by `-` and `hash12` is the first 12 hex chars of `sha256(projectRoot)`.
+| Trigger | Target | Executor |
+|---|---|---|
+| `SKILL.md` | `scan` | `@nx-devkit/skillspector:scan` — spawns the `skillspector` binary via `execFile`, no shell |
+
+## Inspect
+
+```bash
+npx nx show projects
+npx nx show project <name>
+npx nx run <name>:scan
+```
 
 ## Options
 
-```ts
-export interface NxDevkitSkillspectorOptions {
-  scanTargetName?: string;    // default "scan"
-  noLlm?: boolean;            // default true
-  annotations?: boolean;      // default true
-  failOnError?: boolean;      // default true
-  skillspectorBin?: string;   // default "skillspector"
-  sarif?: string;             // SARIF output path prefix
-  baseline?: string;          // baseline file path
-}
-```
-
-### Example: disable annotations, enable caching
+<!-- option reference consistent with src/plugin.ts NxDevkitSkillspectorOptions and executors/scan/schema.json -->
 
 ```jsonc
 {
   "plugins": [
-    ["@nx-devkit/skillspector", { "annotations": false, "sarif": "reports/scan.sarif" }]
+    ["@nx-devkit/skillspector", {
+      "scanTargetName": "scan",
+      "noLlm": true,
+      "annotations": true,
+      "failOnError": true,
+      "skillspectorBin": "skillspector",
+      "sarif": "reports/skillspector.sarif",
+      "baseline": ".skillspector-baseline.json"
+    }]
   ]
 }
 ```
 
-## Scan executor
+| Option | Default | Effect |
+|---|---|---|
+| `scanTargetName` | `scan` | Name of the inferred scan target. |
+| `noLlm` | `true` | Disable LLM-based analysis (static checks only). |
+| `annotations` | `true` | Emit GitHub Actions `::error`/`::warning` workflow annotations for findings. |
+| `failOnError` | `true` | Fail the target when HIGH or CRITICAL findings are present. |
+| `skillspectorBin` | `skillspector` | Binary to invoke — override for local dev or vendored installs. |
+| `sarif` | — | Write a SARIF 2.1.0 report to this path (feed the Security tab or convert to annotations). |
+| `baseline` | — | Path to a baseline file suppressing known findings. |
 
-The `scan` executor:
+## CI integration
 
-1. Spawns `skillspector scan <path>` with `--no-llm` (when enabled) and `--format json`
-2. Parses JSON findings output
-3. Writes a SARIF 2.1.0 report when `sarif` option is set
-4. Emits `::error file=<path>,line=<n>::<rule_id>: <message>` annotations for code files (`.ts`, `.js`, `.py`, `.sh`, `.yml`, `.json`)
-5. Doc findings (`.md`, `.txt`) are NOT annotated
-6. Fails on HIGH/CRITICAL findings when `failOnError` is true
-
-### Annotation escaping
-
-Annotation values are security-escaped:
-- `%` → `%25`
-- Newlines → literal `\n` / `\r`
-- `::` workflow-command delimiters are removed
+- **Annotations** — with `annotations: true` (default), findings appear inline on pull requests as GitHub workflow annotations.
+- **SARIF** — set `sarif` to a path and upload it with `github/codeql-action/upload-sarif`, or convert to annotations with a SARIF-to-annotations step.
+- **Gating** — `failOnError` fails CI on HIGH/CRITICAL; use `baseline` to ratchet down existing debt.
 
 ## Skip rules
 
-- The workspace root is skipped (no `scan` target on the root project).
-- `node_modules` paths are skipped.
-- Path traversal (`..`) segments are skipped.
+- `SKILL.md` inside `node_modules` is skipped.
+- `SKILL.md` at the workspace root is skipped.
+- `SKILL.md` escaping the workspace root is skipped.
+
+## Project naming
+
+Like [`@nx-devkit/skill`](../skill/README.md), project names are slug + SHA-256 hash of the project root — collision-free across identically named directories.
 
 ## License
 

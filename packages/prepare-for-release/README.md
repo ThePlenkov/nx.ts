@@ -1,16 +1,8 @@
 # @nx-devkit/prepare-for-release
 
-Bootstraps a workspace of packages onto the npm registry by publishing minimal `0.0.0` placeholders. Built so any Nx monorepo can use it.
+Nx plugin + executor for bootstrapping npm packages: publishes a `0.0.0` placeholder tarball for every workspace package that doesn't exist on the registry yet, so the package name is claimed before you wire up [OIDC trusted publishing](https://docs.npmjs.com/trusted-publishers). Idempotent — already-published packages are skipped.
 
-## What it does
-
-| Surface | Kind | Purpose |
-|---|---|---|
-| `@nx-devkit/prepare-for-release:publish-placeholder` | Executor | Scans `packages/*`, publishes a `0.0.0` placeholder for any package not yet on the registry. |
-| `@nx-devkit/prepare-for-release:init` | Generator | Adds the plugin to `nx.json`, creates a `tools` project with a `prepare-for-release` target, prints the post-setup checklist. |
-| `@nx-devkit/prepare-for-release` (createNodesV2) | Plugin | Detects a `tools/project.json` referencing the executor and re-affirms the `prepare-for-release` target. |
-
-The executor is idempotent — already-published packages are skipped — and never modifies the source `package.json` (the placeholder tarball is built in a temp directory). Use `dryRun: true` to preview.
+Part of [nx-devkit](https://github.com/nx-devkit/nx.ts).
 
 ## Install
 
@@ -18,72 +10,77 @@ The executor is idempotent — already-published packages are skipped — and ne
 bun add -D @nx-devkit/prepare-for-release
 ```
 
-## Register in nx.json
+Requires `@nx/devkit` `^22 || ^23` (peer).
+
+## Bootstrap
+
+Create `tools/project.json` wired to the executor:
 
 ```jsonc
 {
-  "plugins": ["@nx-devkit/prepare-for-release"]
+  "name": "tools",
+  "targets": {
+    "prepare-for-release": {
+      "executor": "@nx-devkit/prepare-for-release:publish-placeholder"
+    }
+  }
 }
 ```
 
-Or run the generator:
+The plugin's `createNodesV2` detects `tools/project.json` and surfaces the target on the graph. (The package also ships an `init` generator in source, though it is not currently registered in `generators.json` for consumer use — create the file above manually for now.)
+
+Then run:
 
 ```bash
-bunx nx g @nx-devkit/prepare-for-release:init
+npx nx run tools:prepare-for-release
 ```
 
-## Run
+## What the executor does
 
-```bash
-bunx nx run tools:prepare-for-release
-# or with options
-bunx nx run tools:prepare-for-release --placeholderTag=alpha --placeholderVersion=0.0.1 --dryRun
-```
+For each package under `packages/*` (or your `scope` filter):
+
+1. Checks the registry for an existing version of the package.
+2. If the name is unclaimed, builds a minimal placeholder tarball **in a temp dir** — your source `package.json` is never mutated.
+3. Publishes it with `npm publish --tag placeholder`.
+4. Optionally runs `npm trust github` to bind OIDC trusted publishing to your repo.
+
+Already-published packages are skipped on every run.
 
 ## Options
 
-```ts
-export interface NxPrepareForReleaseOptions {
-  scope?: string[];             // default: derived from packages/* names
-  placeholderTag?: string;      // default: "placeholder"
-  placeholderVersion?: string;  // default: "0.0.0"
-  registry?: string;            // default: "https://registry.npmjs.org/"
-  dryRun?: boolean;             // default: false
-  trust?: boolean;              // default: false — run `npm trust github` for all packages including already-published (requires MFA)
-  trustRepo?: string;           // default: process.env.NPM_TRUST_REPO or process.env.GITHUB_REPOSITORY or "nx-devkit/nx.ts"
+<!-- option reference consistent with src/executors/publish-placeholder/schema.json -->
+
+```jsonc
+// tools/project.json → targets.prepare-for-release.options
+{
+  "scope": ["@nx-devkit"],
+  "placeholderTag": "placeholder",
+  "placeholderVersion": "0.0.0",
+  "registry": "https://registry.npmjs.org/",
+  "dryRun": false,
+  "trust": false,
+  "trustRepo": "owner/repo"
 }
 ```
 
-## Example output
+| Option | Default | Effect |
+|---|---|---|
+| `scope` | every package in `packages/*` | Package scope prefixes to check. |
+| `placeholderTag` | `placeholder` | npm dist-tag applied to the placeholder publish. |
+| `placeholderVersion` | `0.0.0` | Version written into the temporary placeholder manifest. |
+| `registry` | `https://registry.npmjs.org/` | npm registry URL. |
+| `dryRun` | `false` | Report what would happen — no `npm pack`, no publish. |
+| `trust` | `false` | Run `npm trust github` for each published package (requires MFA). |
+| `trustRepo` | `NPM_TRUST_REPO` or `GITHUB_REPOSITORY` env, else `nx-devkit/nx.ts` | `owner/repo` slug for the `npm trust github` command. |
 
-```text
-> nx run tools:prepare-for-release
+## Why placeholders
 
-[@nx-devkit/prepare-for-release] Checking 4 packages
-[@nx-devkit/prepare-for-release] @nx-devkit/tsdown: 404 → publishing 0.0.0 placeholder
-[@nx-devkit/prepare-for-release] @nx-devkit/oxlint: 404 → publishing 0.0.0 placeholder
-[@nx-devkit/prepare-for-release] @nx-devkit/biome: 0.5.0 already on registry, skipping
-[@nx-devkit/prepare-for-release] @nx-devkit/typescript: 404 → publishing 0.0.0 placeholder
+npm OIDC trusted publishing requires the package to already exist before you can configure a trust relationship — but publishing the real package first defeats the point. Placeholders claim the name with throwaway `0.0.0` content under a `placeholder` tag (not `latest`), so users never install a stub by accident. The first real release lands under your normal version.
 
-Published: @nx-devkit/tsdown, @nx-devkit/oxlint, @nx-devkit/typescript
-Skipped:   @nx-devkit/biome
+## Security notes
 
-Run these locally (requires MFA) to enable GitHub OIDC trusted publishing:
-
-  npm trust github @nx-devkit/tsdown --file release.yml --repo your-org/your-repo --allow-publish
-  npm trust github @nx-devkit/oxlint --file release.yml --repo your-org/your-repo --allow-publish
-  npm trust github @nx-devkit/typescript --file release.yml --repo your-org/your-repo --allow-publish
-```
-
-## When to use
-
-- Adding a brand new Nx plugin package to a workspace that hasn't shipped to npm yet.
-- Bootstrapping a multi-package monorepo so that downstream `nx release` + OIDC trusted publishing can take over from there.
-- You want the placeholder publish to be idempotent and offline-friendly (it just shells out to `npm view` and `npm publish`).
-
-## Why not `bun publish`?
-
-`bun publish` does not yet support npm OIDC trusted publishing. The CI release workflow uses `npx nx release publish` (which uses the npm CLI). The executor also calls the npm CLI directly to keep the bootstrap flow consistent.
+- The executor invokes `npm` via `spawnSync` with an argv array — no shell interpolation of package names, paths, or registry URLs.
+- `npm trust github` runs only when `trust: true` and may prompt for MFA — it's a real-world side effect, not idempotent in the same sense.
 
 ## License
 
