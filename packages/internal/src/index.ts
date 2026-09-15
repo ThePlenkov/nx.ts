@@ -139,18 +139,9 @@ export async function mapWithConcurrency<T, R>(
   limit: number,
   fn: (item: T) => Promise<R>,
 ): Promise<R[]> {
-  const results = Array.from({ length: items.length }) as R[]
-  let index = 0
-  async function worker(): Promise<void> {
-    while (index < items.length) {
-      const current = index++
-      const item = items.at(current)
-      if (item === undefined) continue
-      // eslint-disable-next-line security/detect-object-injection -- index is a bounded array position
-      results[current] = await fn(item)
-    }
+  const results: R[] = []
+  for (let i = 0; i < items.length; i += limit) {
+    results.push(...(await Promise.all(items.slice(i, i + limit).map(fn))))
   }
-  const workers = Array.from({ length: Math.min(limit, items.length) }, () => worker())
-  await Promise.all(workers)
   return results
 }

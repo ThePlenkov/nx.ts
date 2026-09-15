@@ -37,13 +37,14 @@ export default function replaceTypecheckExecutor(tree: Tree): void {
     const trimmed = command.trim()
 
     // Match: <bin> --build [--clean] <config>  (or --clean before --build)
-    // eslint-disable-next-line security/detect-unsafe-regex -- bounded input (a single command line); alternation is literal
+    // eslint-disable security/detect-unsafe-regex -- bounded input (a single command line); alternation is literal
     const match = trimmed.match(
       /^(tsc|tsgo)\s+--build(?:\s+--clean)?\s+(\S+\.json)$/,
     )
     const matchCleanFirst = trimmed.match(
       /^(tsc|tsgo)\s+--clean\s+--build\s+(\S+\.json)$/,
     )
+    // eslint-enable security/detect-unsafe-regex
     const m = match ?? matchCleanFirst
     if (!m) continue
 

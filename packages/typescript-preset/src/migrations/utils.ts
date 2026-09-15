@@ -30,6 +30,7 @@ export function getSingleRunCommand(
   if (!Array.isArray(commands) || commands.length !== 1) return null
   const entry = commands[0]
   if (typeof entry === 'string') return entry
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- commands[0] is T|undefined under noUncheckedIndexedAccess
   return typeof entry?.command === 'string' ? entry.command : null
 }
 
