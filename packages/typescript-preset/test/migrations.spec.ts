@@ -145,6 +145,26 @@ describe('replaceTypecheckExecutor', () => {
       'nx:run-commands',
     )
   })
+
+  it.each([
+    'tsc --build $CONFIG.json',
+    'tsc --build *.json',
+    'tsc --build `echo tsconfig.json`',
+    'tsc --build "tsconfig.json"',
+    'tsc --build -foo.json',
+    'tsc --build /abs/tsconfig.json',
+  ])('skips non-literal config token: %s', (command) => {
+    const tree = createTreeWithEmptyWorkspace()
+    addProject(tree, 'lib', 'packages/lib', {
+      typecheck: runCommands(command, { cwd: '{projectRoot}' }),
+    })
+
+    replaceTypecheckExecutor(tree)
+
+    expect(readProjectConfiguration(tree, 'lib').targets?.typecheck.executor).toBe(
+      'nx:run-commands',
+    )
+  })
 })
 
 describe('replaceBuildExecutor', () => {

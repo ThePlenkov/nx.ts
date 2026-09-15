@@ -39,11 +39,13 @@ export default function replaceTypecheckExecutor(tree: Tree): void {
     // Match: <bin> --build [--clean] <config>  (or --clean before --build).
     // The config token is a literal relative path — shell expansions
     // ($VAR, globs, backticks, quotes) would resolve differently under
-    // execFile's shell:false, so they are rejected here.
+    // execFile's shell:false, so they are rejected here. The first char
+    // must be a word char or dot so `-foo.json` (parsed as a flag) and
+    // absolute paths are not migrated either.
     // eslint-disable-next-line security/detect-unsafe-regex -- bounded input (a single command line); alternation is literal
-    const RE_BUILD = /^(tsc|tsgo)\s+--build(?:\s+--clean)?\s+([\w./-]+\.json)$/
+    const RE_BUILD = /^(tsc|tsgo)\s+--build(?:\s+--clean)?\s+([\w.][\w./-]*\.json)$/
     // eslint-disable-next-line security/detect-unsafe-regex -- bounded input (a single command line); alternation is literal
-    const RE_CLEAN_FIRST = /^(tsc|tsgo)\s+--clean\s+--build\s+([\w./-]+\.json)$/
+    const RE_CLEAN_FIRST = /^(tsc|tsgo)\s+--clean\s+--build\s+([\w.][\w./-]*\.json)$/
     const match = trimmed.match(RE_BUILD)
     const matchCleanFirst = trimmed.match(RE_CLEAN_FIRST)
     const m = match ?? matchCleanFirst
