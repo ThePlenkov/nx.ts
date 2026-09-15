@@ -244,24 +244,52 @@ describe('createNodesV2 integration', () => {
     }
   })
 
-  it('ignores tsconfig.json at the workspace root', async () => {
+  it('auto-infers a root project when it is the only tsconfig (standalone repo)', async () => {
     const root = makeWorkspace()
     try {
       const cfg = touch(root, 'tsconfig.json')
       const result = await callCreateNodes([cfg], {}, root)
+      const proj = firstProject(result, '.')
+      expect(proj.targets).toHaveProperty('typecheck')
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  it('skips the workspace root when nested projects exist', async () => {
+    const root = makeWorkspace()
+    try {
+      const rootCfg = touch(root, 'tsconfig.json')
+      const nestedCfg = touch(root, 'packages/foo/tsconfig.json')
+      const result = await callCreateNodes([rootCfg, nestedCfg], {}, root)
+      expect(result).toHaveLength(1)
+      expect(result[0]![1].projects).toHaveProperty('packages/foo')
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  it('respects explicit includeRoot: false in a standalone repo', async () => {
+    const root = makeWorkspace()
+    try {
+      const cfg = touch(root, 'tsconfig.json')
+      const result = await callCreateNodes([cfg], { includeRoot: false }, root)
       expect(result).toEqual([])
     } finally {
       rmSync(root, { recursive: true, force: true })
     }
   })
 
-  it('infers a root project when includeRoot is true', async () => {
+  it('respects explicit includeRoot: true alongside nested projects', async () => {
     const root = makeWorkspace()
     try {
-      const cfg = touch(root, 'tsconfig.json')
-      const result = await callCreateNodes([cfg], { includeRoot: true }, root)
-      const proj = firstProject(result, '.')
-      expect(proj.targets).toHaveProperty('typecheck')
+      const rootCfg = touch(root, 'tsconfig.json')
+      const nestedCfg = touch(root, 'packages/foo/tsconfig.json')
+      const result = await callCreateNodes([rootCfg, nestedCfg], { includeRoot: true }, root)
+      expect(result).toHaveLength(2)
+      const keys = result.map(([, r]) => Object.keys(r.projects ?? {})).flat()
+      expect(keys).toContain('.')
+      expect(keys).toContain('packages/foo')
     } finally {
       rmSync(root, { recursive: true, force: true })
     }

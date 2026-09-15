@@ -51,7 +51,6 @@ export const createNodesV2: CreateNodesV2<NxDevkitTypescriptOptions> = [
     const eslint = options.eslint ?? true
     const biome = options.biome ?? true
     const tsdown = options.tsdown ?? true
-    const includeRoot = options.includeRoot ?? false
     const testGlob = options.testGlob ?? '**/*.test.{ts,js,mts,mjs}'
     const specGlob = options.specGlob ?? '**/*.spec.{ts,js,mts,mjs}'
     const workspaceRoot = context.workspaceRoot
@@ -59,6 +58,18 @@ export const createNodesV2: CreateNodesV2<NxDevkitTypescriptOptions> = [
     const filteredConfigFiles = configFiles.filter(
       (configFile) => basename(configFile) === configFileName,
     )
+
+    // Root project semantics: the workspace root is a real project when
+    // `includeRoot` is set, or automatically when it is the only config
+    // detected (single-package repo). Auto-mode self-corrects — when
+    // nested projects appear later, the root is skipped again without
+    // any stale flag left in nx.json. An explicit `false` always wins.
+    const hasNestedProjects = filteredConfigFiles.some(
+      (configFile) => resolve(workspaceRoot, dirname(configFile)) !== resolve(workspaceRoot),
+    )
+    const effectiveIncludeRoot =
+      options.includeRoot === true ||
+      (options.includeRoot === undefined && !hasNestedProjects)
 
     logDebug(PLUGIN_SCOPE, `Detected ${filteredConfigFiles.length} ${configFileName} files`)
 
@@ -73,10 +84,10 @@ export const createNodesV2: CreateNodesV2<NxDevkitTypescriptOptions> = [
         const isWorkspaceRoot =
           resolve(workspaceRoot, projectRoot) === resolve(workspaceRoot)
 
-        // The workspace root is only a project when `includeRoot` is set
-        // (single-package repos). Other skip reasons (node_modules,
-        // escaping the root) still apply regardless.
-        if (shouldSkipPath(projectRoot, workspaceRoot) && !(includeRoot && isWorkspaceRoot)) {
+        // The workspace root is only a project when includeRoot applies
+        // (explicit or single-package auto). Other skip reasons
+        // (node_modules, escaping the root) still apply regardless.
+        if (shouldSkipPath(projectRoot, workspaceRoot) && !(effectiveIncludeRoot && isWorkspaceRoot)) {
           logDebug(PLUGIN_SCOPE, `Skipping ${projectRoot}`)
           return null
         }

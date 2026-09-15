@@ -329,28 +329,13 @@ describe('initGenerator', () => {
       expect(preset?.options).toEqual({ tap: true })
     })
 
-    it('sets includeRoot for a standalone repo (root tsconfig, no nested projects)', async () => {
+    it('does not persist includeRoot — the plugin auto-detects standalone repos', async () => {
+      // includeRoot left in nx.json would go stale when a single-package
+      // repo later gains nested projects; the plugin decides per-run.
       const { tree, files } = createTree({
         'nx.json': JSON.stringify({ plugins: [] }),
         'package.json': JSON.stringify({ name: 'test', version: '0.0.0' }),
         'tsconfig.json': JSON.stringify({ compilerOptions: {} }),
-      })
-
-      await initGenerator(tree, {})
-
-      const nxJson = readJson(files, 'nx.json') as {
-        plugins: Array<{ plugin: string; options: Record<string, unknown> }>
-      }
-      const preset = nxJson.plugins.find((p) => p.plugin === '@nx-devkit/typescript')
-      expect(preset?.options.includeRoot).toBe(true)
-    })
-
-    it('does not set includeRoot when nested projects exist', async () => {
-      const { tree, files } = createTree({
-        'nx.json': JSON.stringify({ plugins: [] }),
-        'package.json': JSON.stringify({ name: 'test', version: '0.0.0' }),
-        'tsconfig.json': JSON.stringify({ compilerOptions: {} }),
-        'packages/lib/tsconfig.json': JSON.stringify({ compilerOptions: {} }),
       })
 
       await initGenerator(tree, {})
@@ -360,6 +345,29 @@ describe('initGenerator', () => {
       }
       const preset = nxJson.plugins.find((p) => p.plugin === '@nx-devkit/typescript')
       expect(preset?.options.includeRoot).toBeUndefined()
+    })
+
+    it('renders the workspace root as a project in the summary when standalone', async () => {
+      const { tree } = createTree({
+        'nx.json': JSON.stringify({ plugins: [] }),
+        'package.json': JSON.stringify({ name: 'test', version: '0.0.0' }),
+        'tsconfig.json': JSON.stringify({ compilerOptions: {} }),
+      })
+
+      const output = await capturedSummary(tree)
+      expect(output).toContain('(workspace root) → typecheck')
+    })
+
+    it('keeps the no-targets summary when nested projects exist', async () => {
+      const { tree } = createTree({
+        'nx.json': JSON.stringify({ plugins: [] }),
+        'package.json': JSON.stringify({ name: 'test', version: '0.0.0' }),
+        'tsconfig.json': JSON.stringify({ compilerOptions: {} }),
+        'packages/lib/tsconfig.json': JSON.stringify({ compilerOptions: {} }),
+      })
+
+      const output = await capturedSummary(tree)
+      expect(output).toContain('(workspace root — no targets, config source) → tsconfig')
     })
 
     it('respects an explicit includeRoot option over detection', async () => {

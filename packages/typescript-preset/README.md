@@ -351,11 +351,11 @@ Pass options via the inline plugin tuple in `nx.json`:
 | `tsdown` | `boolean` | `true` | When `true` and `tsdown.config.ts` exists, infers a `build` target via `npx tsdown`. |
 | `testGlob` | `string` | `"**/*.test.{ts,js,mts,mjs}"` | Glob pattern for detecting native test files. |
 | `specGlob` | `string` | `"**/*.spec.{ts,js,mts,mjs}"` | Glob pattern for detecting spec files. |
-| `includeRoot` | `boolean` | `false` | When `true`, the workspace root itself becomes a project — for single-package repos. The init generator sets this automatically when no nested projects are found. |
+| `includeRoot` | `boolean` | auto | When `true`, the workspace root is always a project. When `false`, never. Unset: the root becomes a project only when no nested project has a matching config — single-package repos get targets automatically and the behavior self-corrects if nested projects appear later. |
 
 ## Skip rules
 
-The plugin ignores any `tsconfig.json` under `node_modules` or outside the workspace. The workspace root is skipped by default; set `includeRoot: true` to infer targets for a single-package repo.
+The plugin ignores any `tsconfig.json` under `node_modules` or outside the workspace. The workspace root is skipped when nested projects exist; in a single-package repo it is inferred automatically (opt out with `includeRoot: false`).
 
 ## Reusable helpers
 
