@@ -35,7 +35,7 @@ bun add -D markdownlint-cli2 tsx
 | `os-check` | `tsx scripts/check-os-independence.ts --skill '{projectRoot}'` | Flags OS-specific commands/paths that break cross-platform portability. |
 | `size-check` | `tsx scripts/check-skill-size.ts --skill '{projectRoot}'` | Enforces size budgets on the skill directory. |
 
-The `build` target's `inputs` default to `{projectRoot}/**/*` plus any `skillInputs` you add. All run-commands targets use `cwd` = project root; `{projectRoot}` is the Nx macro, expanded safely — never interpolated into a shell string.
+The `build` target's `inputs` are an explicit list — `SKILL.md`, `**/*.md`, `scripts/`, `references/`, `assets/`, `agents/` under the project root, plus `^production` — extended by any `skillInputs` you add. The four `nx:run-commands` targets run with `cwd` = workspace root (the tools expect workspace-relative paths); `{projectRoot}` in commands is the Nx macro, expanded safely — never interpolated into a shell string.
 
 ## Inspect
 
@@ -47,7 +47,7 @@ npx nx run <name>:build
 
 ## Project naming
 
-Project names are derived from the skill directory slug plus a 12-char SHA-256 hash of the project root — injective, so two `SKILL.md` files whose directory names collapse to the same slug still get distinct project names.
+Project names are derived from the skill directory slug plus a 12-hex-char SHA-256 suffix of the project root — collision-resistant in practice (birthday bound applies, it's not a guarantee), so two `SKILL.md` files whose directory names collapse to the same slug still get distinct project names.
 
 ## Options
 
@@ -77,7 +77,7 @@ Project names are derived from the skill directory slug plus a 12-char SHA-256 h
 | `sizeCheckTargetName` | `size-check` | Name of the size-check target. |
 | `skillInputs` | `[]` | Extra input globs merged into the `build` target's inputs. |
 
-All five target names must be non-empty and unique — the plugin throws on collision.
+All five target names must be non-empty and unique — on an empty or duplicate name the plugin logs a warning and skips that skill's project (other skills are unaffected).
 
 ## Skip rules
 

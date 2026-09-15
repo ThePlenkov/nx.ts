@@ -25,9 +25,9 @@ Requires `nx`, `@nx/devkit` `^22 || ^23`, and `@biomejs/biome` `^2` — all decl
 
 | Target | Default command | Cacheable | Inputs |
 |---|---|---|---|
-| `format` | `biome format --write .` | no (mutates source) | `biome.json{,c}`, `**/*` |
-| `format-check` | `biome format .` | yes | `biome.json{,c}`, `**/*` |
-| `lint` | `biome lint .` | yes | `biome.json{,c}`, `**/*` |
+| `format` | `biome format --write .` | no (mutates source) | the matched `biome.json`/`biome.jsonc`, `**/*` |
+| `format-check` | `biome format .` | yes | the matched `biome.json`/`biome.jsonc`, `**/*` |
+| `lint` | `biome lint .` | yes | the matched `biome.json`/`biome.jsonc`, `**/*` |
 
 All run via `nx:run-commands` with `cwd` = the project root.
 

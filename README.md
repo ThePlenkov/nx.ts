@@ -43,7 +43,7 @@ bun add -D @nx-devkit/typescript   # or npm/pnpm/yarn add -D
 | [`@nx-devkit/biome`](./packages/biome/README.md) | `**/biome.json{,c}` | Standalone `format`, `format-check`, `lint` |
 | [`@nx-devkit/skill`](./packages/skill/README.md) | `**/SKILL.md` | Skill lifecycle: `build`, `lint`, `validate`, `os-check`, `size-check` |
 | [`@nx-devkit/skillspector`](./packages/skillspector/README.md) | `**/SKILL.md` | `scan` target — SkillSpector security scans with SARIF + CI annotations |
-| [`@nx-devkit/prepare-for-release`](./packages/prepare-for-release/README.md) | `tools/project.json` | `prepare-for-release` target — idempotent npm placeholder publishing |
+| [`@nx-devkit/prepare-for-release`](./packages/prepare-for-release/README.md) | `**/project.json` referencing its executor | `prepare-for-release` target — idempotent npm placeholder publishing |
 
 The preset subsumes the standalone tsdown/oxlint/biome plugins; they stay available for single-tool consumers.
 

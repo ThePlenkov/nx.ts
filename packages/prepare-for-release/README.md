@@ -70,7 +70,7 @@ Already-published packages are skipped on every run.
 | `placeholderVersion` | `0.0.0` | Version written into the temporary placeholder manifest. |
 | `registry` | `https://registry.npmjs.org/` | npm registry URL. |
 | `dryRun` | `false` | Report what would happen — no `npm pack`, no publish. |
-| `trust` | `false` | Run `npm trust github` for each published package (requires MFA). |
+| `trust` | `false` | Run `npm trust github` for every checked package — including already-published (skipped) ones — not just newly published (requires MFA). |
 | `trustRepo` | `NPM_TRUST_REPO` or `GITHUB_REPOSITORY` env, else `nx-devkit/nx.ts` | `owner/repo` slug for the `npm trust github` command. |
 
 ## Why placeholders

@@ -30,11 +30,11 @@ bun add -D @nx-devkit/typescript
 { "plugins": ["@nx-devkit/typescript"] }
 ```
 
-Requires `@nx/devkit` `^22 || ^23` (peer). The tools it shells out to are optional peers — install only what your configs use:
+Requires `@nx/devkit` and `typescript` (required peers). The remaining tools are optional peers — install only what your configs use:
 
 ```bash
-bun add -D typescript vitest oxlint eslint @biomejs/biome tsdown
-# tsgo: bun add -D @typescript/native-preview
+bun add -D vitest oxlint eslint @biomejs/biome tsdown
+# tsgo (optional, not a declared peer): bun add -D @typescript/native-preview
 ```
 
 ## What it infers
@@ -46,16 +46,16 @@ bun add -D typescript vitest oxlint eslint @biomejs/biome tsdown
 | `tsconfig.json` (or `configFile` option) | `typecheck` | `@nx-devkit/typescript:typecheck` executor — `tsgo --build` or `tsc --build`, shell-free, 10-min bounded |
 | `vitest.config.*` | `test`, `test:watch`, `test:coverage` | `vitest run` / `vitest` / `vitest run --coverage` |
 | `*.test.*`/`*.spec.*` without Vitest | `test` (+ `test:tap`, `test:coverage` when enabled) | native `node --test` |
-| `.oxlintrc.*` | `lint` | `oxlint .` |
-| `eslint.config.*` | `lint` (if oxlint absent) | `eslint .` |
-| `biome.json{,c}` | `format`, `format-check` (+ `lint` if neither oxlint nor eslint) | `biome format --write .` / `biome format .` / `biome lint .` |
+| `.oxlintrc.*` + `oxlint: true` | `lint` | `oxlint .` |
+| `eslint.config.*` + `eslint: true` | `lint` (if oxlint did not provide it) | `eslint .` |
+| `biome.json{,c}` + `biome: true` | `format`, `format-check` (+ `lint` if no earlier tool provided it) | `biome format --write .` / `biome format .` / `biome lint .` |
 | `tsdown.config.*` | `build`, `build:watch` | `@nx-devkit/typescript:build` executor — `tsdown` / `tsdown --watch` |
 
 All `nx:run-commands` targets run with `cwd` = the project root and resolve binaries from `node_modules/.bin`. The executors resolve the tool's Node entry directly and walk up ancestor `node_modules` directories — hoisted monorepo installs work, on Windows too.
 
 ### Lint precedence
 
-When several lint configs exist for one project: **oxlint** → **eslint** → **biome**. Biome's `format`/`format-check` are inferred regardless of who owns `lint`. Root-level lint/format configs are used as fallbacks for projects that lack their own.
+Each lint source requires its option enabled *and* its config present: oxlint wins when `oxlint: true` and `.oxlintrc.*` exists; eslint wins when `eslint: true` and `eslint.config.*` exists; biome owns `lint` only when `biome: true`, `biome.json{,c}` exists, and no earlier tool provided `lint`. So `oxlint: false` lets ESLint win even with an `.oxlintrc.*` present, and `eslint: true` without an `eslint.config.*` still leaves `lint` for Biome. Biome's `format`/`format-check` are inferred regardless of who owns `lint`. Root-level lint/format configs are used as fallbacks for projects that lack their own.
 
 ### Root project
 
@@ -98,7 +98,7 @@ Pass via the plugin tuple in `nx.json`:
 
 | Option | Type | Default | Effect |
 |---|---|---|---|
-| `tsgo` | `boolean` | `true` | `typecheck` runs `tsgo` (`@typescript/native-preview`); `false` → `tsc`. |
+| `tsgo` | `boolean` | `true` | `typecheck` runs `tsgo` when `@typescript/native-preview` is installed; falls back to `tsc` when absent or `tsgo: false`. |
 | `configFile` | `string` | `"tsconfig.json"` | Config basename that marks a directory as a project. |
 | `clean` | `boolean` | `false` | `typecheck` runs `… --build --clean <config>` first. |
 | `tap` | `boolean` | `false` | Adds `test:tap` — native runner, TAP reporter, `test-results.tap` output. |

@@ -62,7 +62,7 @@ npx nx run <name>:scan
 | `annotations` | `true` | Emit GitHub Actions `::error`/`::warning` workflow annotations for findings. |
 | `failOnError` | `true` | Fail the target when HIGH or CRITICAL findings are present. |
 | `skillspectorBin` | `skillspector` | Binary to invoke — override for local dev or vendored installs. |
-| `sarif` | — | Write a SARIF 2.1.0 report to this path (feed the Security tab or convert to annotations). |
+| `sarif` | — | Path **prefix** for the SARIF 2.1.0 report — `-<projectName>.sarif` is appended (any `.sarif` suffix is stripped first), so `reports/scan.sarif` produces `reports/scan-<name>.sarif`. |
 | `baseline` | — | Path to a baseline file suppressing known findings. |
 
 ## CI integration
@@ -79,7 +79,7 @@ npx nx run <name>:scan
 
 ## Project naming
 
-Like [`@nx-devkit/skill`](../skill/README.md), project names are slug + SHA-256 hash of the project root — collision-free across identically named directories.
+Like [`@nx-devkit/skill`](../skill/README.md), project names are slug + a 12-hex-char SHA-256 suffix of the project root — collision-resistant in practice (birthday bound applies, not a guarantee).
 
 ## License
 
