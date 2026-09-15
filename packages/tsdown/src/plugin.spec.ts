@@ -77,7 +77,7 @@ describe('@nx-devkit/tsdown createNodesV2', () => {
 
     expect(build.executor).toBe('nx:run-commands')
     expect(build.options).toEqual({
-      command: 'npx tsdown',
+      command: 'tsdown',
       cwd: 'project-a',
     })
     expect(build.outputs).toEqual(['{projectRoot}/dist'])

@@ -52,7 +52,7 @@ function isCodeFile(filePath: string): boolean {
 }
 
 /**
- * Parse a bin string (e.g. "npx skillspector") into command + args
+ * Parse a bin string (e.g. "skillspector") into command + args
  * for use with execFile (which does not use a shell).
  */
 function parseBin(bin: string): { cmd: string; args: string[] } {

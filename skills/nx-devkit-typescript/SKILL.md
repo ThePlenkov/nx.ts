@@ -1,158 +1,130 @@
 ---
 name: nx-devkit-typescript
-description: Preset Nx plugin that infers typecheck and vitest test targets from tsconfig.json and vitest.config.*
+description: Preset Nx plugin — one command bootstraps typecheck, test, lint, format, and build targets from config files you already keep. No project.json required.
 ---
 
 # @nx-devkit/typescript
 
-Preset Nx plugin that infers `typecheck` and `test` targets for any project with a `tsconfig.json`, without requiring `project.json`.
+Preset Nx plugin that infers `typecheck`, `test`, `lint`, `format`, and `build` targets for any project with a `tsconfig.json`. The **single recommended entry point** for nx-devkit — it subsumes `@nx-devkit/tsdown`, `@nx-devkit/oxlint`, and `@nx-devkit/biome`.
 
-## Why a "Preset" Plugin?
+## One-command bootstrap
 
-Per-tool plugins (`@nx-devkit/tsdown`, `@nx-devkit/oxlint`, `@nx-devkit/biome`) only own the target logic for the tool they wrap. Type-checking and test-running are cross-cutting concerns that almost every TypeScript project needs. Instead of each per-tool plugin re-implementing the same `typecheck` / `test` inference, they delegate to this single preset.
+```bash
+npx @nx-devkit/typescript init
+```
 
-This plugin:
-- Eliminates duplication across per-tool plugins
-- Provides a single place to evolve typecheck/test inference logic
-- Exports reusable helpers (`inferTypecheckTarget`, `inferVitestTargets`, etc.) that other plugins can compose with
+This single command:
+1. Registers `@nx-devkit/typescript` as the **sole plugin** in `nx.json` (removes any existing `@nx-devkit/*` standalone entries)
+2. Creates `nx.json` and `package.json` if they don't exist
+3. Detects config files in your workspace and nested project directories
+4. Installs missing peer dependencies (`tsdown`, `oxlint`, `@biomejs/biome`, `vitest`, `typescript`)
+5. Prints a summary of detected projects and inferred targets
 
-## When to Use
+If your project doesn't have Nx yet, the bootstrap installs `nx` + `@nx/devkit` automatically.
 
-Use this skill when:
-- You have a TypeScript monorepo managed by Nx
-- You want automatic `typecheck` and `test` targets without `project.json`
-- You want a single source of truth for type-checking and test inference across all projects
-
-## Install
+### Manual setup (without the bootstrap)
 
 ```bash
 bun add -D @nx-devkit/typescript
 ```
 
-Peer dependency: `@nx/devkit` >= 22.
-
-## Register in nx.json
-
-```json
-{
-  "plugins": ["@nx-devkit/typescript"]
-}
-```
-
-## Targets Inferred
-
-### `typecheck` — always inferred when `tsconfig.json` is present
-
 ```jsonc
-{
-  "typecheck": {
-    "executor": "nx:run-commands",
-    "options": {
-      "command": "npx tsgo --build tsconfig.json",
-      "cwd": "{projectRoot}"
-    },
-    "cache": true,
-    "inputs": [
-      "{projectRoot}/src/**/*.ts",
-      "{projectRoot}/tsconfig.json",
-      "{projectRoot}/package.json",
-      "{workspaceRoot}/tsconfig.base.json",
-      { "externalDependencies": ["@typescript/native-preview"] }
-    ]
-  }
-}
+{ "plugins": ["@nx-devkit/typescript"] }
 ```
 
-When `vitest.config.{ts,js,mts,mjs,cts,cjs}` exists alongside `tsconfig.json`, these targets are also added:
+One plugin entry. The preset auto-detects everything else.
 
-### `test`, `test:watch`, `test:coverage`
+## What it does
 
-```jsonc
-{
-  "test": {
-    "executor": "nx:run-commands",
-    "options": {
-      "command": "npx vitest run --reporter=default",
-      "cwd": "{projectRoot}"
-    },
-    "outputs": ["{projectRoot}/coverage"],
-    "cache": true,
-    "inputs": [
-      "{projectRoot}/src/**/*.ts",
-      "{projectRoot}/tests/**/*",
-      "{projectRoot}/vitest.config.{ts,js,mts,mjs,cts,cjs}",
-      "{projectRoot}/package.json",
-      "{workspaceRoot}/vitest.config.ts"
-    ],
-    "dependsOn": ["^build"]
-  }
-}
-```
+For every `tsconfig.json` (outside the workspace root) the plugin infers a `typecheck` target. Depending on which config files are present in each project, it also infers:
 
-`test:watch` is non-cached and uses `npx vitest` (no `run`).
-`test:coverage` adds `--coverage` and uses the same outputs.
+| Config file detected | Inferred target(s) |
+|---|---|
+| `tsconfig.json` | `typecheck` (tsgo or tsc) |
+| `vitest.config.*` | `test`, `test:watch`, `test:coverage` |
+| `*.test.ts` / `*.spec.ts` (no vitest) | `test` (native `node --test`) |
+| `.oxlintrc.*` | `lint` (oxlint, highest precedence) |
+| `eslint.config.*` | `lint` (eslint, fallback) |
+| `biome.json` / `biome.jsonc` | `format`, `format-check`, `lint` (fallback) |
+| `tsdown.config.*` | `build`, `build:watch` |
+
+### Lint precedence
+
+When multiple lint configs exist: **oxlint** > **eslint** > **biome**. Biome always provides `format`/`format-check` when `biome.json` exists, regardless of lint ownership.
 
 ## Options
 
-Pass options via `pluginsConfig` in `nx.json`:
+Pass options via the inline plugin tuple in `nx.json`:
 
-```json
+```jsonc
 {
-  "pluginsConfig": {
-    "@nx-devkit/typescript": {
-      "tsgo": true,
-      "configFile": "tsconfig.json",
-      "clean": false
-    }
-  }
+  "plugins": [
+    [
+      "@nx-devkit/typescript",
+      {
+        "tsgo": true,
+        "configFile": "tsconfig.json",
+        "clean": false,
+        "tap": false,
+        "coverage": false,
+        "oxlint": true,
+        "eslint": true,
+        "biome": true,
+        "tsdown": true,
+        "testGlob": "**/*.test.{ts,js,mts,mjs}",
+        "specGlob": "**/*.spec.{ts,js,mts,mjs}"
+      }
+    ]
+  ]
 }
 ```
 
 | Option | Type | Default | Notes |
 |---|---|---|---|
-| `tsgo` | `boolean` | `true` | `true` uses `tsgo` (`@typescript/native-preview`); `false` uses `tsc` (`typescript`) |
-| `configFile` | `string` | `"tsconfig.json"` | The trigger file basename. Use `"tsconfig.lib.json"` for lib projects |
-| `clean` | `boolean` | `false` | When `true`, runs `tsgo/tsc --build --clean` before the normal typecheck |
+| `tsgo` | `boolean` | `true` | `true` uses `tsgo` (`@typescript/native-preview`); `false` uses `tsc` |
+| `configFile` | `string` | `"tsconfig.json"` | Trigger file basename |
+| `clean` | `boolean` | `false` | Pre-clean tsbuildinfo before typecheck |
+| `tap` | `boolean` | `false` | Infer `test:tap` with native Node TAP reporter |
+| `coverage` | `boolean` | `false` | Infer `test:coverage` for native Node runner |
+| `oxlint` | `boolean` | `true` | Infer `lint` from `.oxlintrc.*` |
+| `eslint` | `boolean` | `true` | Infer `lint` from `eslint.config.*` (fallback) |
+| `biome` | `boolean` | `true` | Infer `format`/`format-check`/`lint` from `biome.json` |
+| `tsdown` | `boolean` | `true` | Infer `build`/`build:watch` from `tsdown.config.*` |
+| `testGlob` | `string` | `"**/*.test.{ts,js,mts,mjs}"` | Glob for native test files |
+| `specGlob` | `string` | `"**/*.spec.{ts,js,mts,mjs}"` | Glob for spec files |
 
-## Verify It Works
+## Verify it works
 
 ```sh
 npx nx show project packages/foo
-```
-
-Run the targets:
-
-```sh
 npx nx typecheck packages/foo
 npx nx test packages/foo
+npx nx run-many -t build
 ```
 
-## Reusable Helpers
-
-The plugin exports helpers for composition by other plugins:
+## Reusable helpers
 
 ```ts
 import {
   inferTypecheckTarget,
   inferVitestTargets,
+  inferNativeTestTargets,
+  inferOxlintTarget,
+  inferEslintTarget,
+  inferBiomeTargets,
+  inferTsdownBuildTarget,
+  inferTsdownWatchTarget,
   shouldSkipPath,
   isVerbose,
   logDebug,
-} from '@nx-devkit/typescript';
+} from '@nx-devkit/typescript'
 ```
 
-## Skip Rules
+## Skip rules
 
-The plugin never creates a project at the workspace root and ignores any `tsconfig.json` under `node_modules` or outside the workspace.
+Never creates a project at the workspace root. Ignores `tsconfig.json` under `node_modules` or outside the workspace.
 
-## Verbose Logging
-
-`logDebug` only prints when:
-- `--verbose` is on `process.argv`, or
-- `NX_VERBOSE_LOGGING=true` is set in the environment or the workspace `.env`
-
-Messages are prefixed with `[nx-typescript]`.
-
-## Source Reference
+## Source reference
 
 Implementation: [`packages/typescript-preset/src/plugin.ts`](../../packages/typescript-preset/src/plugin.ts)
+Init generator: [`packages/typescript-preset/src/generators/init/generator.ts`](../../packages/typescript-preset/src/generators/init/generator.ts)

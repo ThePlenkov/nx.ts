@@ -7,9 +7,6 @@
   },
   "version": 2,
   "plugins": [
-    "./packages/tsdown/src/index.ts",
-    "./packages/oxlint/src/plugin.ts",
-    "./packages/biome/src/plugin.ts",
     "./packages/typescript-preset/src/plugin.ts",
     "./packages/prepare-for-release/src/plugin.ts"
   ],

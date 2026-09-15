@@ -4,10 +4,13 @@
   "license": "MIT",
   "private": false,
   "type": "module",
-  "description": "Preset Nx plugin that infers typecheck and vitest test targets from tsconfig.json and vitest.config.* without any project.json.",
+  "description": "Preset Nx plugin that infers typecheck, test, lint, format, and build targets from config files you already keep \u2014 no project.json required. One-command bootstrap: npx @nx-devkit/typescript init",
   "main": "./src/plugin.ts",
   "module": "./src/plugin.ts",
   "types": "./src/plugin.ts",
+  "bin": {
+    "nx-devkit-typescript": "./dist/bin/init.mjs"
+  },
   "exports": {
     ".": {
       "types": "./src/plugin.ts",
@@ -16,13 +19,29 @@
     "./generators/init": {
       "types": "./dist/generators/init/generator.d.mts",
       "default": "./dist/generators/init/generator.mjs"
+    },
+    "./executors/typecheck": {
+      "types": "./dist/executors/typecheck/executor.d.mts",
+      "default": "./dist/executors/typecheck/executor.mjs"
+    },
+    "./executors/build": {
+      "types": "./dist/executors/build/executor.d.mts",
+      "default": "./dist/executors/build/executor.mjs"
     }
   },
   "generators": "./generators.json",
+  "executors": "./executors.json",
+  "nx-migrations": {
+    "migrations": "./migrations.json"
+  },
   "files": [
     "dist",
     "generators.json",
+    "executors.json",
+    "migrations.json",
     "src/generators/init/schema.json",
+    "src/executors/typecheck/schema.json",
+    "src/executors/build/schema.json",
     "README.md"
   ],
   "scripts": {
@@ -31,9 +50,33 @@
     "test:watch": "vitest"
   },
   "peerDependencies": {
-    "@nx/devkit": "^22.0.0"
+    "@nx/devkit": "^22.0.0 || ^23.0.0",
+    "@biomejs/biome": "^2.0.0",
+    "eslint": "^9.0.0",
+    "oxlint": "^1.0.0",
+    "tsdown": "^0.22.0",
+    "typescript": "^6.0.0",
+    "vitest": "^4.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@biomejs/biome": {
+      "optional": true
+    },
+    "eslint": {
+      "optional": true
+    },
+    "oxlint": {
+      "optional": true
+    },
+    "tsdown": {
+      "optional": true
+    },
+    "vitest": {
+      "optional": true
+    }
   },
   "devDependencies": {
+    "@nx-devkit/internal": "workspace:*",
     "tsdown": "^0.22.3",
     "vitest": "^4.1.9"
   },

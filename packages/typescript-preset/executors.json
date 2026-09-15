@@ -1,0 +1,14 @@
+{
+  "executors": {
+    "typecheck": {
+      "implementation": "./dist/executors/typecheck/executor",
+      "schema": "./src/executors/typecheck/schema.json",
+      "description": "Run TypeScript type checking via tsc or tsgo"
+    },
+    "build": {
+      "implementation": "./dist/executors/build/executor",
+      "schema": "./src/executors/build/schema.json",
+      "description": "Build a project with tsdown"
+    }
+  }
+}

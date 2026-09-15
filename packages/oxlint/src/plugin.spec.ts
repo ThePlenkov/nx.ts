@@ -108,13 +108,13 @@ describe('@nx-devkit/oxlint createNodesV2', () => {
     expect(result).toEqual([])
   })
 
-  it('configures lint target with nx:run-commands executor, npx oxlint ., cwd projectRoot, cache true', () => {
+  it('configures lint target with nx:run-commands executor, oxlint ., cwd projectRoot, cache true', () => {
     makeProject('barlint', '.oxlintrc.json')
     const result = callWith(join(tmp, 'packages', 'barlint', '.oxlintrc.json'))
     const { projectRoot, project } = firstProject(result)
     const lint = project.targets['lint']!
     expect(lint.executor).toBe('nx:run-commands')
-    expect(lint.options.command).toBe('npx oxlint .')
+    expect(lint.options.command).toBe('oxlint .')
     expect(lint.options.cwd).toBe(projectRoot)
     expect(lint.cache).toBe(true)
   })
@@ -191,7 +191,7 @@ describe('@nx-devkit/oxlint createNodesV2', () => {
       expect(allProjects).not.toContain(join('packages', 'noroot'))
     })
 
-    it('fallback lint target uses npx oxlint . with cwd = projectRoot', () => {
+    it('fallback lint target uses oxlint . with cwd = projectRoot', () => {
       writeFileSync(join(tmp, '.oxlintrc.json'), '{}')
       mkdirSync(join(tmp, 'packages', 'fallback', 'src'), { recursive: true })
       writeFileSync(join(tmp, 'packages', 'fallback', 'package.json'), '{"name":"fallback"}')
@@ -213,7 +213,7 @@ describe('@nx-devkit/oxlint createNodesV2', () => {
       ).find(([, { projects }]) => projects[join('packages', 'fallback')])
       expect(fallbackEntry).toBeDefined()
       const lint = fallbackEntry![1].projects[join('packages', 'fallback')]!.targets['lint']!
-      expect(lint.options.command).toBe('npx oxlint .')
+      expect(lint.options.command).toBe('oxlint .')
       expect(lint.options.cwd).toBe(join('packages', 'fallback'))
     })
   })

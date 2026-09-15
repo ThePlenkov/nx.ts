@@ -10,7 +10,7 @@ function inferLintTarget(projectRoot: string): TargetConfiguration {
     cache: true,
     inputs: ['{projectRoot}/src/**/*', '{projectRoot}/.oxlintrc.*', '{projectRoot}/package.json'],
     options: {
-      command: 'npx oxlint .',
+      command: 'oxlint .',
       cwd: projectRoot || '.',
     },
   }

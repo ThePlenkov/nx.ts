@@ -58,5 +58,5 @@ bunx nx run-many -t build typecheck lint format test
 
 - The plugins are consumed from the **source packages at `../../packages/*`**, via the compiled `dist/plugin.mjs` entry points declared in each plugin's `package.json` (Nx plugins must be JavaScript).
 - The demo overrides the `typecheck` inputs in `nx.json` to drop the `externalDependencies: ['typescript']` hash entry that the `@nx-devkit/typescript` plugin registers by default. Nx's native hasher resolves that key against the workspace's installed packages and, under bun-symlinked `node_modules`, it can fail to detect the package even when it is installed. Overriding the inputs to the file-level set is sufficient for hashing and side-steps the resolver bug.
-- `nx` 22.7.1 is installed at `apps/demo` so it matches the plugin's `peerDependency` on `@nx/devkit@22.7.1`. Nx 23 is the current "latest" but the plugins were authored against Nx 22.
+- `nx` 23.2.1 is installed at `apps/demo`, matching the root workspace and the plugins' `^22.0.0 || ^23.0.0` peer range.
 - Project `name` fields come from the project-level `package.json` (Nx 22+ requires a `name` on every inferred project). `library` and `app` ship with minimal `package.json` for that reason; `monorepo-pkg` already has one because it represents a real workspace package.

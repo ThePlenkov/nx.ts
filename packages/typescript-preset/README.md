@@ -2,6 +2,46 @@
 
 A preset Nx plugin that infers `typecheck`, `test`, `lint`, `format`, and `build` targets for any project that has a `tsconfig.json`, without requiring a `project.json`.
 
+## One-command bootstrap
+
+```bash
+npx @nx-devkit/typescript init
+```
+
+This single command:
+1. Registers `@nx-devkit/typescript` in `nx.json` and removes standalone `@nx-devkit/*` entries (other plugins are left untouched)
+2. Detects config files in your workspace (`tsconfig.json`, `vitest.config.*`, `.oxlintrc.*`, `eslint.config.*`, `biome.json`, `tsdown.config.*`)
+3. Adds devDependencies for the detected tools (`tsdown`, `oxlint`, `eslint`, `@biomejs/biome`, `vitest`, `typescript`, `@typescript/native-preview`)
+4. Prints a summary of detected projects and inferred targets
+
+If your project doesn't have Nx yet, the bootstrap installs `nx` + `@nx/devkit` automatically.
+
+### Manual setup (without the bootstrap command)
+
+```bash
+bun add -D @nx-devkit/typescript
+```
+
+Then add to `nx.json`:
+
+```jsonc
+{
+  "plugins": ["@nx-devkit/typescript"]
+}
+```
+
+That's it — one plugin entry. The preset auto-detects everything else.
+
+Peer dependency: `@nx/devkit` >= 22.
+
+Inferred targets invoke tool binaries (`tsc`/`tsgo`, `vitest`, `oxlint`, `eslint`, `biome`, `tsdown`) resolved from `node_modules` — `typecheck`/`build` use dedicated executors that launch the tool's Node entry directly (shell-free, Windows-safe); other targets use `nx:run-commands`. Install only the tools your project configures; each is an optional peer dependency:
+
+```bash
+bun add -D typescript vitest oxlint eslint @biomejs/biome tsdown
+# or, for the native-preview typechecker:
+bun add -D @typescript/native-preview
+```
+
 ## What it does
 
 For every `tsconfig.json` (outside the workspace root) the plugin infers a `typecheck` target. Depending on which configuration files are present in the project, it also infers:
@@ -10,28 +50,10 @@ For every `tsconfig.json` (outside the workspace root) the plugin infers a `type
 - **Native Node test runner targets** (`test`, optionally `test:tap` and `test:coverage`) when test/spec files exist but no vitest config
 - **Oxlint lint** target when `.oxlintrc.*` exists
 - **ESLint lint** target when `eslint.config.*` exists (fallback when no oxlint config)
-- **Biome format/format-check/lint** targets when `biome.json` or `biome.jsonc` exists
+- **Biome format/format-check** targets when `biome.json` or `biome.jsonc` exists — plus `lint` only when neither oxlint nor ESLint provides it
 - **Tsdown build** target when `tsdown.config.ts` exists
 
-This is a "mega-preset" plugin: it owns the cross-cutting `typecheck`, `test`, `lint`, `format`, and `build` logic that most TypeScript projects need, so per-tool plugins don't have to re-implement it.
-
-## Install
-
-```bash
-bun add -D @nx-devkit/typescript
-```
-
-Peer dependency: `@nx/devkit` >= 22.
-
-## Register in nx.json
-
-```jsonc
-{
-  "plugins": ["@nx-devkit/typescript"]
-}
-```
-
-The plugin needs no other setup. By default it scans every `tsconfig.json` in the workspace.
+This is a "mega-preset" plugin: it owns the cross-cutting `typecheck`, `test`, `lint`, `format`, and `build` logic that most TypeScript projects need, so per-tool plugins don't have to re-implement it. Standalone plugins (`@nx-devkit/tsdown`, `@nx-devkit/oxlint`, `@nx-devkit/biome`) remain available for consumers who want only one tool.
 
 ## Targets generated
 
@@ -40,10 +62,11 @@ The plugin needs no other setup. By default it scans every `tsconfig.json` in th
 ```jsonc
 {
   "typecheck": {
-    "executor": "nx:run-commands",
+    "executor": "@nx-devkit/typescript:typecheck",
     "options": {
-      "command": "tsgo --build tsconfig.json",
-      "cwd": "{projectRoot}"
+      "tsgo": true,
+      "configFile": "tsconfig.json",
+      "clean": false
     },
     "cache": true,
     "inputs": [
@@ -244,11 +267,8 @@ Biome always provides `format`/`format-check` when `biome.json` exists, regardle
 ```jsonc
 {
   "build": {
-    "executor": "nx:run-commands",
-    "options": {
-      "command": "npx tsdown",
-      "cwd": "{projectRoot}"
-    },
+    "executor": "@nx-devkit/typescript:build",
+    "options": {},
     "outputs": ["{projectRoot}/dist"],
     "cache": true,
     "inputs": [
@@ -267,10 +287,9 @@ Biome always provides `format`/`format-check` when `biome.json` exists, regardle
 ```jsonc
 {
   "build:watch": {
-    "executor": "nx:run-commands",
+    "executor": "@nx-devkit/typescript:build",
     "options": {
-      "command": "npx tsdown --watch",
-      "cwd": "{projectRoot}"
+      "watch": true
     },
     "cache": false,
     "inputs": [

@@ -9,8 +9,10 @@ Scans the workspace for any `biome.json` or `biome.jsonc`. For each match (outsi
 ## Install
 
 ```bash
-bun add -D @nx-devkit/biome
+bun add -D @nx-devkit/biome @biomejs/biome
 ```
+
+The inferred targets invoke the `biome` binary directly (Nx `run-commands` resolves `node_modules/.bin`), so `@biomejs/biome` must be installed in the consuming workspace. It is declared as a peer dependency.
 
 ## Register in nx.json
 
@@ -24,9 +26,9 @@ bun add -D @nx-devkit/biome
 
 | Trigger | Target | Command | Cache |
 |---|---|---|---|
-| `**/biome.json` or `**/biome.jsonc` | `format` | `npx biome format --write .` | **false** (side effect: writes files) |
-| same | `format-check` | `npx biome format .` | true |
-| same | `lint` | `npx biome lint .` | true |
+| `**/biome.json` or `**/biome.jsonc` | `format` | `biome format --write .` | **false** (side effect: writes files) |
+| same | `format-check` | `biome format .` | true |
+| same | `lint` | `biome lint .` | true |
 
 All three targets run with `cwd` set to the project root. Each target's `inputs` array contains `{projectRoot}/biome.json` (or `biome.jsonc`) and `{projectRoot}/**/*`.
 

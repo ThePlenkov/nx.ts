@@ -90,7 +90,7 @@ describe('@nx-devkit/skill build executor', () => {
     expect(result.success).toBe(false)
   })
 
-  it('calls execFile with npx skills-compiler and correct args (no shell)', async () => {
+  it('calls execFile with skills-compiler binary and correct args (no shell)', async () => {
     mockExecFile.mockImplementation(
       (
         _cmd: string,
@@ -111,9 +111,8 @@ describe('@nx-devkit/skill build executor', () => {
 
     expect(mockExecFile).toHaveBeenCalledTimes(1)
     const [cmd, args, opts] = mockExecFile.mock.calls[0]!
-    expect(cmd).toBe('npx')
+    expect(cmd).toBe('skills-compiler')
     expect(args).toEqual([
-      'skills-compiler',
       '--target',
       'claude',
       '--out',

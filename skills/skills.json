@@ -18,7 +18,12 @@
     {
       "name": "nx-devkit-typescript",
       "path": "nx-devkit-typescript/SKILL.md",
-      "description": "Preset Nx plugin that infers typecheck and vitest test targets from tsconfig.json and vitest.config.*"
+      "description": "Preset Nx plugin — one command bootstraps typecheck, test, lint, format, and build targets from config files you already keep. No project.json required."
+    },
+    {
+      "name": "nx-skill",
+      "path": "nx-skill/SKILL.md",
+      "description": "Manage SKILL.md lifecycle through Nx — build, lint, validate, os-check, size-check, and security scan targets inferred from SKILL.md files"
     },
     {
       "name": "nx-devkit-prepare-for-release",

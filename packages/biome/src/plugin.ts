@@ -37,9 +37,9 @@ function inferBiomeTargets(
   configFileBasename: string,
   options: BiomePluginOptions | undefined,
 ): Record<string, BiomeTarget> {
-  const formatCommand = options?.formatCommand ?? 'npx biome format --write .'
-  const formatCheckCommand = options?.formatCheckCommand ?? 'npx biome format .'
-  const lintCommand = options?.lintCommand ?? 'npx biome lint .'
+  const formatCommand = options?.formatCommand ?? 'biome format --write .'
+  const formatCheckCommand = options?.formatCheckCommand ?? 'biome format .'
+  const lintCommand = options?.lintCommand ?? 'biome lint .'
 
   const configInput = `{projectRoot}/${configFileBasename}`
   const baseInputs: string[] = [configInput, '{projectRoot}/**/*']

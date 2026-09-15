@@ -10,21 +10,23 @@ Scans the workspace for any file matching `**/SKILL.md`. For each match (outside
 | --- | --- | --- |
 | `**/SKILL.md` | `build`, `lint`, `validate`, `os-check`, `size-check` | `@nx-devkit/skill:build`, `nx:run-commands` |
 
-### Injective project naming
+### Collision-resistant project naming
 
-Each skill is registered under an injective project name derived from its root:
+Each skill is registered under a collision-resistant project name derived from its root:
 
 ```
-${projectRoot.replace(/\//g, '-')}-${sha256(projectRoot).slice(0,8)}
+${projectRoot.replace(/\//g, '-')}-${sha256(projectRoot).slice(0,12)}
 ```
 
-This guarantees that `skills/a-b/SKILL.md` and `skills/a/b/SKILL.md` — which would both slug to `skills-a-b` — receive distinct project names via the hash suffix.
+This keeps names for `skills/a-b/SKILL.md` and `skills/a/b/SKILL.md` — which would both slug to `skills-a-b` — distinct via the hash suffix. The 12-hex-char (48-bit) truncated hash is collision-resistant, not injective: collisions are possible in theory, with probability bounded by the birthday bound (~1 in 10^5 for one collision among ~65k skills).
 
 ## Install
 
 ```bash
-bun add -D @nx-devkit/skill
+bun add -D @nx-devkit/skill markdownlint-cli2 tsx
 ```
+
+The inferred `lint` target invokes `markdownlint-cli2` and the `validate`/`os-check`/`size-check` targets invoke `tsx` directly — Nx `run-commands` resolves them from the consumer workspace's `node_modules/.bin`, so both must be installed there. The `build` target additionally requires a `skills-compiler` binary on PATH or in `node_modules/.bin`.
 
 ## Register in nx.json
 
@@ -96,7 +98,7 @@ reports:
       "executor": "nx:run-commands",
       "cache": true,
       "options": {
-        "command": "npx markdownlint-cli2 '{projectRoot}/**/*.md' --config .markdownlint.json",
+        "command": "markdownlint-cli2 '{projectRoot}/**/*.md' --config .markdownlint.json",
         "cwd": "{workspaceRoot}"
       },
       "inputs": [
@@ -108,7 +110,7 @@ reports:
       "executor": "nx:run-commands",
       "cache": true,
       "options": {
-        "command": "npx tsx scripts/validate-skill.ts --skill {projectRoot}",
+        "command": "tsx scripts/validate-skill.ts --skill {projectRoot}",
         "cwd": "{workspaceRoot}"
       },
       "inputs": [
@@ -120,7 +122,7 @@ reports:
       "executor": "nx:run-commands",
       "cache": true,
       "options": {
-        "command": "npx tsx scripts/check-os-independence.ts --skill {projectRoot}",
+        "command": "tsx scripts/check-os-independence.ts --skill {projectRoot}",
         "cwd": "{workspaceRoot}"
       },
       "inputs": ["{projectRoot}/**/*"]
@@ -129,7 +131,7 @@ reports:
       "executor": "nx:run-commands",
       "cache": true,
       "options": {
-        "command": "npx tsx scripts/check-skill-size.ts --skill {projectRoot}",
+        "command": "tsx scripts/check-skill-size.ts --skill {projectRoot}",
         "cwd": "{workspaceRoot}"
       },
       "inputs": ["{projectRoot}/**/*"]
@@ -150,7 +152,7 @@ npx nx size-check skills-code-review-act-<hash>
 
 ## Build executor
 
-The `build` target uses the `@nx-devkit/skill:build` executor, which wraps the `skills-compiler` CLI. It invokes `npx skills-compiler` via `execFile` (no shell) to avoid shell injection.
+The `build` target uses the `@nx-devkit/skill:build` executor, which wraps the `skills-compiler` CLI. It invokes `skills-compiler` via `execFile` (no shell) to avoid shell injection.
 
 Supported targets: `skills-sh`, `claude`, `codex`, `agents`, `obsidian`.
 

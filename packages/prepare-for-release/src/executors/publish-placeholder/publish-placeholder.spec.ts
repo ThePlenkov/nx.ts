@@ -11,18 +11,45 @@ const state: {
   responses: new Map(),
 }
 
-vi.mock('node:child_process', () => ({
-  spawnSync: (command: string, args: string[] = [], options?: unknown) => {
-    state.calls.push({ args, command, options })
-    const key = `${command} ${args.join(' ')}`
-    for (const [pattern, response] of state.responses.entries()) {
-      if (key.includes(pattern)) {
-        return response
+vi.mock('node:child_process', async () => {
+  const { EventEmitter } = await import('node:events')
+  return {
+    spawnSync: (command: string, args: string[] = [], options?: unknown) => {
+      state.calls.push({ args, command, options })
+      const key = `${command} ${args.join(' ')}`
+      for (const [pattern, response] of state.responses.entries()) {
+        if (key.includes(pattern)) {
+          return response
+        }
       }
-    }
-    return { status: 0, stderr: '', stdout: '' }
-  },
-}))
+      return { status: 0, stderr: '', stdout: '' }
+    },
+    spawn: (command: string, args: string[] = [], options?: unknown) => {
+      state.calls.push({ args, command, options })
+      const key = `${command} ${args.join(' ')}`
+      let status = 0
+      let stderr = ''
+      for (const [pattern, response] of state.responses.entries()) {
+        if (key.includes(pattern)) {
+          status = response.status
+          stderr = response.stderr
+          break
+        }
+      }
+      const child = new EventEmitter() as EventEmitter & {
+        stderr: EventEmitter
+        kill: () => void
+      }
+      child.stderr = new EventEmitter()
+      child.kill = () => {}
+      queueMicrotask(() => {
+        if (stderr) child.stderr.emit('data', Buffer.from(stderr))
+        child.emit('close', status)
+      })
+      return child
+    },
+  }
+})
 
 const { publishPlaceholderExecutor } = await import('./executor.ts')
 
@@ -197,7 +224,37 @@ describe('publishPlaceholderExecutor', () => {
     expect(trustCall?.args).toContain('--repo')
     expect(trustCall?.args).toContain('nx-devkit/nx.ts')
     expect(trustCall?.args).toContain('--allow-publish')
-    expect(trustCall?.options).toMatchObject({ stdio: 'inherit' })
+    expect(trustCall?.options).toMatchObject({ stdio: ['inherit', 'inherit', 'pipe'] })
+  })
+
+  it('trust: true tees piped stderr to the terminal so MFA prompts stay visible', async () => {
+    makePackage(workspace, '@nx-devkit/prepare-for-release', '0.0.0')
+    state.responses.set('npm view', { status: 1, stderr: 'E404', stdout: '' })
+    state.responses.set('npm pack', {
+      status: 0,
+      stderr: '',
+      stdout: join(workspace, 'nx-devkit-prepare-for-release-0.0.0.tgz'),
+    })
+    state.responses.set('npm publish', { status: 0, stderr: '', stdout: 'ok' })
+    state.responses.set('npm trust', { status: 0, stderr: 'Enter OTP:', stdout: '' })
+    writeFileSync(join(workspace, 'nx-devkit-prepare-for-release-0.0.0.tgz'), 'fake-tarball-bytes')
+
+    const writes: string[] = []
+    const originalWrite = process.stderr.write.bind(process.stderr)
+    const spy = vi
+      .spyOn(process.stderr, 'write')
+      .mockImplementation(((chunk: unknown, ...rest: unknown[]) => {
+        writes.push(String(chunk))
+        return originalWrite(chunk as never, ...(rest as never[]))
+      }) as typeof process.stderr.write)
+
+    try {
+      const result = await publishPlaceholderExecutor({ trust: true }, { root: workspace })
+      expect(result.success).toBe(true)
+      expect(writes.join('')).toContain('Enter OTP:')
+    } finally {
+      spy.mockRestore()
+    }
   })
 
   it('trust: true does not run npm trust github in dryRun mode', async () => {

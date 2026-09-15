@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/schema",
+  "type": "object",
+  "properties": {
+    "watch": {
+      "type": "boolean",
+      "description": "Watch mode — rebuild on file changes. Default: false.",
+      "default": false
+    }
+  },
+  "additionalProperties": false
+}

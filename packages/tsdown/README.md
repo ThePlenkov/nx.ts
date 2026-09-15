@@ -4,7 +4,7 @@ Zero-config Nx plugin that infers a `build` target from a `tsdown.config.ts`.
 
 ## What it does
 
-For every project that contains a `tsdown.config.ts`, this plugin automatically infers a `build` target — no `project.json` required. The target runs `npx tsdown` with `cwd` set to the project root and caches output in `{projectRoot}/dist`.
+For every project that contains a `tsdown.config.ts`, this plugin automatically infers a `build` target — no `project.json` required. The target runs `tsdown` with `cwd` set to the project root and caches output in `{projectRoot}/dist`.
 
 | Trigger file | Inferred target | Executor |
 | --- | --- | --- |
@@ -47,7 +47,7 @@ reports:
   "targets": {
     "build": {
       "executor": "nx:run-commands",
-      "options": { "command": "npx tsdown", "cwd": "packages/foo" },
+      "options": { "command": "tsdown", "cwd": "packages/foo" },
       "outputs": ["{projectRoot}/dist"],
       "cache": true,
       "inputs": [
