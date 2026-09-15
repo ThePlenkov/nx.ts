@@ -134,11 +134,11 @@ export function resolveBinLaunch(
  */
 function* nodeModulesDirs(start: string): Generator<string> {
   let dir = resolve(start)
-  while (true) {
+  let prev = ''
+  while (dir !== prev) {
     if (basename(dir) !== 'node_modules') yield join(dir, 'node_modules')
-    const parent = dirname(dir)
-    if (parent === dir) return
-    dir = parent
+    prev = dir
+    dir = dirname(dir)
   }
 }
 
