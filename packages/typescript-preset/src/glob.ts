@@ -10,11 +10,16 @@ export function globMatch(rootDir: string, pattern: string): boolean {
     const matches = globSync(pattern, {
       cwd: rootDir,
       // `exclude` receives path strings (withFileTypes is unsupported on
-      // some runtimes). Skip anything under node_modules/dist/coverage
-      // path segments so generated or vendored files never trigger
-      // target inference.
-      exclude: (entry) =>
-        entry.split(/[\\/]/).some((s) => s === 'node_modules' || s === 'dist' || s === 'coverage'),
+      // some runtimes). node_modules is pruned at any depth (vendored
+      // files are never sources); dist/coverage only at the project
+      // root so legitimately-named source dirs and explicit
+      // testGlob/specGlob paths still match.
+      exclude: (entry) => {
+        const segments = entry.split(/[\\/]/)
+        return (
+          segments.includes('node_modules') || segments[0] === 'dist' || segments[0] === 'coverage'
+        )
+      },
     })
     // globSync can return directories that match the pattern (e.g. a
     // `foo.test.ts/` directory). Only count real files as matches so we
