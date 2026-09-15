@@ -10,9 +10,11 @@ export function globMatch(rootDir: string, pattern: string): boolean {
     const matches = globSync(pattern, {
       cwd: rootDir,
       // `exclude` receives path strings (withFileTypes is unsupported on
-      // some runtimes). Skip anything under a node_modules path segment
-      // so vendored fixtures never trigger target inference.
-      exclude: (entry) => entry.split(/[\\/]/).includes('node_modules'),
+      // some runtimes). Skip anything under node_modules/dist/coverage
+      // path segments so generated or vendored files never trigger
+      // target inference.
+      exclude: (entry) =>
+        entry.split(/[\\/]/).some((s) => s === 'node_modules' || s === 'dist' || s === 'coverage'),
     })
     // globSync can return directories that match the pattern (e.g. a
     // `foo.test.ts/` directory). Only count real files as matches so we

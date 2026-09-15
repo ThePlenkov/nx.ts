@@ -47,7 +47,7 @@ export async function buildExecutor(options: BuildExecutorOptions): Promise<Buil
     execFile(
       bin,
       ['--target', target, '--out', outDir, '--skill', skillPath],
-      { shell: false },
+      { shell: false, timeout: 300_000 },
       (err, _stdout, _stderr) => {
         if (err) {
           resolvePromise({ success: false })
