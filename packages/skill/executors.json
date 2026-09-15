@@ -1,7 +1,7 @@
 {
   "executors": {
     "build": {
-      "implementation": "./dist/executors/build/executor",
+      "implementation": "./dist/executors/build/executor.mjs",
       "schema": "./src/executors/build/schema.json",
       "description": "Compile a skill to a distribution target"
     }
