@@ -1,3 +1,10 @@
+const BIOME_INPUTS = [
+  '{projectRoot}/src/**/*',
+  '{projectRoot}/biome.json',
+  '{projectRoot}/biome.jsonc',
+  '{projectRoot}/package.json',
+]
+
 export function inferBiomeTargets(
   projectRoot: string,
   includeLint: boolean,
@@ -26,12 +33,7 @@ export function inferBiomeTargets(
         cwd: projectRoot,
       },
       cache: false,
-      inputs: [
-        '{projectRoot}/src/**/*',
-        '{projectRoot}/biome.json',
-        '{projectRoot}/biome.jsonc',
-        '{projectRoot}/package.json',
-      ],
+      inputs: BIOME_INPUTS,
     },
     'format-check': {
       executor: 'nx:run-commands',
@@ -40,12 +42,7 @@ export function inferBiomeTargets(
         cwd: projectRoot,
       },
       cache: true,
-      inputs: [
-        '{projectRoot}/src/**/*',
-        '{projectRoot}/biome.json',
-        '{projectRoot}/biome.jsonc',
-        '{projectRoot}/package.json',
-      ],
+      inputs: BIOME_INPUTS,
     },
   }
 
@@ -57,12 +54,7 @@ export function inferBiomeTargets(
         cwd: projectRoot,
       },
       cache: true,
-      inputs: [
-        '{projectRoot}/src/**/*',
-        '{projectRoot}/biome.json',
-        '{projectRoot}/biome.jsonc',
-        '{projectRoot}/package.json',
-      ],
+      inputs: BIOME_INPUTS,
     }
   }
 

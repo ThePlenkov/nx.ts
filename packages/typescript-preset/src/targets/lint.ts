@@ -28,6 +28,13 @@ export function inferEslintTarget(projectRoot: string): {
       cwd: projectRoot,
     },
     cache: true,
-    inputs: ['{projectRoot}/**/*', '{projectRoot}/eslint.config.*', '{projectRoot}/package.json'],
+    inputs: [
+      '{projectRoot}/**/*',
+      '!{projectRoot}/dist',
+      '!{projectRoot}/node_modules',
+      '!{projectRoot}/coverage',
+      '{projectRoot}/eslint.config.*',
+      '{projectRoot}/package.json',
+    ],
   }
 }
