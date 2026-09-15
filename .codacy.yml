@@ -11,7 +11,3 @@ engines:
   eslint-8:
     exclude_paths:
       - "packages/typescript-preset/src/plugin.ts"
-      # Workspace scanning is these modules' core function — dynamic fs
-      # paths come from the Nx project graph, not untrusted input.
-      - "packages/typescript-preset/src/config.ts"
-      - "packages/typescript-preset/src/glob.ts"

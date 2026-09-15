@@ -51,6 +51,7 @@ export function findConfigFile(
   const absProjectRoot = resolve(workspaceRoot, projectRoot)
   for (const name of candidates) {
     const candidate = join(absProjectRoot, name)
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- candidate names are fixed config basenames joined to an Nx project root
     if (existsSync(candidate)) {
       return candidate
     }
@@ -69,6 +70,7 @@ export function checkNativePreview(projectRoot: string, workspaceRoot: string): 
   const absProjectRoot = resolve(workspaceRoot, projectRoot)
   const pkgPath = join(absProjectRoot, 'package.json')
   try {
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- path is the project's own package.json under an Nx project root
     const pkg = JSON.parse(readFileSync(pkgPath, 'utf8')) as Record<string, unknown>
     const allDeps = {
       ...(pkg.dependencies as Record<string, string> | undefined),

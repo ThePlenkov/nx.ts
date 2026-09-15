@@ -26,6 +26,7 @@ export function globMatch(rootDir: string, pattern: string): boolean {
     // don't infer a native test target for a matching directory name.
     return matches.some((m) => {
       try {
+        // eslint-disable-next-line security/detect-non-literal-fs-filename -- match paths are produced by globSync under the project root
         return statSync(join(rootDir, m)).isFile()
       } catch {
         return false
