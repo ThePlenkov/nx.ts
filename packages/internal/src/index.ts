@@ -79,7 +79,9 @@ export function resolveBinLaunch(
   // ancestor node_modules — a nested workspace (apps/demo inside a
   // monorepo) finds tools hoisted to the outer repo root. workspaceRoot
   // lies on that chain in any normal layout.
-  const dirs = [...nodeModulesDirs(projectRoot), ...nodeModulesDirs(workspaceRoot)]
+  const dirs = [
+    ...new Set([...nodeModulesDirs(projectRoot), ...nodeModulesDirs(workspaceRoot)]),
+  ]
 
   // 1. Resolve via the owning package's `bin` field — exact and
   //    cross-platform (no shim involved).
