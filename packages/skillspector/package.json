@@ -15,7 +15,8 @@
     "./plugin": {
       "types": "./dist/plugin.d.mts",
       "default": "./dist/plugin.mjs"
-    }
+    },
+    "./package.json": "./package.json"
   },
   "executors": "./executors.json",
   "files": [
