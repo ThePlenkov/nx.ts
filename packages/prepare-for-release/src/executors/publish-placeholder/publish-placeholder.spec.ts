@@ -197,7 +197,7 @@ describe('publishPlaceholderExecutor', () => {
     expect(trustCall?.args).toContain('--repo')
     expect(trustCall?.args).toContain('nx-devkit/nx.ts')
     expect(trustCall?.args).toContain('--allow-publish')
-    expect(trustCall?.options).toMatchObject({ stdio: 'inherit' })
+    expect(trustCall?.options).toMatchObject({ stdio: ['inherit', 'inherit', 'pipe'] })
   })
 
   it('trust: true does not run npm trust github in dryRun mode', async () => {

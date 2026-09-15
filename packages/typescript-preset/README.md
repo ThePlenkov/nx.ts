@@ -156,7 +156,7 @@ When `coverage: true`, a `test:coverage` target is also inferred:
   "lint": {
     "executor": "nx:run-commands",
     "options": {
-      "command": "npx oxlint .",
+      "command": "oxlint .",
       "cwd": "{projectRoot}"
     },
     "cache": true,
@@ -176,7 +176,7 @@ When `coverage: true`, a `test:coverage` target is also inferred:
   "format": {
     "executor": "nx:run-commands",
     "options": {
-      "command": "npx biome format --write .",
+      "command": "biome format --write .",
       "cwd": "{projectRoot}"
     },
     "cache": false,
@@ -190,7 +190,7 @@ When `coverage: true`, a `test:coverage` target is also inferred:
   "format-check": {
     "executor": "nx:run-commands",
     "options": {
-      "command": "npx biome format .",
+      "command": "biome format .",
       "cwd": "{projectRoot}"
     },
     "cache": true,
@@ -215,7 +215,7 @@ When `biome.json` exists but neither oxlint nor ESLint is providing the `lint` t
   "lint": {
     "executor": "nx:run-commands",
     "options": {
-      "command": "npx biome lint .",
+      "command": "biome lint .",
       "cwd": "{projectRoot}"
     },
     "cache": true,
@@ -246,7 +246,7 @@ Biome always provides `format`/`format-check` when `biome.json` exists, regardle
   "build": {
     "executor": "nx:run-commands",
     "options": {
-      "command": "npx tsdown",
+      "command": "tsdown",
       "cwd": "{projectRoot}"
     },
     "outputs": ["{projectRoot}/dist"],
@@ -269,7 +269,7 @@ Biome always provides `format`/`format-check` when `biome.json` exists, regardle
   "build:watch": {
     "executor": "nx:run-commands",
     "options": {
-      "command": "npx tsdown --watch",
+      "command": "tsdown --watch",
       "cwd": "{projectRoot}"
     },
     "cache": false,
@@ -326,10 +326,10 @@ Pass options via the inline plugin tuple in `nx.json`:
 | `clean` | `boolean` | `false` | When `true`, a `tsgo/tsc --build --clean <configFile>` runs first, chained with `&&`, so a full clean rebuild happens before the normal typecheck. |
 | `tap` | `boolean` | `false` | When `true`, infers a `test:tap` target using the native Node test runner with TAP reporter. |
 | `coverage` | `boolean` | `false` | When `true`, infers a `test:coverage` target using the native Node test runner with `--experimental-test-coverage`. |
-| `oxlint` | `boolean` | `true` | When `true` and `.oxlintrc.*` exists, infers a `lint` target via `npx oxlint .`. |
+| `oxlint` | `boolean` | `true` | When `true` and `.oxlintrc.*` exists, infers a `lint` target via `oxlint .`. |
 | `eslint` | `boolean` | `true` | When `true` and `eslint.config.*` exists (and oxlint is not owning lint), infers a `lint` target via `npx eslint .`. |
 | `biome` | `boolean` | `true` | When `true` and `biome.json`/`biome.jsonc` exists, infers `format`/`format-check` (and `lint` when neither oxlint nor ESLint is providing it). |
-| `tsdown` | `boolean` | `true` | When `true` and `tsdown.config.ts` exists, infers a `build` target via `npx tsdown`. |
+| `tsdown` | `boolean` | `true` | When `true` and `tsdown.config.ts` exists, infers a `build` target via `tsdown`. |
 | `testGlob` | `string` | `"**/*.test.{ts,js,mts,mjs}"` | Glob pattern for detecting native test files. |
 | `specGlob` | `string` | `"**/*.spec.{ts,js,mts,mjs}"` | Glob pattern for detecting spec files. |
 

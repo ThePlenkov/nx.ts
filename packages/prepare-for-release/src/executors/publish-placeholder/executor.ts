@@ -268,10 +268,15 @@ function runTrustFor(pkgName: string, trustRepo: string, registry?: string): voi
   const npmCmd = resolveNpmCommand()
   const result = spawnWithTimeout(npmCmd, trustArgs(pkgName, trustRepo, registry), {
     encoding: 'utf8',
-    stdio: 'inherit',
+    // Inherit stdin/stdout for the MFA prompt, but capture stderr so we can
+    // include it in the error message and detect "already trusted" cases.
+    stdio: ['inherit', 'inherit', 'pipe'],
   })
   if (result.status !== 0) {
-    throw new Error(`npm trust github failed for ${pkgName} (exit ${result.status})`)
+    const stderr = typeof result.stderr === 'string' ? result.stderr : ''
+    throw new Error(
+      `npm trust github failed for ${pkgName} (exit ${result.status})${stderr ? `: ${stderr}` : ''}`,
+    )
   }
   console.log(`  ✓ ${pkgName}`)
 }

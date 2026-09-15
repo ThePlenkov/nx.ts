@@ -26,11 +26,20 @@ export function shouldSkipPath(projectRoot: string, workspaceRoot: string): bool
   }
 
   const rel = relative(workspaceRoot, absProjectRoot)
-  if (!rel || rel.startsWith('..')) {
+  if (!rel) {
+    return true
+  }
+  // Segment-aware check: skip paths that escape the workspace via `..`
+  // segments. Using `startsWith('..')` would incorrectly skip valid
+  // directories like `..foo` or `..hidden`.
+  const segments = rel.split(/[\\/]/)
+  if (segments[0] === '..' || segments.includes('..')) {
     return true
   }
 
-  if (rel.includes('node_modules')) {
+  // Only skip paths that contain a `node_modules` path segment, not paths
+  // that merely contain the substring (e.g. `skills/node_modules-docs/`).
+  if (segments.includes('node_modules')) {
     return true
   }
 

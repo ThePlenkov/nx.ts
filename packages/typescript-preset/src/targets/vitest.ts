@@ -38,7 +38,7 @@ export function inferVitestTargets(
     '{workspaceRoot}/vitest.config.cjs',
   ]
   const baseInputs = [
-    '{projectRoot}/src/**/*.ts',
+    '{projectRoot}/src/**/*',
     '{projectRoot}/tests/**/*',
     `{projectRoot}/${configName}`,
     '{projectRoot}/package.json',

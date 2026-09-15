@@ -24,7 +24,7 @@ bun add -D @nx-devkit/oxlint
 
 | Trigger file | Target | Executor | Command | Cache | Inputs |
 |---|---|---|---|---|---|
-| `**/.oxlintrc.{json,yaml,yml,js,mjs,cjs,cts,mts}` | `lint` | `nx:run-commands` | `npx oxlint .` | true | `{projectRoot}/src/**/*`, `{projectRoot}/.oxlintrc.*`, `{projectRoot}/package.json` |
+| `**/.oxlintrc.{json,yaml,yml,js,mjs,cjs,cts,mts}` | `lint` | `nx:run-commands` | `oxlint .` | true | `{projectRoot}/src/**/*`, `{projectRoot}/.oxlintrc.*`, `{projectRoot}/package.json` |
 
 The `cwd` of the lint command is the project root (relative to the workspace root).
 

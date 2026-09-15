@@ -187,7 +187,7 @@ describe('inferVitestTargets', () => {
     expect(t.dependsOn).toEqual(['^build'])
     expect(t.inputs).toEqual(
       expect.arrayContaining([
-        '{projectRoot}/src/**/*.ts',
+        '{projectRoot}/src/**/*',
         '{projectRoot}/tests/**/*',
         '{projectRoot}/vitest.config.ts',
         '{projectRoot}/package.json',

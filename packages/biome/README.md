@@ -24,9 +24,9 @@ bun add -D @nx-devkit/biome
 
 | Trigger | Target | Command | Cache |
 |---|---|---|---|
-| `**/biome.json` or `**/biome.jsonc` | `format` | `npx biome format --write .` | **false** (side effect: writes files) |
-| same | `format-check` | `npx biome format .` | true |
-| same | `lint` | `npx biome lint .` | true |
+| `**/biome.json` or `**/biome.jsonc` | `format` | `biome format --write .` | **false** (side effect: writes files) |
+| same | `format-check` | `biome format .` | true |
+| same | `lint` | `biome lint .` | true |
 
 All three targets run with `cwd` set to the project root. Each target's `inputs` array contains `{projectRoot}/biome.json` (or `biome.jsonc`) and `{projectRoot}/**/*`.
 

@@ -21,8 +21,8 @@
     "test": "vitest run"
   },
   "peerDependencies": {
-    "@biomejs/biome": "^2.0.0",
-    "@nx/devkit": "^22.0.0 || ^23.0.0"
+    "@nx/devkit": "^22.0.0 || ^23.0.0",
+    "nx": "^22.0.0 || ^23.0.0"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.0.0",

@@ -96,7 +96,7 @@ reports:
       "executor": "nx:run-commands",
       "cache": true,
       "options": {
-        "command": "npx markdownlint-cli2 '{projectRoot}/**/*.md' --config .markdownlint.json",
+        "command": "markdownlint-cli2 '{projectRoot}/**/*.md' --config .markdownlint.json",
         "cwd": "{workspaceRoot}"
       },
       "inputs": [
