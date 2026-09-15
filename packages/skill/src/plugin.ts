@@ -80,7 +80,7 @@ function inferValidateTarget() {
     executor: 'nx:run-commands',
     cache: true,
     options: {
-      command: 'tsx scripts/validate-skill.ts --skill {projectRoot}',
+      command: 'tsx scripts/validate-skill.ts --skill "{projectRoot}"',
       cwd: '{workspaceRoot}',
     },
     inputs: ['{projectRoot}/SKILL.md', '{projectRoot}/agents/openai.yaml'],
@@ -92,7 +92,7 @@ function inferOsCheckTarget() {
     executor: 'nx:run-commands',
     cache: true,
     options: {
-      command: 'tsx scripts/check-os-independence.ts --skill {projectRoot}',
+      command: 'tsx scripts/check-os-independence.ts --skill "{projectRoot}"',
       cwd: '{workspaceRoot}',
     },
     inputs: ['{projectRoot}/**/*'],
@@ -104,7 +104,7 @@ function inferSizeCheckTarget() {
     executor: 'nx:run-commands',
     cache: true,
     options: {
-      command: 'tsx scripts/check-skill-size.ts --skill {projectRoot}',
+      command: 'tsx scripts/check-skill-size.ts --skill "{projectRoot}"',
       cwd: '{workspaceRoot}',
     },
     inputs: ['{projectRoot}/**/*'],

@@ -27,7 +27,7 @@ import { inferTsdownBuildTarget, inferTsdownWatchTarget } from './targets/build.
 // Re-export everything for backward compatibility
 export type { NxDevkitTypescriptOptions }
 export { shouldSkipPath, isVerbose, resetCachedEnv, logDebug }
-export { globMatch } from './glob.js'
+export { globMatch, globToRegExp, expandBraces } from './glob.js'
 export { inferTypecheckTarget } from './targets/typecheck.js'
 export { inferVitestTargets } from './targets/vitest.js'
 export { inferNativeTestTargets } from './targets/native-test.js'

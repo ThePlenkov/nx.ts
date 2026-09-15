@@ -1,4 +1,5 @@
 import { relative, resolve } from 'node:path'
+import { logger } from '@nx/devkit'
 
 export function isVerbose(): boolean {
   if (process.argv.includes('--verbose')) {
@@ -14,7 +15,7 @@ export function resetCachedEnv(): void {}
 
 export function logDebug(scope: string, message: string): void {
   if (isVerbose()) {
-    console.error(`[${scope}] ${message}`)
+    logger.info(`[${scope}] ${message}`)
   }
 }
 
