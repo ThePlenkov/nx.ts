@@ -1,7 +1,7 @@
 {
   "executors": {
     "scan": {
-      "implementation": "./dist/executors/scan/executor",
+      "implementation": "./dist/executors/scan/executor.mjs",
       "schema": "./src/executors/scan/schema.json",
       "description": "Run SkillSpector security scan on a skill"
     }

@@ -1,6 +1,6 @@
 {
   "name": "@nx-devkit/oxlint",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "license": "MIT",
   "private": false,
   "type": "module",
@@ -11,7 +11,8 @@
     ".": {
       "types": "./dist/plugin.d.mts",
       "default": "./dist/plugin.mjs"
-    }
+    },
+    "./package.json": "./package.json"
   },
   "files": [
     "dist"
