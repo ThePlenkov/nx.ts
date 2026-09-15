@@ -31,7 +31,20 @@
     "test:watch": "vitest"
   },
   "peerDependencies": {
-    "@nx/devkit": "^22.0.0 || ^23.0.0"
+    "@nx/devkit": "^22.0.0 || ^23.0.0",
+    "@biomejs/biome": "^2.0.0",
+    "eslint": "^9.0.0",
+    "oxlint": "^1.0.0",
+    "tsdown": "^0.22.0",
+    "typescript": "^6.0.0",
+    "vitest": "^4.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@biomejs/biome": { "optional": true },
+    "eslint": { "optional": true },
+    "oxlint": { "optional": true },
+    "tsdown": { "optional": true },
+    "vitest": { "optional": true }
   },
   "devDependencies": {
     "@nx-devkit/internal": "workspace:*",

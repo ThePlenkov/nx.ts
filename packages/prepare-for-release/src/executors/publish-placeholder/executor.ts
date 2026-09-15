@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from 'node:fs'
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
-import { spawnSync } from 'node:child_process'
+import { spawn, spawnSync } from 'node:child_process'
 import { glob } from 'tinyglobby'
 
 export interface NxPrepareForReleaseOptions {
@@ -264,21 +264,43 @@ function trustArgs(pkgName: string, trustRepo: string, registry?: string): strin
   return args
 }
 
-function runTrustFor(pkgName: string, trustRepo: string, registry?: string): void {
+function runTrustFor(pkgName: string, trustRepo: string, registry?: string): Promise<void> {
   const npmCmd = resolveNpmCommand()
-  const result = spawnWithTimeout(npmCmd, trustArgs(pkgName, trustRepo, registry), {
-    encoding: 'utf8',
-    // Inherit stdin/stdout for the MFA prompt, but capture stderr so we can
-    // include it in the error message and detect "already trusted" cases.
-    stdio: ['inherit', 'inherit', 'pipe'],
+  return new Promise((resolvePromise, rejectPromise) => {
+    // stderr is piped but forwarded live: npm writes the interactive MFA/OTP
+    // prompt to stderr, so a plain 'pipe' would hide the prompt while the
+    // child blocks on stdin. Tee keeps the prompt visible AND retains a copy
+    // for "already trusted" detection.
+    const child = spawn(npmCmd, trustArgs(pkgName, trustRepo, registry), {
+      stdio: ['inherit', 'inherit', 'pipe'],
+    })
+    let stderr = ''
+    const timer = setTimeout(() => {
+      child.kill()
+      rejectPromise(new Error(`npm trust github timed out for ${pkgName}`))
+    }, NPM_SUBPROCESS_TIMEOUT_MS)
+    child.stderr?.on('data', (chunk: Buffer) => {
+      stderr += chunk.toString()
+      process.stderr.write(chunk)
+    })
+    child.on('error', (err) => {
+      clearTimeout(timer)
+      rejectPromise(err)
+    })
+    child.on('close', (code) => {
+      clearTimeout(timer)
+      if (code !== 0) {
+        rejectPromise(
+          new Error(
+            `npm trust github failed for ${pkgName} (exit ${code})${stderr ? `: ${stderr}` : ''}`,
+          ),
+        )
+        return
+      }
+      console.log(`  ✓ ${pkgName}`)
+      resolvePromise()
+    })
   })
-  if (result.status !== 0) {
-    const stderr = typeof result.stderr === 'string' ? result.stderr : ''
-    throw new Error(
-      `npm trust github failed for ${pkgName} (exit ${result.status})${stderr ? `: ${stderr}` : ''}`,
-    )
-  }
-  console.log(`  ✓ ${pkgName}`)
 }
 
 async function publishOnePackage(
@@ -386,7 +408,7 @@ export async function publishPlaceholderExecutor(
       )
       for (const pkgName of trustTargets) {
         try {
-          runTrustFor(pkgName, resolved.trustRepo, resolved.registry)
+          await runTrustFor(pkgName, resolved.trustRepo, resolved.registry)
         } catch (error) {
           if (error instanceof Error && /already.*trust|conflict|exists/i.test(error.message)) {
             console.log(`  ⊙ ${pkgName} (trust already configured)`)

@@ -24,9 +24,5 @@ jobs:
         run: bun install --frozen-lockfile
       - name: Lint (biome)
         run: bun run lint
-      - name: Build plugins (for executor dist)
-        run: |
-          cd packages/typescript-preset && bun run build
-          cd ../skill && bun run build
       - name: Lint, Build, Test, Typecheck (Nx inferred targets)
         run: bun --bun node_modules/.bin/nx run-many -t lint,build,test,typecheck

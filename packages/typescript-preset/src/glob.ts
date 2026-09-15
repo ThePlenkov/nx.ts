@@ -1,4 +1,5 @@
-import { globSync } from 'node:fs'
+import { globSync, statSync } from 'node:fs'
+import { join } from 'node:path'
 
 /**
  * Check if any file in `rootDir` matches the given glob pattern.
@@ -6,8 +7,23 @@ import { globSync } from 'node:fs'
  */
 export function globMatch(rootDir: string, pattern: string): boolean {
   try {
-    const matches = globSync(pattern, { cwd: rootDir })
-    return matches.length > 0
+    const matches = globSync(pattern, {
+      cwd: rootDir,
+      // `exclude` receives path strings (withFileTypes is unsupported on
+      // some runtimes). Skip anything under a node_modules path segment
+      // so vendored fixtures never trigger target inference.
+      exclude: (entry) => entry.split(/[\\/]/).includes('node_modules'),
+    })
+    // globSync can return directories that match the pattern (e.g. a
+    // `foo.test.ts/` directory). Only count real files as matches so we
+    // don't infer a native test target for a matching directory name.
+    return matches.some((m) => {
+      try {
+        return statSync(join(rootDir, m)).isFile()
+      } catch {
+        return false
+      }
+    })
   } catch (error) {
     // Only swallow ENOENT (directory missing). Surface other errors
     // (permission denied, invalid pattern, missing fs.globSync) so

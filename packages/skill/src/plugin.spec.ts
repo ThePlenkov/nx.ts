@@ -176,7 +176,7 @@ describe('@nx-devkit/skill createNodesV2', () => {
     expect(validate.executor).toBe('nx:run-commands')
     expect(validate.cache).toBe(true)
     expect(validate.options!.command).toBe(
-      `tsx scripts/validate-skill.ts --skill "{projectRoot}"`,
+      `tsx scripts/validate-skill.ts --skill '{projectRoot}'`,
     )
     expect(validate.options!.cwd).toBe('{workspaceRoot}')
     expect(validate.inputs).toEqual(['{projectRoot}/SKILL.md', '{projectRoot}/agents/openai.yaml'])
@@ -192,7 +192,7 @@ describe('@nx-devkit/skill createNodesV2', () => {
     expect(osCheck.executor).toBe('nx:run-commands')
     expect(osCheck.cache).toBe(true)
     expect(osCheck.options!.command).toBe(
-      `tsx scripts/check-os-independence.ts --skill "{projectRoot}"`,
+      `tsx scripts/check-os-independence.ts --skill '{projectRoot}'`,
     )
     expect(osCheck.options!.cwd).toBe('{workspaceRoot}')
     expect(osCheck.inputs).toEqual(['{projectRoot}/**/*'])
@@ -208,7 +208,7 @@ describe('@nx-devkit/skill createNodesV2', () => {
     expect(sizeCheck.executor).toBe('nx:run-commands')
     expect(sizeCheck.cache).toBe(true)
     expect(sizeCheck.options!.command).toBe(
-      `tsx scripts/check-skill-size.ts --skill "{projectRoot}"`,
+      `tsx scripts/check-skill-size.ts --skill '{projectRoot}'`,
     )
     expect(sizeCheck.options!.cwd).toBe('{workspaceRoot}')
     expect(sizeCheck.inputs).toEqual(['{projectRoot}/**/*'])

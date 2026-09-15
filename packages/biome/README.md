@@ -9,8 +9,10 @@ Scans the workspace for any `biome.json` or `biome.jsonc`. For each match (outsi
 ## Install
 
 ```bash
-bun add -D @nx-devkit/biome
+bun add -D @nx-devkit/biome @biomejs/biome
 ```
+
+The inferred targets invoke the `biome` binary directly (Nx `run-commands` resolves `node_modules/.bin`), so `@biomejs/biome` must be installed in the consuming workspace. It is declared as a peer dependency.
 
 ## Register in nx.json
 

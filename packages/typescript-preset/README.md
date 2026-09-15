@@ -23,6 +23,16 @@ bun add -D @nx-devkit/typescript
 
 Peer dependency: `@nx/devkit` >= 22.
 
+Inferred targets invoke tool binaries directly (`tsc`/`tsgo`, `vitest`, `oxlint`, `eslint`, `biome`, `tsdown`) — Nx `run-commands` resolves them from `node_modules/.bin`. Install only the tools your project configures; each is an optional peer dependency:
+
+```bash
+bun add -D typescript vitest oxlint @biomejs/biome tsdown
+# or, for the native-preview typechecker:
+bun add -D @typescript/native-preview
+```
+
+For example, a project with only `tsconfig.json` + `vitest.config.ts` needs just `typescript` and `vitest`; the lint/format/build targets are only inferred when the matching config file exists.
+
 ## Register in nx.json
 
 ```jsonc
@@ -64,7 +74,7 @@ The plugin needs no other setup. By default it scans every `tsconfig.json` in th
   "test": {
     "executor": "nx:run-commands",
     "options": {
-      "command": "npx vitest run",
+      "command": "vitest run",
       "cwd": "{projectRoot}"
     },
     "outputs": ["{projectRoot}/coverage"],
@@ -81,7 +91,7 @@ The plugin needs no other setup. By default it scans every `tsconfig.json` in th
 }
 ```
 
-`test:watch` is non-cached and uses `npx vitest` (no `run`).
+`test:watch` is non-cached and uses `vitest` (no `run`).
 `test:coverage` adds `--coverage` and uses the same outputs.
 
 ### Native Node test runner — when test files exist but NO vitest config
@@ -327,7 +337,7 @@ Pass options via the inline plugin tuple in `nx.json`:
 | `tap` | `boolean` | `false` | When `true`, infers a `test:tap` target using the native Node test runner with TAP reporter. |
 | `coverage` | `boolean` | `false` | When `true`, infers a `test:coverage` target using the native Node test runner with `--experimental-test-coverage`. |
 | `oxlint` | `boolean` | `true` | When `true` and `.oxlintrc.*` exists, infers a `lint` target via `oxlint .`. |
-| `eslint` | `boolean` | `true` | When `true` and `eslint.config.*` exists (and oxlint is not owning lint), infers a `lint` target via `npx eslint .`. |
+| `eslint` | `boolean` | `true` | When `true` and `eslint.config.*` exists (and oxlint is not owning lint), infers a `lint` target via `eslint .`. |
 | `biome` | `boolean` | `true` | When `true` and `biome.json`/`biome.jsonc` exists, infers `format`/`format-check` (and `lint` when neither oxlint nor ESLint is providing it). |
 | `tsdown` | `boolean` | `true` | When `true` and `tsdown.config.ts` exists, infers a `build` target via `tsdown`. |
 | `testGlob` | `string` | `"**/*.test.{ts,js,mts,mjs}"` | Glob pattern for detecting native test files. |

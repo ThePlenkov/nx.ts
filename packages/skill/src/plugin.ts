@@ -5,9 +5,20 @@ import {
   type CreateNodesV2,
   type TargetConfiguration,
   logger,
+  workspaceRoot as defaultWorkspaceRoot,
 } from '@nx/devkit'
-import { shouldSkipPath } from '@nx-devkit/internal'
-export { shouldSkipPath }
+import { shouldSkipPath as internalShouldSkipPath } from '@nx-devkit/internal'
+
+/**
+ * Backward-compat wrapper: the original plugin exposed `shouldSkipPath(projectRoot)`
+ * with the workspace root defaulted. The shared helper requires it explicitly.
+ */
+export function shouldSkipPath(
+  projectRoot: string,
+  workspaceRoot: string = defaultWorkspaceRoot,
+): boolean {
+  return internalShouldSkipPath(projectRoot, workspaceRoot)
+}
 
 export interface NxDevkitSkillOptions {
   /** Override the build target name. Default: "build". */
@@ -80,7 +91,7 @@ function inferValidateTarget() {
     executor: 'nx:run-commands',
     cache: true,
     options: {
-      command: 'tsx scripts/validate-skill.ts --skill "{projectRoot}"',
+      command: "tsx scripts/validate-skill.ts --skill '{projectRoot}'",
       cwd: '{workspaceRoot}',
     },
     inputs: ['{projectRoot}/SKILL.md', '{projectRoot}/agents/openai.yaml'],
@@ -92,7 +103,7 @@ function inferOsCheckTarget() {
     executor: 'nx:run-commands',
     cache: true,
     options: {
-      command: 'tsx scripts/check-os-independence.ts --skill "{projectRoot}"',
+      command: "tsx scripts/check-os-independence.ts --skill '{projectRoot}'",
       cwd: '{workspaceRoot}',
     },
     inputs: ['{projectRoot}/**/*'],
@@ -104,7 +115,7 @@ function inferSizeCheckTarget() {
     executor: 'nx:run-commands',
     cache: true,
     options: {
-      command: 'tsx scripts/check-skill-size.ts --skill "{projectRoot}"',
+      command: "tsx scripts/check-skill-size.ts --skill '{projectRoot}'",
       cwd: '{workspaceRoot}',
     },
     inputs: ['{projectRoot}/**/*'],
