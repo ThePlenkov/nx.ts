@@ -54,8 +54,21 @@ for (const { pkg } of manifests.values()) {
 }
 
 let rewritten = 0
-// No dynamic-key writes: deps maps are rebuilt via Object.fromEntries so
-// SAST's prototype-pollution/object-injection rules see only literals.
+// Translates a workspace: spec the way pnpm publish does: `*` → exact
+// local version, `^`/`~` → ranged local version, an explicit suffix like
+// `^1.2.3` keeps its range and version. Unknown local package falls back
+// to `*` (a bare `^`/`~` alone is not a valid npm range).
+const translateWorkspaceSpec = (name: string, spec: string): string => {
+  const local = localVersions.get(name)
+  const range = spec.slice('workspace:'.length)
+  if (local) {
+    if (range === '*') return local
+    if (range === '^' || range === '~') return `${range}${local}`
+    if (range) return range // e.g. workspace:^1.2.3 → ^1.2.3
+  }
+  return '*'
+}
+
 const rewriteDeps = (
   deps: Record<string, string> | undefined,
   pkgName: string,
@@ -64,8 +77,8 @@ const rewriteDeps = (
   if (!deps) return deps
   return Object.fromEntries(
     Object.entries(deps).map(([name, spec]) => {
-      if (!spec.startsWith('workspace:')) return [name, spec]
-      const replacement = localVersions.get(name) ?? '*'
+      if (typeof spec !== 'string' || !spec.startsWith('workspace:')) return [name, spec]
+      const replacement = translateWorkspaceSpec(name, spec)
       rewritten += 1
       console.log(`${pkgName}: ${field}.${name} ${spec} → ${replacement}`)
       return [name, replacement]
