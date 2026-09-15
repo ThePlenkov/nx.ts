@@ -363,10 +363,19 @@ function printSummary(
     .filter(([, v]) => v)
     .map(([k]) => k)
   if (rootDetected.length > 0) {
-    // The preset skips the workspace root itself — root configs only
-    // contribute lint/format fallbacks for nested projects and drive
-    // dependency installation.
-    console.log(`  . (workspace root — no targets, config source) → ${rootDetected.join(', ')}`)
+    // Without includeRoot the preset skips the workspace root — root
+    // configs only contribute lint/format fallbacks for nested projects
+    // and drive dependency installation. With includeRoot (standalone
+    // repos) the root is itself a project.
+    const rootTargets =
+      presetOptions.includeRoot === true
+        ? targetLabel(rootConfigs, rootConfigs, presetOptions)
+        : []
+    if (rootTargets.length > 0) {
+      console.log(`  . (workspace root) → ${rootTargets.join(', ')}`)
+    } else {
+      console.log(`  . (workspace root — no targets, config source) → ${rootDetected.join(', ')}`)
+    }
   }
 
   for (const { root, configs } of projectConfigs) {

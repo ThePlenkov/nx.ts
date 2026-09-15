@@ -270,8 +270,11 @@ describe('createNodesV2 integration', () => {
   it('includeRoot does not rescue node_modules or escaping paths', async () => {
     const root = makeWorkspace()
     try {
-      const cfg = touch(root, 'packages/foo/node_modules/x/tsconfig.json')
-      const result = await callCreateNodes([cfg], { includeRoot: true }, root)
+      const nmCfg = touch(root, 'packages/foo/node_modules/x/tsconfig.json')
+      // A config path outside the workspace stays skipped — includeRoot
+      // only widens the root itself, never paths escaping it.
+      const outsideCfg = join(root, '..', 'outside-escape', 'tsconfig.json')
+      const result = await callCreateNodes([nmCfg, outsideCfg], { includeRoot: true }, root)
       expect(result).toEqual([])
     } finally {
       rmSync(root, { recursive: true, force: true })
