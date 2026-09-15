@@ -189,6 +189,19 @@ describe('initGenerator', () => {
   })
 
   describe('config detection', () => {
+    // Assert against the conditional "Detected projects" section — the
+    // static "preset auto-detects" block always prints every target name
+    // and cannot fail on detection logic.
+    async function capturedSummary(tree: Parameters<typeof initGenerator>[0]): Promise<string> {
+      const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+      try {
+        await initGenerator(tree, {})
+        return consoleSpy.mock.calls.map((c) => String(c[0])).join('\n')
+      } finally {
+        consoleSpy.mockRestore()
+      }
+    }
+
     it('detects tsconfig.json and reports typecheck target', async () => {
       const { tree } = createTree({
         'nx.json': JSON.stringify({ plugins: [] }),
@@ -196,13 +209,8 @@ describe('initGenerator', () => {
         'package.json': JSON.stringify({ name: 'test', version: '0.0.0' }),
       })
 
-      const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
-
-      await initGenerator(tree, {})
-
-      const output = consoleSpy.mock.calls.map((c) => String(c[0])).join('\n')
-      expect(output).toContain('typecheck')
-      consoleSpy.mockRestore()
+      const output = await capturedSummary(tree)
+      expect(output).toContain('(workspace root — no targets, config source) → tsconfig')
     })
 
     it('detects vitest.config.ts and reports test targets', async () => {
@@ -212,13 +220,8 @@ describe('initGenerator', () => {
         'package.json': JSON.stringify({ name: 'test', version: '0.0.0' }),
       })
 
-      const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
-
-      await initGenerator(tree, {})
-
-      const output = consoleSpy.mock.calls.map((c) => String(c[0])).join('\n')
-      expect(output).toContain('test')
-      consoleSpy.mockRestore()
+      const output = await capturedSummary(tree)
+      expect(output).toContain('(workspace root — no targets, config source) → vitest')
     })
 
     it('detects .oxlintrc.json and reports lint target', async () => {
@@ -228,13 +231,19 @@ describe('initGenerator', () => {
         'package.json': JSON.stringify({ name: 'test', version: '0.0.0' }),
       })
 
-      const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+      const output = await capturedSummary(tree)
+      expect(output).toContain('(workspace root — no targets, config source) → oxlint')
+    })
 
-      await initGenerator(tree, {})
+    it('detects eslint.config.js and reports lint target', async () => {
+      const { tree } = createTree({
+        'nx.json': JSON.stringify({ plugins: [] }),
+        'eslint.config.js': 'export default []',
+        'package.json': JSON.stringify({ name: 'test', version: '0.0.0' }),
+      })
 
-      const output = consoleSpy.mock.calls.map((c) => String(c[0])).join('\n')
-      expect(output).toContain('lint')
-      consoleSpy.mockRestore()
+      const output = await capturedSummary(tree)
+      expect(output).toContain('(workspace root — no targets, config source) → eslint')
     })
 
     it('detects biome.json and reports format targets', async () => {
@@ -244,13 +253,8 @@ describe('initGenerator', () => {
         'package.json': JSON.stringify({ name: 'test', version: '0.0.0' }),
       })
 
-      const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
-
-      await initGenerator(tree, {})
-
-      const output = consoleSpy.mock.calls.map((c) => String(c[0])).join('\n')
-      expect(output).toContain('format')
-      consoleSpy.mockRestore()
+      const output = await capturedSummary(tree)
+      expect(output).toContain('(workspace root — no targets, config source) → biome')
     })
 
     it('detects tsdown.config.ts and reports build target', async () => {
@@ -260,13 +264,8 @@ describe('initGenerator', () => {
         'package.json': JSON.stringify({ name: 'test', version: '0.0.0' }),
       })
 
-      const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
-
-      await initGenerator(tree, {})
-
-      const output = consoleSpy.mock.calls.map((c) => String(c[0])).join('\n')
-      expect(output).toContain('build')
-      consoleSpy.mockRestore()
+      const output = await capturedSummary(tree)
+      expect(output).toContain('(workspace root — no targets, config source) → tsdown')
     })
 
     it('detects nested project config files', async () => {
@@ -279,13 +278,53 @@ describe('initGenerator', () => {
         'packages/my-pkg/.oxlintrc.json': JSON.stringify({ plugins: ['oxc'] }),
       })
 
-      const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+      const output = await capturedSummary(tree)
+      expect(output).toContain('packages/my-pkg → typecheck, lint, build, build:watch')
+    })
+
+    it('reports native test files without a vitest config', async () => {
+      const { tree } = createTree({
+        'nx.json': JSON.stringify({ plugins: [] }),
+        'package.json': JSON.stringify({ name: 'test', version: '0.0.0' }),
+        'packages/my-pkg/package.json': JSON.stringify({ name: '@test/my-pkg', version: '0.0.0' }),
+        'packages/my-pkg/tsconfig.json': JSON.stringify({ compilerOptions: {} }),
+        'packages/my-pkg/src/foo.test.ts': 'test',
+      })
+
+      const output = await capturedSummary(tree)
+      expect(output).toContain('packages/my-pkg → typecheck, test')
+    })
+
+    it('detects deeply nested project roots', async () => {
+      const { tree } = createTree({
+        'nx.json': JSON.stringify({ plugins: [] }),
+        'package.json': JSON.stringify({ name: 'test', version: '0.0.0' }),
+        'packages/scopes/my-pkg/package.json': JSON.stringify({
+          name: '@test/my-pkg',
+          version: '0.0.0',
+        }),
+        'packages/scopes/my-pkg/tsconfig.json': JSON.stringify({ compilerOptions: {} }),
+      })
+
+      const output = await capturedSummary(tree)
+      expect(output).toContain('packages/scopes/my-pkg → typecheck')
+    })
+
+    it('preserves existing preset options when re-registering', async () => {
+      const { tree, files } = createTree({
+        'nx.json': JSON.stringify({
+          plugins: [{ plugin: '@nx-devkit/typescript', options: { tap: true } }],
+        }),
+        'package.json': JSON.stringify({ name: 'test', version: '0.0.0' }),
+      })
 
       await initGenerator(tree, {})
 
-      const output = consoleSpy.mock.calls.map((c) => String(c[0])).join('\n')
-      expect(output).toContain('packages/my-pkg')
-      consoleSpy.mockRestore()
+      const nxJson = JSON.parse(files.get('nx.json') ?? '{}') as {
+        plugins: Array<{ plugin: string; options: Record<string, unknown> }>
+      }
+      const preset = nxJson.plugins.find((p) => p.plugin === '@nx-devkit/typescript')
+      expect(preset?.options).toEqual({ tap: true })
     })
   })
 

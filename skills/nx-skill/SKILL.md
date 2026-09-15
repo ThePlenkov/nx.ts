@@ -13,7 +13,7 @@ Scans for `**/SKILL.md` and infers 5 targets per skill:
 
 | Target | What it does | Executor |
 |---|---|---|
-| `build` | Compiles SKILL.md → skills-sh / claude / codex / agents / obsidian formats | `@nx-devkit/skill:build` (wraps `npx skills-compiler`, `shell: false`) |
+| `build` | Compiles SKILL.md → skills-sh / claude / codex / agents / obsidian formats | `@nx-devkit/skill:build` (invokes the `skills-compiler` binary directly via `execFile`, `shell: false`) |
 | `lint` | Runs `markdownlint-cli2` on all markdown in the skill dir | `nx:run-commands` |
 | `validate` | Validates SKILL.md frontmatter and structure | `nx:run-commands` |
 | `os-check` | Checks OS-independence (no hardcoded paths, no platform-specific commands) | `nx:run-commands` |

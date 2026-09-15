@@ -9,9 +9,9 @@ npx @nx-devkit/typescript init
 ```
 
 This single command:
-1. Registers `@nx-devkit/typescript` as the **sole plugin** in `nx.json` (removes any existing `@nx-devkit/*` standalone entries)
-2. Detects config files in your workspace (`tsconfig.json`, `vitest.config.*`, `.oxlintrc.*`, `biome.json`, `tsdown.config.*`)
-3. Installs missing peer dependencies (`tsdown`, `oxlint`, `@biomejs/biome`, `vitest`, `typescript`)
+1. Registers `@nx-devkit/typescript` in `nx.json` and removes standalone `@nx-devkit/*` entries (other plugins are left untouched)
+2. Detects config files in your workspace (`tsconfig.json`, `vitest.config.*`, `.oxlintrc.*`, `eslint.config.*`, `biome.json`, `tsdown.config.*`)
+3. Adds devDependencies for the detected tools (`tsdown`, `oxlint`, `eslint`, `@biomejs/biome`, `vitest`, `typescript`, `@typescript/native-preview`)
 4. Prints a summary of detected projects and inferred targets
 
 If your project doesn't have Nx yet, the bootstrap installs `nx` + `@nx/devkit` automatically.
@@ -50,7 +50,7 @@ For every `tsconfig.json` (outside the workspace root) the plugin infers a `type
 - **Native Node test runner targets** (`test`, optionally `test:tap` and `test:coverage`) when test/spec files exist but no vitest config
 - **Oxlint lint** target when `.oxlintrc.*` exists
 - **ESLint lint** target when `eslint.config.*` exists (fallback when no oxlint config)
-- **Biome format/format-check/lint** targets when `biome.json` or `biome.jsonc` exists
+- **Biome format/format-check** targets when `biome.json` or `biome.jsonc` exists — plus `lint` only when neither oxlint nor ESLint provides it
 - **Tsdown build** target when `tsdown.config.ts` exists
 
 This is a "mega-preset" plugin: it owns the cross-cutting `typecheck`, `test`, `lint`, `format`, and `build` logic that most TypeScript projects need, so per-tool plugins don't have to re-implement it. Standalone plugins (`@nx-devkit/tsdown`, `@nx-devkit/oxlint`, `@nx-devkit/biome`) remain available for consumers who want only one tool.

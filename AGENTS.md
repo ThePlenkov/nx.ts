@@ -83,7 +83,8 @@ Run `nx migrate latest` **before** starting any new feature work — working on 
 # 1. Generate migration migrations.json
 bun --bun node_modules/.bin/nx migrate latest
 
-# 2. Review migrations.json — it lists package.json bumps + file migrations
+# 2. Review migrations.json — it lists codemod/file migrations
+#    (nx migrate applies package.json version bumps immediately)
 
 # 3. Apply migrations
 bun --bun node_modules/.bin/nx migrate --run-migrations=migrations.json
@@ -93,6 +94,9 @@ bun install
 
 # 5. Verify everything still works
 bun run lint && bun test && bun run build
+
+# 6. Delete migrations.json — it is a transient artifact, never commit it
+rm migrations.json
 ```
 
 **Rules:**

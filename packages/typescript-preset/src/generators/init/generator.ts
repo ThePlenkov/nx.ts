@@ -50,6 +50,19 @@ function isPresetEntry(entry: unknown, presetPath: string): boolean {
   return getPluginName(entry) === presetPath
 }
 
+function getPluginOptions(entry: unknown): Record<string, unknown> {
+  if (Array.isArray(entry) && typeof entry[1] === 'object' && entry[1] !== null) {
+    return entry[1] as Record<string, unknown>
+  }
+  if (typeof entry === 'object' && entry !== null) {
+    const options = (entry as { options?: unknown }).options
+    if (typeof options === 'object' && options !== null) {
+      return options as Record<string, unknown>
+    }
+  }
+  return {}
+}
+
 function registerPlugin(tree: Tree, pluginPath: string): void {
   const nxJson = readJson(tree, 'nx.json') ?? {}
   const plugins = Array.isArray(nxJson.plugins) ? (nxJson.plugins as unknown[]) : []
@@ -57,12 +70,14 @@ function registerPlugin(tree: Tree, pluginPath: string): void {
   // Remove @nx-devkit/* standalone entries (not the preset — it gets normalized)
   const filtered = plugins.filter((entry) => !isNxDevkitStandalone(entry, pluginPath))
 
-  // Normalize or add the preset in object form
+  // Normalize or add the preset in object form, preserving existing options
   const presetIndex = filtered.findIndex((entry) => isPresetEntry(entry, pluginPath))
+  const existingOptions = presetIndex >= 0 ? getPluginOptions(filtered[presetIndex]) : {}
+  const presetEntry = { options: existingOptions, plugin: pluginPath }
   if (presetIndex >= 0) {
-    filtered[presetIndex] = { options: {}, plugin: pluginPath }
+    filtered[presetIndex] = presetEntry
   } else {
-    filtered.push({ options: {}, plugin: pluginPath })
+    filtered.push(presetEntry)
   }
 
   nxJson.plugins = filtered
@@ -103,6 +118,14 @@ const CONFIG_FILES: Record<string, string[]> = {
     '.oxlintrc.mts',
     '.oxlintrc.cts',
   ],
+  eslint: [
+    'eslint.config.js',
+    'eslint.config.mjs',
+    'eslint.config.cjs',
+    'eslint.config.ts',
+    'eslint.config.mts',
+    'eslint.config.cts',
+  ],
   biome: ['biome.json', 'biome.jsonc'],
   tsdown: [
     'tsdown.config.ts',
@@ -118,61 +141,93 @@ interface DetectedConfigs {
   tsconfig: boolean
   vitest: boolean
   oxlint: boolean
+  eslint: boolean
   biome: boolean
   tsdown: boolean
+  tests: boolean
 }
 
-function detectConfigsAtRoot(tree: Tree): DetectedConfigs {
+const TEST_FILE_PATTERN = /\.(test|spec)\.(ts|js|mts|mjs|cts|cjs)$/
+const SKIP_DIRS = new Set(['node_modules', '.git', 'dist', 'coverage'])
+
+function detectConfigs(
+  tree: Tree,
+  files: Record<string, string[]>,
+  prefix: string,
+): DetectedConfigs {
   const result: DetectedConfigs = {
     tsconfig: false,
     vitest: false,
     oxlint: false,
+    eslint: false,
     biome: false,
     tsdown: false,
+    tests: false,
   }
-  for (const [key, files] of Object.entries(CONFIG_FILES)) {
-    result[key as keyof DetectedConfigs] = files.some((f) => tree.exists(f))
+  for (const [key, names] of Object.entries(files)) {
+    result[key as keyof DetectedConfigs] = names.some((f) => tree.exists(`${prefix}${f}`))
   }
+  return result
+}
+
+function hasTestFiles(
+  tree: Tree,
+  dir: string,
+  depth = 0,
+  extraSkip: ReadonlySet<string> = new Set(),
+): boolean {
+  if (depth > 6) return false
+  const normalized = dir === '' ? '.' : dir
+  let children: string[]
+  try {
+    children = tree.children(normalized)
+  } catch {
+    return false
+  }
+  for (const child of children) {
+    if (SKIP_DIRS.has(child) || (depth === 0 && extraSkip.has(child))) continue
+    const path = dir === '' ? child : `${dir}/${child}`
+    if (TEST_FILE_PATTERN.test(child) && tree.exists(path)) return true
+    if (hasTestFiles(tree, path, depth + 1, extraSkip)) return true
+  }
+  return false
+}
+
+const PROJECT_CONTAINER_DIRS = new Set(['packages', 'apps', 'libs', 'projects'])
+
+function detectConfigsAtRoot(tree: Tree): DetectedConfigs {
+  const result = detectConfigs(tree, CONFIG_FILES, '')
+  // Scan root for test files but skip the project container dirs — their
+  // tests belong to the nested projects, not the root.
+  result.tests = hasTestFiles(tree, '', 0, PROJECT_CONTAINER_DIRS)
   return result
 }
 
 function detectConfigsAtProjectRoot(tree: Tree, projectRoot: string): DetectedConfigs {
-  const result: DetectedConfigs = {
-    tsconfig: false,
-    vitest: false,
-    oxlint: false,
-    biome: false,
-    tsdown: false,
-  }
   const prefix = projectRoot.endsWith('/') ? projectRoot : `${projectRoot}/`
-  for (const [key, files] of Object.entries(CONFIG_FILES)) {
-    result[key as keyof DetectedConfigs] = files.some((f) => tree.exists(`${prefix}${f}`))
-  }
+  const result = detectConfigs(tree, CONFIG_FILES, prefix)
+  result.tests = hasTestFiles(tree, projectRoot)
   return result
 }
 
-function findNestedProjectRoots(tree: Tree): string[] {
-  const roots: string[] = []
-
-  // Try common monorepo directory patterns
-  const commonDirs = ['packages', 'apps', 'libs', 'projects']
-  for (const dir of commonDirs) {
-    try {
-      const children = tree.children(dir)
-      if (children.length === 0) continue
-      for (const child of children) {
-        const childPath = `${dir}/${child}`
-        // A project root is a directory with a package.json or tsconfig.json
-        if (tree.exists(`${childPath}/package.json`) || tree.exists(`${childPath}/tsconfig.json`)) {
-          roots.push(childPath)
-        }
-      }
-    } catch {
-      // Tree might not support children — skip
-    }
+function findNestedProjectRoots(tree: Tree, dir: string, depth: number, roots: string[]): void {
+  if (depth > 4) return
+  let children: string[]
+  try {
+    children = tree.children(dir)
+  } catch {
+    return
   }
-
-  return roots
+  for (const child of children) {
+    if (SKIP_DIRS.has(child)) continue
+    const childPath = `${dir}/${child}`
+    // A project root is a directory with a package.json or tsconfig.json —
+    // the preset itself infers a project from either signal.
+    if (tree.exists(`${childPath}/package.json`) || tree.exists(`${childPath}/tsconfig.json`)) {
+      roots.push(childPath)
+    }
+    findNestedProjectRoots(tree, childPath, depth + 1, roots)
+  }
 }
 
 // --- Dependency installation ---
@@ -180,9 +235,11 @@ function findNestedProjectRoots(tree: Tree): string[] {
 const DEP_VERSIONS: Record<string, string> = {
   tsdown: '^0.22.3',
   oxlint: '^1.0.0',
+  eslint: '^9.0.0',
   '@biomejs/biome': '^2.0.0',
   vitest: '^4.1.9',
   typescript: '^6.0.3',
+  '@typescript/native-preview': '^7.0.0-dev.20260621.1',
 }
 
 function getMissingDevDeps(tree: Tree, configs: DetectedConfigs[]): Record<string, string> {
@@ -197,11 +254,17 @@ function getMissingDevDeps(tree: Tree, configs: DetectedConfigs[]): Record<strin
 
   if (hasAny('tsdown') && !('tsdown' in existing)) needed['tsdown'] = DEP_VERSIONS['tsdown']
   if (hasAny('oxlint') && !('oxlint' in existing)) needed['oxlint'] = DEP_VERSIONS['oxlint']
+  if (hasAny('eslint') && !('eslint' in existing)) needed['eslint'] = DEP_VERSIONS['eslint']
   if (hasAny('biome') && !('@biomejs/biome' in existing))
     needed['@biomejs/biome'] = DEP_VERSIONS['@biomejs/biome']
   if (hasAny('vitest') && !('vitest' in existing)) needed['vitest'] = DEP_VERSIONS['vitest']
   if (hasAny('tsconfig') && !('typescript' in existing))
     needed['typescript'] = DEP_VERSIONS['typescript']
+  // Default `tsgo: true` typecheck runs the tsgo binary from
+  // @typescript/native-preview — install it alongside typescript so a
+  // freshly bootstrapped workspace's typecheck target works.
+  if (hasAny('tsconfig') && !('@typescript/native-preview' in existing))
+    needed['@typescript/native-preview'] = DEP_VERSIONS['@typescript/native-preview']
 
   return needed
 }
@@ -217,14 +280,21 @@ function detectPackageManagerFromTree(tree: Tree): 'bun' | 'npm' | 'pnpm' | 'yar
 
 // --- Summary printing ---
 
-function targetLabel(configs: DetectedConfigs): string[] {
+function targetLabel(configs: DetectedConfigs, rootConfigs?: DetectedConfigs): string[] {
+  // Lint-family configs fall back to the workspace root, matching the
+  // preset's root-config fallback for lint/format inference.
+  const hasOxlint = configs.oxlint || (rootConfigs?.oxlint ?? false)
+  const hasEslint = configs.eslint || (rootConfigs?.eslint ?? false)
+  const hasBiome = configs.biome || (rootConfigs?.biome ?? false)
+
   const targets: string[] = []
   if (configs.tsconfig) targets.push('typecheck')
   if (configs.vitest) targets.push('test', 'test:watch', 'test:coverage')
-  if (configs.oxlint) targets.push('lint')
-  if (configs.biome) {
+  else if (configs.tests) targets.push('test')
+  if (hasOxlint || hasEslint) targets.push('lint')
+  if (hasBiome) {
     targets.push('format', 'format-check')
-    if (!configs.oxlint) targets.push('lint')
+    if (!hasOxlint && !hasEslint) targets.push('lint')
   }
   if (configs.tsdown) targets.push('build', 'build:watch')
   return targets
@@ -254,13 +324,18 @@ function printSummary(
   console.log('')
   console.log('Detected projects and inferred targets:')
 
-  const rootTargets = targetLabel(rootConfigs)
-  if (rootTargets.length > 0) {
-    console.log(`  . (workspace root) → ${rootTargets.join(', ')}`)
+  const rootDetected = Object.entries(rootConfigs)
+    .filter(([, v]) => v)
+    .map(([k]) => k)
+  if (rootDetected.length > 0) {
+    // The preset skips the workspace root itself — root configs only
+    // contribute lint/format fallbacks for nested projects and drive
+    // dependency installation.
+    console.log(`  . (workspace root — no targets, config source) → ${rootDetected.join(', ')}`)
   }
 
   for (const { root, configs } of projectConfigs) {
-    const targets = targetLabel(configs)
+    const targets = targetLabel(configs, rootConfigs)
     if (targets.length > 0) {
       console.log(`  ${root} → ${targets.join(', ')}`)
     }
@@ -313,7 +388,10 @@ export async function initGenerator(
   const rootConfigs = detectConfigsAtRoot(tree)
 
   // 4. Detect configs in nested project directories
-  const nestedRoots = findNestedProjectRoots(tree)
+  const nestedRoots: string[] = []
+  for (const dir of ['packages', 'apps', 'libs', 'projects']) {
+    findNestedProjectRoots(tree, dir, 0, nestedRoots)
+  }
   const projectConfigs: Array<{ root: string; configs: DetectedConfigs }> = []
   for (const root of nestedRoots) {
     const configs = detectConfigsAtProjectRoot(tree, root)

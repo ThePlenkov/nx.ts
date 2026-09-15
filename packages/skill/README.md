@@ -10,15 +10,15 @@ Scans the workspace for any file matching `**/SKILL.md`. For each match (outside
 | --- | --- | --- |
 | `**/SKILL.md` | `build`, `lint`, `validate`, `os-check`, `size-check` | `@nx-devkit/skill:build`, `nx:run-commands` |
 
-### Injective project naming
+### Collision-resistant project naming
 
-Each skill is registered under an injective project name derived from its root:
+Each skill is registered under a collision-resistant project name derived from its root:
 
 ```
-${projectRoot.replace(/\//g, '-')}-${sha256(projectRoot).slice(0,8)}
+${projectRoot.replace(/\//g, '-')}-${sha256(projectRoot).slice(0,12)}
 ```
 
-This guarantees that `skills/a-b/SKILL.md` and `skills/a/b/SKILL.md` — which would both slug to `skills-a-b` — receive distinct project names via the hash suffix.
+This keeps names for `skills/a-b/SKILL.md` and `skills/a/b/SKILL.md` — which would both slug to `skills-a-b` — distinct via the hash suffix. The 12-hex-char (48-bit) truncated hash is collision-resistant, not injective: collisions are possible in theory, with probability bounded by the birthday bound (~1 in 10^5 for one collision among ~65k skills).
 
 ## Install
 
