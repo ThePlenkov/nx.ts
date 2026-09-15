@@ -386,6 +386,21 @@ describe('initGenerator', () => {
       expect(output).not.toContain('(workspace root) → typecheck')
     })
 
+    it('honours a configured configFile for root detection', async () => {
+      // With configFile: 'tsconfig.lib.json', the plugin's typecheck
+      // target keys off that file — init must detect the same name.
+      const { tree } = createTree({
+        'nx.json': JSON.stringify({
+          plugins: [{ plugin: '@nx-devkit/typescript', options: { configFile: 'tsconfig.lib.json' } }],
+        }),
+        'package.json': JSON.stringify({ name: 'test', version: '0.0.0' }),
+        'tsconfig.lib.json': JSON.stringify({ compilerOptions: {} }),
+      })
+
+      const output = await capturedSummary(tree)
+      expect(output).toContain('(workspace root) → typecheck')
+    })
+
     it('respects an explicit includeRoot option over detection', async () => {
       const { tree, files } = createTree({
         'nx.json': JSON.stringify({

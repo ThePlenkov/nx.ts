@@ -204,17 +204,21 @@ function hasTestFiles(
 
 const PROJECT_CONTAINER_DIRS = new Set(['packages', 'apps', 'libs', 'projects'])
 
-function detectConfigsAtRoot(tree: Tree): DetectedConfigs {
-  const result = detectConfigs(tree, CONFIG_FILES, '')
+function detectConfigsAtRoot(tree: Tree, configFile = 'tsconfig.json'): DetectedConfigs {
+  const result = detectConfigs(tree, { ...CONFIG_FILES, tsconfig: [configFile] }, '')
   // Scan root for test files but skip the project container dirs — their
   // tests belong to the nested projects, not the root.
   result.tests = hasTestFiles(tree, '', 0, PROJECT_CONTAINER_DIRS)
   return result
 }
 
-function detectConfigsAtProjectRoot(tree: Tree, projectRoot: string): DetectedConfigs {
+function detectConfigsAtProjectRoot(
+  tree: Tree,
+  projectRoot: string,
+  configFile = 'tsconfig.json',
+): DetectedConfigs {
   const prefix = projectRoot.endsWith('/') ? projectRoot : `${projectRoot}/`
-  const result = detectConfigs(tree, CONFIG_FILES, prefix)
+  const result = detectConfigs(tree, { ...CONFIG_FILES, tsconfig: [configFile] }, prefix)
   result.tests = hasTestFiles(tree, projectRoot)
   return result
 }
@@ -240,11 +244,12 @@ function findNestedProjectRoots(tree: Tree, dir: string, depth: number, roots: s
 }
 
 // Mirrors the preset's nested-project check: the plugin glob matches
-// config files in ANY directory, not only the container dirs scanned
-// above — a tools/tsconfig.json suppresses root inference just the same.
-// Skipped dirs never become projects and must not count either.
-function hasNestedConfigFile(tree: Tree, fileName: string, dir = '', depth = 0): boolean {
-  if (depth > 6) return false
+// config files in ANY directory at ANY depth, not only the container
+// dirs scanned above — a tools/tsconfig.json suppresses root inference
+// just the same. Skipped dirs never become projects and must not count
+// either. Deliberately unbounded: a depth cap would diverge from the
+// plugin and misreport root targets in the summary.
+function hasNestedConfigFile(tree: Tree, fileName: string, dir = ''): boolean {
   let children: string[]
   try {
     children = tree.children(dir === '' ? '.' : dir)
@@ -255,7 +260,7 @@ function hasNestedConfigFile(tree: Tree, fileName: string, dir = '', depth = 0):
     if (SKIP_DIRS.has(child)) continue
     const path = dir === '' ? child : `${dir}/${child}`
     if (dir !== '' && child === fileName && tree.exists(path)) return true
-    if (hasNestedConfigFile(tree, fileName, path, depth + 1)) return true
+    if (hasNestedConfigFile(tree, fileName, path)) return true
   }
   return false
 }
@@ -449,20 +454,23 @@ export async function initGenerator(
   // 1. Ensure package.json exists
   ensurePackageJson(tree)
 
-  // 2. Detect configs at workspace root
-  const rootConfigs = detectConfigsAtRoot(tree)
+  // 2. Register plugin first (removes standalone @nx-devkit/* entries) —
+  // preserved options like `configFile` steer detection below.
+  const presetOptions = registerPlugin(tree, pluginPath)
+  const configFileName =
+    typeof presetOptions.configFile === 'string' ? presetOptions.configFile : 'tsconfig.json'
 
-  // 3. Detect configs in nested project directories
+  // 3. Detect configs at workspace root
+  const rootConfigs = detectConfigsAtRoot(tree, configFileName)
+
+  // 4. Detect configs in nested project directories
   const nestedRoots: string[] = []
   for (const dir of ['packages', 'apps', 'libs', 'projects']) {
     findNestedProjectRoots(tree, dir, 0, nestedRoots)
   }
-
-  // 4. Register plugin (removes standalone @nx-devkit/* entries)
-  const presetOptions = registerPlugin(tree, pluginPath)
   const projectConfigs: Array<{ root: string; configs: DetectedConfigs }> = []
   for (const root of nestedRoots) {
-    const configs = detectConfigsAtProjectRoot(tree, root)
+    const configs = detectConfigsAtProjectRoot(tree, root, configFileName)
     if (Object.values(configs).some(Boolean)) {
       projectConfigs.push({ root, configs })
     }
@@ -483,8 +491,6 @@ export async function initGenerator(
 
   // 6. Print summary
   const packageManager = detectPackageManagerFromTree(tree)
-  const configFileName =
-    typeof presetOptions.configFile === 'string' ? presetOptions.configFile : 'tsconfig.json'
   printSummary(
     pluginPath,
     rootConfigs,
