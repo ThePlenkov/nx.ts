@@ -72,9 +72,11 @@ function registerPlugin(tree: Tree, pluginPath: string): void {
 
   // Normalize or add the preset in object form, preserving existing options
   const presetIndex = filtered.findIndex((entry) => isPresetEntry(entry, pluginPath))
+  // eslint-disable-next-line security/detect-object-injection -- index is a bounded findIndex result
   const existingOptions = presetIndex >= 0 ? getPluginOptions(filtered[presetIndex]) : {}
   const presetEntry = { options: existingOptions, plugin: pluginPath }
   if (presetIndex >= 0) {
+    // eslint-disable-next-line security/detect-object-injection -- index is a bounded findIndex result
     filtered[presetIndex] = presetEntry
   } else {
     filtered.push(presetEntry)
@@ -252,19 +254,25 @@ function getMissingDevDeps(tree: Tree, configs: DetectedConfigs[]): Record<strin
   const hasAny = (key: keyof DetectedConfigs) => configs.some((c) => c[key])
   const needed: Record<string, string> = {}
 
-  if (hasAny('tsdown') && !('tsdown' in existing)) needed['tsdown'] = DEP_VERSIONS['tsdown']
-  if (hasAny('oxlint') && !('oxlint' in existing)) needed['oxlint'] = DEP_VERSIONS['oxlint']
-  if (hasAny('eslint') && !('eslint' in existing)) needed['eslint'] = DEP_VERSIONS['eslint']
-  if (hasAny('biome') && !('@biomejs/biome' in existing))
-    needed['@biomejs/biome'] = DEP_VERSIONS['@biomejs/biome']
-  if (hasAny('vitest') && !('vitest' in existing)) needed['vitest'] = DEP_VERSIONS['vitest']
-  if (hasAny('tsconfig') && !('typescript' in existing))
-    needed['typescript'] = DEP_VERSIONS['typescript']
   // Default `tsgo: true` typecheck runs the tsgo binary from
   // @typescript/native-preview — install it alongside typescript so a
   // freshly bootstrapped workspace's typecheck target works.
-  if (hasAny('tsconfig') && !('@typescript/native-preview' in existing))
-    needed['@typescript/native-preview'] = DEP_VERSIONS['@typescript/native-preview']
+  const DEP_RULES: ReadonlyArray<{
+    when: keyof DetectedConfigs
+    dep: keyof typeof DEP_VERSIONS
+  }> = [
+    { when: 'tsdown', dep: 'tsdown' },
+    { when: 'oxlint', dep: 'oxlint' },
+    { when: 'eslint', dep: 'eslint' },
+    { when: 'biome', dep: '@biomejs/biome' },
+    { when: 'vitest', dep: 'vitest' },
+    { when: 'tsconfig', dep: 'typescript' },
+    { when: 'tsconfig', dep: '@typescript/native-preview' },
+  ]
+  for (const { when, dep } of DEP_RULES) {
+    // eslint-disable-next-line security/detect-object-injection -- dep keys come from the literal DEP_RULES table
+    if (hasAny(when) && !(dep in existing)) needed[dep] = DEP_VERSIONS[dep]
+  }
 
   return needed
 }
@@ -417,9 +425,7 @@ export async function initGenerator(
   const packageManager = detectPackageManagerFromTree(tree)
   printSummary(pluginPath, rootConfigs, projectConfigs, installedDeps, packageManager)
 
-  return () => {
-    installCallback()
-  }
+  return () => installCallback()
 }
 
 export default initGenerator
