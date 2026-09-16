@@ -59,7 +59,7 @@ npx nx run <name>:scan
 |---|---|---|
 | `scanTargetName` | `scan` | Name of the inferred scan target. |
 | `noLlm` | `true` | Disable LLM-based analysis (static checks only). |
-| `annotations` | `true` | Emit GitHub Actions `::error`/`::warning` workflow annotations for findings. |
+| `annotations` | `true` | Write `annotations-<projectName>.txt` with `::error` workflow-command lines for code findings (skipped on a clean scan). |
 | `failOnError` | `true` | Fail the target when HIGH or CRITICAL findings are present. |
 | `skillspectorBin` | `skillspector` | Binary to invoke — override for local dev or vendored installs. |
 | `sarif` | — | Path **prefix** for the SARIF 2.1.0 report — `-<projectName>.sarif` is appended (any `.sarif` suffix is stripped first), so `reports/scan.sarif` produces `reports/scan-<name>.sarif`. |
@@ -67,7 +67,7 @@ npx nx run <name>:scan
 
 ## CI integration
 
-- **Annotations** — with `annotations: true` (default), the executor writes `annotations-<projectName>.txt` at the workspace root containing GitHub workflow-command lines (`::error`/`::warning`). Surface them in CI by `cat`ing the files into the step output (or uploading them as an artifact) — they are not emitted to stdout automatically.
+- **Annotations** — with `annotations: true` (default) and at least one code finding, the executor writes `annotations-<projectName>.txt` at the workspace root containing `::error file=…,line=…::` workflow-command lines (findings-only; the file is not created on a clean scan). Surface them in CI by `cat`ing the files into the step output or uploading them as an artifact — they are not emitted to stdout automatically.
 - **SARIF** — set `sarif` to a path and upload it with `github/codeql-action/upload-sarif`, or convert to annotations with a SARIF-to-annotations step.
 - **Gating** — `failOnError` fails CI on HIGH/CRITICAL; use `baseline` to ratchet down existing debt.
 
