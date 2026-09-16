@@ -12,10 +12,11 @@ npx @nx-devkit/typescript init
 
 This:
 
-1. Registers `@nx-devkit/typescript` in `nx.json` — removing standalone `@nx-devkit/*` entries, preserving your existing preset options and non-nx-devkit plugins
-2. Detects config files at the workspace root and in `packages/`, `apps/`, `libs/`, `projects/` (nested project roots are found recursively)
-3. Adds devDependencies for the tools your configs imply (`typescript`, `@typescript/native-preview`, `vitest`, `oxlint`, `eslint`, `@biomejs/biome`, `tsdown`)
-4. Prints the detected projects and the targets each will get
+1. Installs `@nx-devkit/typescript` (plus `nx`/`@nx/devkit` when missing) into the workspace — the plugin is fetched from the npx cache to a real devDependency
+2. Registers `@nx-devkit/typescript` in `nx.json` — removing standalone `@nx-devkit/*` entries, preserving your existing preset options and non-nx-devkit plugins
+3. Detects config files at the workspace root and in `packages/`, `apps/`, `libs/`, `projects/` (nested project roots are found recursively)
+4. Adds devDependencies for the tools your configs imply (`typescript`, `@typescript/native-preview`, `vitest`, `oxlint`, `eslint`, `@biomejs/biome`, `tsdown`)
+5. Prints the detected projects and the targets each will get
 
 If the workspace has no Nx yet, the bootstrap installs `nx` + `@nx/devkit` first.
 

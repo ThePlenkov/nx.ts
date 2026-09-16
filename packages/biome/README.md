@@ -1,6 +1,6 @@
 # @nx-devkit/biome
 
-Standalone Nx plugin: any `biome.json` or `biome.jsonc` becomes a project with `format`, `format-check`, and `lint` targets. No `project.json` needed.
+Standalone Nx plugin: any nested `biome.json` or `biome.jsonc` becomes a project with `format`, `format-check`, and `lint` targets. No `project.json` needed.
 
 Part of [nx-devkit](https://github.com/nx-devkit/nx.ts). If you want the full TypeScript toolchain (typecheck, test, lint, format, build), use the [`@nx-devkit/typescript`](../typescript-preset/README.md) preset instead — it includes everything this plugin does.
 

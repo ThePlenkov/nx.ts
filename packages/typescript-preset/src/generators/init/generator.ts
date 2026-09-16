@@ -334,7 +334,7 @@ function hasPackageDep(tree: Tree, name: string): boolean {
     ...(pkg.devDependencies as Record<string, string> | undefined),
   }
   // eslint-disable-next-line security/detect-object-injection -- name is the caller-provided plugin path
-  return name in deps
+  return Object.hasOwn(deps, name)
 }
 
 // --- Package manager detection ---

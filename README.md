@@ -49,9 +49,9 @@ The preset subsumes the standalone tsdown/oxlint/biome plugins; they stay availa
 
 ## How it works
 
-Each plugin implements Nx's `createNodesV2` API: during project-graph construction it globs for config files, then emits project nodes whose targets call the tool binaries resolved from `node_modules` — the same way Nx's own `@nx/*` plugins infer targets. Tool invocations go through dedicated executors that launch binaries directly (`execFile`/`spawn`, no shell), with walk-up `node_modules` resolution so hoisted monorepo installs work.
+Each plugin implements Nx's `createNodesV2` API: during project-graph construction it globs for config files, then emits project nodes whose targets call the tool binaries — the same way Nx's own `@nx/*` plugins infer targets. Most targets are `nx:run-commands` (binaries resolved from `node_modules/.bin`, `cwd` = project root); the typecheck/build/scan targets use dedicated executors that launch the tool's entry point directly (`execFile`/`spawn`, no shell), with walk-up `node_modules` resolution so hoisted monorepo installs work.
 
-Because inference is per-run, the graph always reflects the files on disk: add `vitest.config.ts` and `test` appears; a single-package repo gets a root project until the day it grows nested packages.
+Because inference is per-run, the graph always reflects the files on disk: add `vitest.config.ts` and `test` appears. A single-package repo (a `tsconfig` at the root, none nested) gets a root project; the first nested `tsconfig` turns that off automatically — `includeRoot` on the preset forces the behavior either way.
 
 ## Repository map
 

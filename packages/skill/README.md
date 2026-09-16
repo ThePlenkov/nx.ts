@@ -10,10 +10,10 @@ Part of [nx-devkit](https://github.com/nx-devkit/nx.ts).
 bun add -D @nx-devkit/skill
 ```
 
-Requires `@nx/devkit` `^22 || ^23` (peer). The inferred commands also need their tools on the workspace: `lint` runs `markdownlint-cli2`, and `validate`/`os-check`/`size-check` run `tsx` — add whichever you use:
+Requires `@nx/devkit` `^22 || ^23` (peer). The inferred targets also need their tools available: `build` invokes `skills-compiler` (resolved from `node_modules/.bin`, falling back to `PATH`), `lint` runs `markdownlint-cli2`, and `validate`/`os-check`/`size-check` run `tsx` — add whichever you use:
 
 ```bash
-bun add -D markdownlint-cli2 tsx
+bun add -D markdownlint-cli2 tsx   # plus the skills-compiler tool for `build`
 ```
 
 ## Register
@@ -35,7 +35,7 @@ bun add -D markdownlint-cli2 tsx
 | `os-check` | `tsx scripts/check-os-independence.ts --skill '{projectRoot}'` | Flags OS-specific commands/paths that break cross-platform portability. |
 | `size-check` | `tsx scripts/check-skill-size.ts --skill '{projectRoot}'` | Enforces size budgets on the skill directory. |
 
-The `build` target's `inputs` are an explicit list — `SKILL.md`, `**/*.md`, `scripts/`, `references/`, `assets/`, `agents/` under the project root, plus `^production` — extended by any `skillInputs` you add. The four `nx:run-commands` targets run with `cwd` = workspace root (the tools expect workspace-relative paths); `{projectRoot}` in commands is the Nx macro, expanded safely — never interpolated into a shell string.
+The `build` target's `inputs` are an explicit list — `SKILL.md`, `**/*.md`, `scripts/`, `references/`, `assets/`, `agents/` under the project root, plus `^production` — extended by any `skillInputs` you add. The four `nx:run-commands` targets run with `cwd` = workspace root (the tools expect workspace-relative paths); `{projectRoot}` in commands is the Nx macro, expanded by Nx into the command string before the shell runs it — the quotes keep the path literal.
 
 ## Inspect
 

@@ -14,7 +14,13 @@ Requires `@nx/devkit` `^22 || ^23` (peer).
 
 ## Bootstrap
 
-Create `tools/project.json` wired to the executor:
+1. Register the plugin in `nx.json` so `createNodesV2` can detect release-bootstrap projects:
+
+```jsonc
+{ "plugins": ["@nx-devkit/prepare-for-release"] }
+```
+
+2. Create `tools/project.json` wired to the executor:
 
 ```jsonc
 {
@@ -27,7 +33,7 @@ Create `tools/project.json` wired to the executor:
 }
 ```
 
-The plugin's `createNodesV2` detects `tools/project.json` and surfaces the target on the graph. (The package also ships an `init` generator in source, though it is not currently registered in `generators.json` for consumer use — create the file above manually for now.)
+The plugin's `createNodesV2` scans `**/project.json` for projects whose targets reference its executor and surfaces them on the graph. (The package also ships an `init` generator in source, though it is not currently registered in `generators.json` for consumer use — create the file above manually for now.)
 
 Then run:
 
@@ -70,7 +76,7 @@ Already-published packages are skipped on every run.
 | `placeholderVersion` | `0.0.0` | Version written into the temporary placeholder manifest. |
 | `registry` | `https://registry.npmjs.org/` | npm registry URL. |
 | `dryRun` | `false` | Report what would happen — no `npm pack`, no publish. |
-| `trust` | `false` | Run `npm trust github` for every checked package — including already-published (skipped) ones — not just newly published (requires MFA). |
+| `trust` | `false` | Run `npm trust github` for every checked package — including already-published (skipped) ones — not just newly published (requires MFA). With `dryRun: true` the trust commands are printed, not run. |
 | `trustRepo` | `NPM_TRUST_REPO` or `GITHUB_REPOSITORY` env, else `nx-devkit/nx.ts` | `owner/repo` slug for the `npm trust github` command. |
 
 ## Why placeholders

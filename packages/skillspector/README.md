@@ -67,7 +67,7 @@ npx nx run <name>:scan
 
 ## CI integration
 
-- **Annotations** — with `annotations: true` (default), findings appear inline on pull requests as GitHub workflow annotations.
+- **Annotations** — with `annotations: true` (default), the executor writes `annotations-<projectName>.txt` at the workspace root containing GitHub workflow-command lines (`::error`/`::warning`). Surface them in CI by `cat`ing the files into the step output (or uploading them as an artifact) — they are not emitted to stdout automatically.
 - **SARIF** — set `sarif` to a path and upload it with `github/codeql-action/upload-sarif`, or convert to annotations with a SARIF-to-annotations step.
 - **Gating** — `failOnError` fails CI on HIGH/CRITICAL; use `baseline` to ratchet down existing debt.
 

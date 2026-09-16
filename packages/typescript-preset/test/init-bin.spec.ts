@@ -29,12 +29,25 @@ describe('init bin', () => {
   })
 
   it('installs the plugin itself when absent from node_modules', async () => {
-    // nx is present; @nx-devkit/typescript is not
-    fsExists = (p) => p.includes('nx/package.json') && !p.includes('@nx-devkit')
+    // nx and @nx/devkit are present; @nx-devkit/typescript is not
+    fsExists = (p) => p.includes('nx/package.json') || p.includes('@nx/devkit')
     main()
     const install = installs()[0]
     expect(install).toBeDefined()
     expect(install).toContain('@nx-devkit/typescript')
+    expect(install).not.toContain('nx')
+    expect(install).not.toContain('@nx/devkit')
+  })
+
+  it('installs @nx/devkit even when nx is already present', async () => {
+    // nx exists but @nx/devkit is absent — nx g needs the devkit peer
+    fsExists = (p) => p.includes('nx/package.json')
+    main()
+    const install = installs()[0]
+    expect(install).toBeDefined()
+    expect(install).toContain('@nx/devkit')
+    expect(install).toContain('@nx-devkit/typescript')
+    expect(install).not.toContain('nx')
   })
 
   it('installs nx, devkit, and the plugin when nx is absent', async () => {

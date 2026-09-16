@@ -8,10 +8,14 @@
  * generator at `@nx-devkit/typescript:init`.
  */
 
-import { existsSync } from 'node:fs'
+import { existsSync, realpathSync } from 'node:fs'
 import { execFileSync } from 'node:child_process'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+
+// Bound each install so a stalled package-manager process can't pend the
+// bootstrap command indefinitely.
+const INSTALL_TIMEOUT_MS = 10 * 60 * 1000
 
 const PLUGIN_PACKAGE = '@nx-devkit/typescript'
 
@@ -27,7 +31,12 @@ function detectPackageManager(): 'bun' | 'npm' | 'pnpm' | 'yarn' {
 }
 
 function run(cmd: string, args: string[]): void {
-  execFileSync(cmd, args, { stdio: 'inherit', cwd: process.cwd(), shell: false })
+  execFileSync(cmd, args, {
+    stdio: 'inherit',
+    cwd: process.cwd(),
+    shell: false,
+    timeout: INSTALL_TIMEOUT_MS,
+  })
 }
 
 function install(pm: 'bun' | 'npm' | 'pnpm' | 'yarn', packages: string[]): void {
@@ -47,7 +56,8 @@ export function main(): void {
   const pm = detectPackageManager()
 
   const missing: string[] = []
-  if (!hasPackage('nx')) missing.push('nx', '@nx/devkit')
+  if (!hasPackage('nx')) missing.push('nx')
+  if (!hasPackage('@nx/devkit')) missing.push('@nx/devkit')
   // When invoked via `npx @nx-devkit/typescript init` the package lives in
   // the npx cache, not the workspace — install it so `nx g` can resolve it.
   if (!hasPackage(PLUGIN_PACKAGE)) missing.push(PLUGIN_PACKAGE)
@@ -88,6 +98,18 @@ export function main(): void {
   }
 }
 
-if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
+// npx invokes the bin through a node_modules/.bin symlink: argv[1] keeps the
+// symlink path while import.meta.url resolves to the real file — compare
+// canonical paths so the direct-entry check still fires under npm/npx.
+function invokedDirectly(): boolean {
+  if (!process.argv[1]) return false
+  try {
+    return realpathSync(fileURLToPath(import.meta.url)) === realpathSync(process.argv[1])
+  } catch {
+    return false
+  }
+}
+
+if (invokedDirectly()) {
   main()
 }
