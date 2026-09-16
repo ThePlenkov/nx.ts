@@ -3,16 +3,20 @@
 /**
  * One-command bootstrap: npx @nx-devkit/typescript init
  *
- * This is a thin launcher. It ensures `nx` is available, then delegates
- * all logic to the Nx init generator at `@nx-devkit/typescript:init`.
+ * This is a thin launcher. It ensures `nx` and the plugin itself are
+ * installed in the workspace, then delegates all logic to the Nx init
+ * generator at `@nx-devkit/typescript:init`.
  */
 
 import { existsSync } from 'node:fs'
 import { execFileSync } from 'node:child_process'
 import { join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
-function hasNx(): boolean {
-  return existsSync(join(process.cwd(), 'node_modules', 'nx', 'package.json'))
+const PLUGIN_PACKAGE = '@nx-devkit/typescript'
+
+function hasPackage(name: string): boolean {
+  return existsSync(join(process.cwd(), 'node_modules', name, 'package.json'))
 }
 
 function detectPackageManager(): 'bun' | 'npm' | 'pnpm' | 'yarn' {
@@ -26,25 +30,34 @@ function run(cmd: string, args: string[]): void {
   execFileSync(cmd, args, { stdio: 'inherit', cwd: process.cwd(), shell: false })
 }
 
-function main(): void {
+function install(pm: 'bun' | 'npm' | 'pnpm' | 'yarn', packages: string[]): void {
+  if (pm === 'bun') {
+    run('bun', ['add', '-D', ...packages])
+  } else if (pm === 'pnpm') {
+    run('pnpm', ['add', '-D', ...packages])
+  } else if (pm === 'yarn') {
+    run('yarn', ['add', '-D', ...packages])
+  } else {
+    run('npm', ['install', '-D', ...packages])
+  }
+}
+
+export function main(): void {
   const args = process.argv.slice(2)
   const pm = detectPackageManager()
 
-  // If nx is not installed, install it first
-  if (!hasNx()) {
-    console.log('Nx not found. Installing nx + @nx/devkit...')
+  const missing: string[] = []
+  if (!hasPackage('nx')) missing.push('nx', '@nx/devkit')
+  // When invoked via `npx @nx-devkit/typescript init` the package lives in
+  // the npx cache, not the workspace — install it so `nx g` can resolve it.
+  if (!hasPackage(PLUGIN_PACKAGE)) missing.push(PLUGIN_PACKAGE)
+
+  if (missing.length > 0) {
+    console.log(`Installing: ${missing.join(', ')}`)
     try {
-      if (pm === 'bun') {
-        run('bun', ['add', '-D', 'nx', '@nx/devkit'])
-      } else if (pm === 'pnpm') {
-        run('pnpm', ['add', '-D', 'nx', '@nx/devkit'])
-      } else if (pm === 'yarn') {
-        run('yarn', ['add', '-D', 'nx', '@nx/devkit'])
-      } else {
-        run('npm', ['install', '-D', 'nx', '@nx/devkit'])
-      }
+      install(pm, missing)
     } catch (error) {
-      console.error('Failed to install nx + @nx/devkit. Please install them manually.')
+      console.error(`Failed to install ${missing.join(', ')}. Please install them manually.`)
       if (error instanceof Error && error.message) {
         console.error(`Error: ${error.message}`)
       }
@@ -54,7 +67,7 @@ function main(): void {
 
   // Build the generator command. Pass through any args after "init".
   const genArgs = args.filter((a) => a !== 'init')
-  const generatorArgs = ['g', '@nx-devkit/typescript:init', ...genArgs]
+  const generatorArgs = ['g', `${PLUGIN_PACKAGE}:init`, ...genArgs]
 
   try {
     if (pm === 'bun') {
@@ -75,4 +88,6 @@ function main(): void {
   }
 }
 
-main()
+if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
+  main()
+}

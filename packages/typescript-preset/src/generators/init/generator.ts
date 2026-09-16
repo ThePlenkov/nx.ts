@@ -327,6 +327,16 @@ function getMissingDevDeps(
   return needed
 }
 
+function hasPackageDep(tree: Tree, name: string): boolean {
+  const pkg = readJson(tree, 'package.json') ?? {}
+  const deps = {
+    ...(pkg.dependencies as Record<string, string> | undefined),
+    ...(pkg.devDependencies as Record<string, string> | undefined),
+  }
+  // eslint-disable-next-line security/detect-object-injection -- name is the caller-provided plugin path
+  return name in deps
+}
+
 // --- Package manager detection ---
 
 function detectPackageManagerFromTree(tree: Tree): 'bun' | 'npm' | 'pnpm' | 'yarn' {
@@ -372,6 +382,7 @@ function printSummary(
   packageManager: 'bun' | 'npm' | 'pnpm' | 'yarn' = 'bun',
   presetOptions: Record<string, unknown> = {},
   hasNestedConfig = false,
+  pluginInstalled = false,
 ): void {
   const isLocalPath = pluginPath.startsWith('.') || pluginPath.startsWith('/')
   const installCmd =
@@ -384,7 +395,9 @@ function printSummary(
           : 'npm install -D'
   const installStep = isLocalPath
     ? `1. The plugin is registered from a local path: ${pluginPath}`
-    : `1. Install the plugin: ${installCmd} ${pluginPath}`
+    : pluginInstalled
+      ? `1. The plugin is installed: ${pluginPath}`
+      : `1. Install the plugin: ${installCmd} ${pluginPath}`
 
   console.log(installStep)
   console.log('')
@@ -505,6 +518,7 @@ export async function initGenerator(
     packageManager,
     presetOptions,
     hasNestedConfigFile(tree, configFileName),
+    hasPackageDep(tree, pluginPath),
   )
 
   return () => installCallback()
