@@ -358,6 +358,33 @@ describe('initGenerator', () => {
       expect(output).toContain('(workspace root) → typecheck')
     })
 
+    it('reports the plugin as installed when already in package.json', async () => {
+      const { tree } = createTree({
+        'nx.json': JSON.stringify({ plugins: [] }),
+        'package.json': JSON.stringify({
+          name: 'test',
+          version: '0.0.0',
+          devDependencies: { '@nx-devkit/typescript': '^0.1.0' },
+        }),
+        'tsconfig.json': JSON.stringify({ compilerOptions: {} }),
+      })
+
+      const output = await capturedSummary(tree)
+      expect(output).toContain('1. The plugin is installed: @nx-devkit/typescript')
+      expect(output).not.toContain('Install the plugin')
+    })
+
+    it('instructs to install the plugin when absent from package.json', async () => {
+      const { tree } = createTree({
+        'nx.json': JSON.stringify({ plugins: [] }),
+        'package.json': JSON.stringify({ name: 'test', version: '0.0.0' }),
+        'tsconfig.json': JSON.stringify({ compilerOptions: {} }),
+      })
+
+      const output = await capturedSummary(tree)
+      expect(output).toContain('Install the plugin')
+    })
+
     it('keeps the no-targets summary when nested projects exist', async () => {
       const { tree } = createTree({
         'nx.json': JSON.stringify({ plugins: [] }),

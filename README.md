@@ -1,71 +1,78 @@
 # nx-devkit
 
-Zero-config Nx inference plugins for TypeScript projects. Add a plugin to `nx.json` and get `build`, `typecheck`, `lint`, `format`, and `test` targets derived from the config files you already keep — no `project.json` required.
+Zero-config Nx plugins for modern TypeScript tooling. Register one plugin and get `typecheck`, `test`, `lint`, `format`, and `build` targets derived from the config files your project already keeps — no `project.json`, no target boilerplate.
 
-## Why nx-devkit?
+## Why
 
-- **One command.** `npx @nx-devkit/typescript init` bootstraps the full preset into any project.
-- **Zero config.** Targets are inferred from `tsdown.config.ts`, `tsconfig.json`, `.oxlintrc.*`, `biome.json{,c}`, and `vitest.config.*` already in your project.
-- **Inference-based.** The preset uses Nx's `createNodesV2` to discover projects at graph-creation time.
-- **Extend, don't replace.** nx-devkit adds targets alongside anything Nx already provides.
-- **One plugin, all tools.** Register only `@nx-devkit/typescript` — it auto-detects and orchestrates everything.
+Nx's project graph, caching, and `affected` detection are excellent; its built-in TypeScript tooling is not. nx-devkit keeps the graph and replaces the toolchain:
 
-## Plugin matrix
+- **tsdown** instead of `tsc` emit for builds
+- **tsgo** (`@typescript/native-preview`) for typecheck, with `tsc` fallback
+- **oxlint / ESLint / Biome** for lint, **Biome** for format
+- **Vitest**, or the native `node --test` runner when no Vitest config exists
+- **`createNodesV2` inference** — targets appear because `tsconfig.json` or `biome.json` exists, not because someone edited `project.json`
 
-| Plugin | npm package | Trigger file | Inferred targets |
-|---|---|---|---|
-| **typescript (preset)** | [`@nx-devkit/typescript`](./packages/typescript-preset/README.md) | `**/tsconfig.json` + `vitest.config.*` | `typecheck`, `test`, `test:watch`, `test:coverage`, `lint`, `format`, `format-check`, `build`, `build:watch` |
-| tsdown (standalone) | [`@nx-devkit/tsdown`](./packages/tsdown/README.md) | `**/tsdown.config.ts` | `build` |
-| oxlint (standalone) | [`@nx-devkit/oxlint`](./packages/oxlint/README.md) | `**/.oxlintrc.*` | `lint` |
-| biome (standalone) | [`@nx-devkit/biome`](./packages/biome/README.md) | `**/biome.json{,c}` | `format`, `format-check`, `lint` |
-| prepare-for-release | [`@nx-devkit/prepare-for-release`](./packages/prepare-for-release/README.md) | `tools/project.json` referencing its executor | `prepare-for-release` |
-
-The **typescript preset** is the recommended entry point — it subsumes tsdown, oxlint, and biome. Standalone plugins remain available for granular use.
-
-## Install
+## Quick start
 
 ```bash
 npx @nx-devkit/typescript init
 ```
 
-This registers the preset in `nx.json` (removing standalone `@nx-devkit/*` plugin entries, leaving other plugins untouched), detects your config files, adds devDependencies for the detected tools, and prints a summary of inferred targets.
+In any workspace — Nx or plain TypeScript — this registers the preset in `nx.json`, detects your config files, installs missing tool dependencies, and prints the inferred targets. Works for single-package repos and monorepos.
 
-### Manual setup
+Manual alternative:
 
 ```bash
-bun add -D @nx-devkit/typescript
+bun add -D @nx-devkit/typescript   # or npm/pnpm/yarn add -D
 ```
 
-Register in `nx.json`:
-
 ```jsonc
+// nx.json
 { "plugins": ["@nx-devkit/typescript"] }
 ```
 
-See each plugin's README for options and per-tool behavior. `prepare-for-release` has its own install command — see [its README](./packages/prepare-for-release/README.md).
+## Packages
 
-## Try it locally
+<!-- package matrix consistent with packages/*/package.json names and each plugin's createNodesV2 glob -->
 
-```bash
-git clone https://github.com/nx-devkit/nx.ts
-cd nx.ts
-bun install
-bun run build
-```
+| Package | Trigger | What you get |
+|---|---|---|
+| [`@nx-devkit/typescript`](./packages/typescript-preset/README.md) | `**/tsconfig*.json` + tool configs | Full preset: `typecheck`, `test`, `lint`, `format`, `build` (+ watch/coverage variants). **Recommended entry point.** |
+| [`@nx-devkit/tsdown`](./packages/tsdown/README.md) | `**/tsdown.config.ts` | Standalone `build` target |
+| [`@nx-devkit/oxlint`](./packages/oxlint/README.md) | `**/.oxlintrc.*` | Standalone `lint` target |
+| [`@nx-devkit/biome`](./packages/biome/README.md) | `**/biome.json{,c}` | Standalone `format`, `format-check`, `lint` |
+| [`@nx-devkit/skill`](./packages/skill/README.md) | `**/SKILL.md` | Skill lifecycle: `build`, `lint`, `validate`, `os-check`, `size-check` |
+| [`@nx-devkit/skillspector`](./packages/skillspector/README.md) | `**/SKILL.md` | `scan` target — SkillSpector security scans with SARIF + CI annotations |
+| [`@nx-devkit/prepare-for-release`](./packages/prepare-for-release/README.md) | `**/project.json` referencing its executor | `prepare-for-release` target — idempotent npm placeholder publishing |
 
-The `apps/demo/` workspace is a working example that wires all five plugins.
+The preset subsumes the standalone tsdown/oxlint/biome plugins; they stay available for single-tool consumers.
 
-## Documentation map
+## How it works
 
-| Audience | File |
+Each plugin implements Nx's `createNodesV2` API: during project-graph construction it globs for config files, then emits project nodes whose targets call the tool binaries — the same way Nx's own `@nx/*` plugins infer targets. Most targets are `nx:run-commands` (binaries resolved from `node_modules/.bin`, `cwd` = project root); the typecheck/build targets use dedicated executors that launch the tool's entry point directly (`execFile`/`spawn`, no shell), with walk-up `node_modules` resolution so hoisted monorepo installs work.
+
+Because inference is per-run, the graph always reflects the files on disk: add `vitest.config.ts` and `test` appears. A single-package repo (a `tsconfig` at the root, none nested) gets a root project; the first nested `tsconfig` turns that off automatically — `includeRoot` on the preset forces the behavior either way.
+
+## Repository map
+
+<!-- top-level layout consistent with this repository's directories -->
+
+| Path | Contents |
 |---|---|
-| npm consumer — per-package usage | [`packages/*/README.md`](./packages) |
-| Human contributor — fork, branch, PR flow | [`CONTRIBUTING.md`](CONTRIBUTING.md) |
-| AI coding agent — scope, TDD, escalation | [`AGENTS.md`](./AGENTS.md) |
-| AI code reviewer — review rules | [`REVIEW.md`](./REVIEW.md) |
-| Working example | [`apps/demo/`](./apps/demo) |
-| Agent skills registry | [`skills/`](./skills) |
+| `packages/` | The publishable plugins above (+ private `internal` helpers) |
+| `apps/demo/` | Working demo workspace exercising the plugins |
+| `skills/` | Project-facing agent skills (`nx-devkit-typescript`, `nx-skill`, …) |
+| `scripts/` | `e2e.sh`, `spec-check.ts`, `rewrite-workspace-protocol.ts` |
+| `.github/workflows/` | `ci.yml` (lint/build/test), `release.yml` (e2e + OIDC publish) |
+
+## Contributing
+
+| Audience | Doc |
+|---|---|
+| Human contributor | [`CONTRIBUTING.md`](./CONTRIBUTING.md) |
+| AI coding agent | [`AGENTS.md`](./AGENTS.md) |
+| Code reviewer | [`REVIEW.md`](./REVIEW.md) |
 
 ## License
 
-MIT. See [`LICENSE`](./LICENSE).
+MIT — see [`LICENSE`](./LICENSE).

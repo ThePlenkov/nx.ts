@@ -1,166 +1,93 @@
 # @nx-devkit/skill
 
-Zero-config Nx plugin that infers skill lifecycle targets from `SKILL.md` files.
+Nx plugin for [agent skills](https://agentskills.io/specification): any directory containing `SKILL.md` becomes a project with a full skill lifecycle — `build`, `lint`, `validate`, `os-check`, `size-check`. No `project.json` needed.
 
-## What it does
-
-Scans the workspace for any file matching `**/SKILL.md`. For each match (outside the workspace root and `node_modules`), it injects a project with five targets — `build`, `lint`, `validate`, `os-check`, and `size-check` — into the project graph. No `project.json` required.
-
-| Trigger file | Inferred targets | Executors |
-| --- | --- | --- |
-| `**/SKILL.md` | `build`, `lint`, `validate`, `os-check`, `size-check` | `@nx-devkit/skill:build`, `nx:run-commands` |
-
-### Collision-resistant project naming
-
-Each skill is registered under a collision-resistant project name derived from its root:
-
-```
-${projectRoot.replace(/\//g, '-')}-${sha256(projectRoot).slice(0,12)}
-```
-
-This keeps names for `skills/a-b/SKILL.md` and `skills/a/b/SKILL.md` — which would both slug to `skills-a-b` — distinct via the hash suffix. The 12-hex-char (48-bit) truncated hash is collision-resistant, not injective: collisions are possible in theory, with probability bounded by the birthday bound (~1 in 10^5 for one collision among ~65k skills).
+Part of [nx-devkit](https://github.com/nx-devkit/nx.ts).
 
 ## Install
 
 ```bash
-bun add -D @nx-devkit/skill markdownlint-cli2 tsx
+bun add -D @nx-devkit/skill
 ```
 
-The inferred `lint` target invokes `markdownlint-cli2` and the `validate`/`os-check`/`size-check` targets invoke `tsx` directly — Nx `run-commands` resolves them from the consumer workspace's `node_modules/.bin`, so both must be installed there. The `build` target additionally requires a `skills-compiler` binary on PATH or in `node_modules/.bin`.
+Requires `@nx/devkit` `^22 || ^23` (peer). The inferred targets also need their tools available: `build` invokes `skills-compiler` (resolved from `node_modules/.bin`, falling back to `PATH`), `lint` runs `markdownlint-cli2`, and `validate`/`os-check`/`size-check` run `tsx` — add whichever you use:
 
-## Register in nx.json
+```bash
+bun add -D markdownlint-cli2 tsx   # plus the skills-compiler tool for `build`
+```
+
+## Register
 
 ```jsonc
-{
-  "plugins": ["@nx-devkit/skill"]
-}
+// nx.json
+{ "plugins": ["@nx-devkit/skill"] }
 ```
+
+## What it infers
+
+<!-- target table consistent with src/plugin.ts infer* functions and executors.json -->
+
+| Target | Runs | Purpose |
+|---|---|---|
+| `build` | `@nx-devkit/skill:build` executor — skills-compiler via `execFile`, no shell | Compiles the skill to a distribution target. |
+| `lint` | `markdownlint-cli2 '{projectRoot}/**/*.md' --config .markdownlint.json` | Lints all skill Markdown. |
+| `validate` | `tsx scripts/validate-skill.ts --skill '{projectRoot}'` | Validates `SKILL.md` frontmatter and structure. |
+| `os-check` | `tsx scripts/check-os-independence.ts --skill '{projectRoot}'` | Flags OS-specific commands/paths that break cross-platform portability. |
+| `size-check` | `tsx scripts/check-skill-size.ts --skill '{projectRoot}'` | Enforces size budgets on the skill directory. |
+
+The `build` target's `inputs` are an explicit list — `SKILL.md`, `**/*.md`, `scripts/`, `references/`, `assets/`, `agents/` under the project root, plus `^production` — extended by any `skillInputs` you add. The four `nx:run-commands` targets run with `cwd` = workspace root (the tools expect workspace-relative paths); `{projectRoot}` in commands is the Nx macro, expanded by Nx into the command string before the shell runs it — the quotes keep the path literal.
+
+## Inspect
+
+```bash
+npx nx show projects
+npx nx show project <name>
+npx nx run <name>:build
+```
+
+## Project naming
+
+Project names are derived from the skill directory slug plus a 12-hex-char SHA-256 suffix of the project root — collision-resistant in practice (birthday bound applies, it's not a guarantee), so two `SKILL.md` files whose directory names collapse to the same slug still get distinct project names.
 
 ## Options
 
-```ts
-export interface NxDevkitSkillOptions {
-  /** Override the build target name. Default: "build". */
-  buildTargetName?: string
-  /** Override the lint target name. Default: "lint". */
-  lintTargetName?: string
-  /** Override the validate target name. Default: "validate". */
-  validateTargetName?: string
-  /** Override the os-check target name. Default: "os-check". */
-  osCheckTargetName?: string
-  /** Override the size-check target name. Default: "size-check". */
-  sizeCheckTargetName?: string
-  /** Additional input globs appended to the build target inputs. */
-  skillInputs?: string[]
-}
-```
-
-Pass options via the plugin registration:
+<!-- option reference consistent with src/plugin.ts NxDevkitSkillOptions -->
 
 ```jsonc
 {
   "plugins": [
-    ["@nx-devkit/skill", { "buildTargetName": "compile" }]
+    ["@nx-devkit/skill", {
+      "buildTargetName": "build",
+      "lintTargetName": "lint",
+      "validateTargetName": "validate",
+      "osCheckTargetName": "os-check",
+      "sizeCheckTargetName": "size-check",
+      "skillInputs": []
+    }]
   ]
 }
 ```
 
-## Targets generated
+| Option | Default | Effect |
+|---|---|---|
+| `buildTargetName` | `build` | Name of the build target. |
+| `lintTargetName` | `lint` | Name of the lint target. |
+| `validateTargetName` | `validate` | Name of the validate target. |
+| `osCheckTargetName` | `os-check` | Name of the OS-independence check target. |
+| `sizeCheckTargetName` | `size-check` | Name of the size-check target. |
+| `skillInputs` | `[]` | Extra input globs merged into the `build` target's inputs. |
 
-For a skill at `skills/code-review/act/` with a `SKILL.md`:
-
-```bash
-npx nx show project skills-code-review-act-<hash>
-```
-
-reports:
-
-```jsonc
-{
-  "targets": {
-    "build": {
-      "executor": "@nx-devkit/skill:build",
-      "cache": true,
-      "outputs": ["{workspaceRoot}/.build/skills/<projectName>"],
-      "options": {
-        "target": "skills-sh",
-        "outDir": ".build/skills/<projectName>",
-        "path": "skills/code-review/act"
-      },
-      "inputs": [
-        "{projectRoot}/**/*.md",
-        "{projectRoot}/SKILL.md",
-        "{projectRoot}/agents/**/*",
-        "^production"
-      ]
-    },
-    "lint": {
-      "executor": "nx:run-commands",
-      "cache": true,
-      "options": {
-        "command": "markdownlint-cli2 '{projectRoot}/**/*.md' --config .markdownlint.json",
-        "cwd": "{workspaceRoot}"
-      },
-      "inputs": [
-        "{projectRoot}/**/*.md",
-        "{workspaceRoot}/.markdownlint.json"
-      ]
-    },
-    "validate": {
-      "executor": "nx:run-commands",
-      "cache": true,
-      "options": {
-        "command": "tsx scripts/validate-skill.ts --skill {projectRoot}",
-        "cwd": "{workspaceRoot}"
-      },
-      "inputs": [
-        "{projectRoot}/SKILL.md",
-        "{projectRoot}/agents/openai.yaml"
-      ]
-    },
-    "os-check": {
-      "executor": "nx:run-commands",
-      "cache": true,
-      "options": {
-        "command": "tsx scripts/check-os-independence.ts --skill {projectRoot}",
-        "cwd": "{workspaceRoot}"
-      },
-      "inputs": ["{projectRoot}/**/*"]
-    },
-    "size-check": {
-      "executor": "nx:run-commands",
-      "cache": true,
-      "options": {
-        "command": "tsx scripts/check-skill-size.ts --skill {projectRoot}",
-        "cwd": "{workspaceRoot}"
-      },
-      "inputs": ["{projectRoot}/**/*"]
-    }
-  }
-}
-```
-
-Run them:
-
-```bash
-npx nx build skills-code-review-act-<hash>
-npx nx lint skills-code-review-act-<hash>
-npx nx validate skills-code-review-act-<hash>
-npx nx os-check skills-code-review-act-<hash>
-npx nx size-check skills-code-review-act-<hash>
-```
-
-## Build executor
-
-The `build` target uses the `@nx-devkit/skill:build` executor, which wraps the `skills-compiler` CLI. It invokes `skills-compiler` via `execFile` (no shell) to avoid shell injection.
-
-Supported targets: `skills-sh`, `claude`, `codex`, `agents`, `obsidian`.
+All five target names must be non-empty and unique — on an empty or duplicate name the plugin logs a warning and skips that skill's project (other skills are unaffected).
 
 ## Skip rules
 
-- The workspace root (where `SKILL.md` lives at `./`) is skipped.
-- Paths inside `node_modules` are skipped.
-- Paths that traverse outside the workspace (`..`) are skipped.
+- `SKILL.md` inside `node_modules` is skipped.
+- `SKILL.md` at the workspace root is skipped — skills live in nested directories.
+- `SKILL.md` escaping the workspace root is skipped.
+
+## Pairing with skillspector
+
+For security scanning of skills, add [`@nx-devkit/skillspector`](../skillspector/README.md) alongside — it infers a `scan` target from the same `SKILL.md` trigger.
 
 ## License
 

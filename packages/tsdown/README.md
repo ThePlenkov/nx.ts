@@ -1,14 +1,8 @@
 # @nx-devkit/tsdown
 
-Zero-config Nx plugin that infers a `build` target from a `tsdown.config.ts`.
+Standalone Nx plugin: any `tsdown.config.ts` becomes a project with a cached `build` target. No `project.json` needed.
 
-## What it does
-
-For every project that contains a `tsdown.config.ts`, this plugin automatically infers a `build` target — no `project.json` required. The target runs `tsdown` with `cwd` set to the project root and caches output in `{projectRoot}/dist`.
-
-| Trigger file | Inferred target | Executor |
-| --- | --- | --- |
-| `**/tsdown.config.ts` | `build` | `nx:run-commands` |
+Part of [nx-devkit](https://github.com/nx-devkit/nx.ts). If you want the full TypeScript toolchain (typecheck, test, lint, format, build), use the [`@nx-devkit/typescript`](../typescript-preset/README.md) preset instead — it includes everything this plugin does.
 
 ## Install
 
@@ -16,69 +10,43 @@ For every project that contains a `tsdown.config.ts`, this plugin automatically 
 bun add -D @nx-devkit/tsdown tsdown
 ```
 
-## Register in nx.json
+Requires `@nx/devkit` `^22 || ^23` (peer) and the `tsdown` binary installed — the target shells out to it via `nx:run-commands`.
+
+## Register
 
 ```jsonc
-{
-  "plugins": ["@nx-devkit/tsdown"]
-}
+// nx.json
+{ "plugins": ["@nx-devkit/tsdown"] }
 ```
 
-## Options
+## What it infers
 
-The plugin currently ships no options.
+<!-- target table consistent with src/plugin.ts createNodesV2 -->
 
-```ts
-export interface NxTsdownPluginOptions {}
-```
+| Trigger | Target | Command | Cacheable | Outputs |
+|---|---|---|---|---|
+| `tsdown.config.ts` | `build` | `tsdown` (via `nx:run-commands`, `cwd` = project root) | yes | `{projectRoot}/dist` |
 
-## Targets generated
+`build` declares `dependsOn: ["^build"]`, so upstream dependencies build first.
 
-For a project at `packages/foo/` with a `tsdown.config.ts`:
+## Inspect
 
 ```bash
-npx nx show project packages/foo
-```
-
-reports:
-
-```jsonc
-{
-  "targets": {
-    "build": {
-      "executor": "nx:run-commands",
-      "options": { "command": "tsdown", "cwd": "packages/foo" },
-      "outputs": ["{projectRoot}/dist"],
-      "cache": true,
-      "inputs": [
-        "{projectRoot}/src/**/*.ts",
-        "{projectRoot}/tsdown.config.ts",
-        "{projectRoot}/tsconfig.lib.json",
-        "{projectRoot}/package.json"
-      ],
-      "dependsOn": ["^build"]
-    }
-  }
-}
-```
-
-Run it:
-
-```bash
-npx nx build packages/foo
+npx nx show projects
+npx nx show project <name>
+npx nx run <name>:build
 ```
 
 ## Skip rules
 
-The workspace root (where `tsdown.config.ts` lives at `./`) is skipped so the repo itself is not treated as a project.
+- Only `tsdown.config.ts` matches (not `.mts`, `.js`, or other extensions).
+- Configs inside `node_modules` are skipped.
+- Configs that escape the workspace root are skipped.
+- The workspace-root `tsdown.config.ts` is skipped — the plugin is for nested project roots.
 
-## Verbose logging
+## Options
 
-The plugin logs discovery messages when:
-
-- `nx ... --verbose` is passed
-- `NX_VERBOSE_LOGGING=true` is set in the environment
-- `NX_VERBOSE_LOGGING=true` appears in `<workspaceRoot>/.env`
+None. Behavior is entirely file-driven.
 
 ## License
 

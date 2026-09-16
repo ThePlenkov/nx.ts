@@ -106,6 +106,18 @@ describe('@nx-devkit/tsdown createNodesV2', () => {
     expect(results).toHaveLength(0)
   })
 
+  it('skips configs inside node_modules', async () => {
+    const [, fn] = createNodesV2
+    const results = await fn(['node_modules/pkg/tsdown.config.ts'], {}, makeContext())
+    expect(results).toHaveLength(0)
+  })
+
+  it('skips configs that escape the workspace root', async () => {
+    const [, fn] = createNodesV2
+    const results = await fn(['../outside/tsdown.config.ts'], {}, makeContext())
+    expect(results).toHaveLength(0)
+  })
+
   it('infers a build target for each non-root project', async () => {
     const [, fn] = createNodesV2
     const results = await fn(

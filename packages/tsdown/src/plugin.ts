@@ -1,6 +1,6 @@
 import { dirname, relative, resolve } from 'node:path'
 import { type CreateNodesV2, logger } from '@nx/devkit'
-import { isVerbose, logDebug } from '@nx-devkit/internal'
+import { isVerbose, logDebug, shouldSkipPath } from '@nx-devkit/internal'
 
 export { isVerbose }
 
@@ -23,6 +23,9 @@ export const createNodesV2: CreateNodesV2 = [
           return null
         }
         const projectRoot = relative(workspaceRootAbs, dirAbs).replace(/\\/g, '/')
+        if (shouldSkipPath(projectRoot, workspaceRootAbs)) {
+          return null
+        }
         logDebug(PLUGIN_SCOPE, `Found tsdown.config.ts in ${projectRoot}`)
 
         const buildTarget = {

@@ -1,42 +1,52 @@
 # @nx-devkit/oxlint
 
-Zero-config Nx plugin that infers a `lint` target from `.oxlintrc.*` config files.
+Standalone Nx plugin: any `.oxlintrc.*` config becomes a project with a cached `lint` target. A workspace-root `.oxlintrc.json` also backstops every `packages/*` directory containing a `package.json` that lacks its own config. No `project.json` needed.
 
-## What it does
-
-Scans the workspace for any file matching `**/.oxlintrc.{json,yaml,yml,js,mjs,cjs,cts,mts}`. For each match (outside the workspace root), it injects a `lint` target into the project graph.
+Part of [nx-devkit](https://github.com/nx-devkit/nx.ts). If you want the full TypeScript toolchain (typecheck, test, lint, format, build), use the [`@nx-devkit/typescript`](../typescript-preset/README.md) preset instead — it includes everything this plugin does.
 
 ## Install
 
 ```bash
-bun add -D @nx-devkit/oxlint
+bun add -D @nx-devkit/oxlint oxlint
 ```
 
-## Register in nx.json
+Requires `nx`, `@nx/devkit`, and `oxlint` `^1` — all declared peers.
+
+## Register
 
 ```jsonc
-{
-  "plugins": ["@nx-devkit/oxlint"]
-}
+// nx.json
+{ "plugins": ["@nx-devkit/oxlint"] }
 ```
 
-## Targets generated
+## What it infers
 
-| Trigger file | Target | Executor | Command | Cache | Inputs |
-|---|---|---|---|---|---|
-| `**/.oxlintrc.{json,yaml,yml,js,mjs,cjs,cts,mts}` | `lint` | `nx:run-commands` | `oxlint .` | true | `{projectRoot}/src/**/*`, `{projectRoot}/.oxlintrc.*`, `{projectRoot}/package.json` |
+<!-- target table consistent with src/plugin.ts createNodesV2 and inferLintTarget -->
 
-The `cwd` of the lint command is the project root (relative to the workspace root).
+| Trigger | Target | Command | Cacheable | Inputs |
+|---|---|---|---|---|
+| `.oxlintrc.{json,yml,yaml,cjs,mjs,js,cts,mts}` | `lint` | `oxlint .` (via `nx:run-commands`, `cwd` = project root) | yes | `src/**`, `.oxlintrc.*`, `package.json` |
 
-## Options
+Config files are read defensively: the plugin only checks the file exists and is within the size limit — JSON parse failures are tolerated, and non-JSON formats (yaml/js) are never parsed by the plugin. Real config semantics are delegated to `oxlint` at target runtime.
 
-This plugin accepts no options. The discovery glob is fixed; rename the trigger file if you need to restrict it.
+## Inspect
+
+```bash
+npx nx show projects
+npx nx show project <name>
+npx nx run <name>:lint
+```
 
 ## Skip rules
 
-- The workspace root is skipped (no `lint` target is added to the root project).
-- Files that cannot be read are skipped.
-- Config files larger than 1 MiB are ignored.
+- Configs inside `node_modules` are skipped.
+- Configs that escape the workspace root are skipped.
+- The workspace-root `.oxlintrc.*` never becomes a project itself — but a readable `.oxlintrc.json` there enables a fallback `lint` target on every `packages/*` directory containing a `package.json` that lacks its own `.oxlintrc.*`.
+- Unreadable files and configs larger than 1 MiB are skipped.
+
+## Options
+
+None. Behavior is entirely file-driven.
 
 ## License
 
