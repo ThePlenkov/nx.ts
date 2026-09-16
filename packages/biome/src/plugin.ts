@@ -1,4 +1,5 @@
 import type { CreateNodesFunctionV2 } from 'nx/src/project-graph/plugins/public-api'
+import { shouldSkipPath } from '@nx-devkit/internal'
 
 const PLUGIN_NAME = '@nx-devkit/biome'
 const WORKSPACE_ROOT_MARKER = 'biome.json'
@@ -83,7 +84,7 @@ const createNodesFn: CreateNodesFunctionV2<BiomePluginOptions> = (
     }
 
     const projectRoot = normalized.replace(/^\.\//, '').replace(/\/biome\.jsonc?$/, '')
-    if (projectRoot === '' || projectRoot === workspaceRoot) {
+    if (shouldSkipPath(projectRoot, workspaceRoot)) {
       continue
     }
 

@@ -85,6 +85,16 @@ describe('@nx-devkit/biome createNodesV2', () => {
     expect(result).toEqual([])
   })
 
+  it('skips configs inside node_modules', async () => {
+    const result = await createNodesV2[1](['node_modules/pkg/biome.json'], {}, makeContext('/workspace'))
+    expect(result).toEqual([])
+  })
+
+  it('skips configs that escape the workspace root', async () => {
+    const result = await createNodesV2[1](['../outside/biome.json'], {}, makeContext('/workspace'))
+    expect(result).toEqual([])
+  })
+
   it('exports the createNodesV2 tuple with the correct glob pattern', () => {
     expect(createNodesV2[0]).toBe('**/biome.json{,c}')
     expect(createNodesV2[0]).toMatch(/biome\.json/)

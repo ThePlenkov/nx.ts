@@ -36,9 +36,10 @@
     },
     "packages/biome": {
       "name": "@nx-devkit/biome",
-      "version": "0.0.1",
+      "version": "0.1.0",
       "devDependencies": {
         "@biomejs/biome": "^2.0.0",
+        "@nx-devkit/internal": "workspace:*",
         "tsdown": "^0.22.3",
         "typescript": "^6.0.3",
         "vitest": "^4.1.9",
@@ -58,8 +59,9 @@
     },
     "packages/oxlint": {
       "name": "@nx-devkit/oxlint",
-      "version": "0.0.1",
+      "version": "0.1.0",
       "devDependencies": {
+        "@nx-devkit/internal": "workspace:*",
         "@types/node": "^26.0.0",
         "memfs": "^4.57.8",
         "oxlint": "^1.0.0",
@@ -75,7 +77,7 @@
     },
     "packages/prepare-for-release": {
       "name": "@nx-devkit/prepare-for-release",
-      "version": "0.0.1",
+      "version": "0.1.0",
       "dependencies": {
         "tinyglobby": "^0.2.0",
       },
@@ -93,7 +95,7 @@
     },
     "packages/skill": {
       "name": "@nx-devkit/skill",
-      "version": "0.0.1",
+      "version": "0.1.0",
       "devDependencies": {
         "@nx-devkit/internal": "workspace:*",
         "@nx/devkit": "23.2.1",
@@ -109,7 +111,7 @@
     },
     "packages/skillspector": {
       "name": "@nx-devkit/skillspector",
-      "version": "0.0.1",
+      "version": "0.1.0",
       "devDependencies": {
         "@nx-devkit/internal": "workspace:*",
         "@nx/devkit": "23.2.1",
@@ -125,7 +127,7 @@
     },
     "packages/tsdown": {
       "name": "@nx-devkit/tsdown",
-      "version": "0.0.1",
+      "version": "0.1.0",
       "dependencies": {
         "tsdown": "^0.22.3",
       },
@@ -143,7 +145,7 @@
     },
     "packages/typescript-preset": {
       "name": "@nx-devkit/typescript",
-      "version": "0.0.1",
+      "version": "0.1.1",
       "devDependencies": {
         "@nx-devkit/internal": "workspace:*",
         "tsdown": "^0.22.3",

@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "skills": {
+    "documentation": {
+      "source": "mcollina/skills",
+      "sourceType": "github",
+      "skillPath": "skills/documentation/SKILL.md",
+      "computedHash": "9a43f2e8ebb01dbc162ad78d865ff9e20bf20270e0514095c3bf3f1ac43599c6"
+    },
+    "readme": {
+      "source": "statelyai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/readme/SKILL.md",
+      "computedHash": "b2c4624a194fd8aebbc9fc3d75b7b1da8d2033e0439c3f4e2802e4b07d308a89"
+    }
+  }
+}

@@ -16,13 +16,20 @@
       "types": "./dist/plugin.d.mts",
       "default": "./dist/plugin.mjs"
     },
+    "./generators/init": {
+      "types": "./dist/generators/init/generator.d.mts",
+      "default": "./dist/generators/init/generator.mjs"
+    },
     "./package.json": "./package.json"
   },
   "executors": "./executors.json",
+  "generators": "./generators.json",
   "files": [
     "dist",
     "executors.json",
+    "generators.json",
     "src/executors/publish-placeholder/schema.json",
+    "src/generators/init/schema.json",
     "README.md"
   ],
   "scripts": {

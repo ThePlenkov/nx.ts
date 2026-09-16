@@ -108,6 +108,27 @@ describe('@nx-devkit/oxlint createNodesV2', () => {
     expect(result).toEqual([])
   })
 
+  it('skips configs inside node_modules', () => {
+    const dir = join(tmp, 'node_modules', 'pkg')
+    mkdirSync(dir, { recursive: true })
+    writeFileSync(join(dir, '.oxlintrc.json'), '{}')
+    const result = callWith(join(tmp, 'node_modules', 'pkg', '.oxlintrc.json'))
+    expect(result).toEqual([])
+  })
+
+  it('skips configs that escape the workspace root', () => {
+    const dir = join(tmp, '..', 'outside-oxlint')
+    mkdirSync(dir, { recursive: true })
+    writeFileSync(join(dir, '.oxlintrc.json'), '{}')
+    const result = createNodesV2[1](
+      ['../outside-oxlint/.oxlintrc.json'],
+      { configFile: '.oxlintrc.json' },
+      ctx,
+    )
+    expect(result).toEqual([])
+    rmSync(dir, { recursive: true, force: true })
+  })
+
   it('configures lint target with nx:run-commands executor, oxlint ., cwd projectRoot, cache true', () => {
     makeProject('barlint', '.oxlintrc.json')
     const result = callWith(join(tmp, 'packages', 'barlint', '.oxlintrc.json'))

@@ -28,6 +28,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2.0.0",
+    "@nx-devkit/internal": "workspace:*",
     "tsdown": "^0.22.3",
     "typescript": "^6.0.3",
     "vitest": "^4.1.9"

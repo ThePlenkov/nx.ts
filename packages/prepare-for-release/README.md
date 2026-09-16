@@ -14,6 +14,16 @@ Requires `@nx/devkit` `^22 || ^23` (peer).
 
 ## Bootstrap
 
+Run the `init` generator — it registers the plugin in `nx.json` and creates a `tools` project with the `prepare-for-release` target:
+
+```bash
+npx nx g @nx-devkit/prepare-for-release:init
+```
+
+<!-- sym:generators.json → generators.init.factory,schema -->
+
+Or do it manually:
+
 1. Register the plugin in `nx.json` so `createNodesV2` can detect release-bootstrap projects:
 
 ```jsonc
@@ -33,7 +43,7 @@ Requires `@nx/devkit` `^22 || ^23` (peer).
 }
 ```
 
-The plugin's `createNodesV2` scans `**/project.json` for projects whose targets reference its executor and surfaces them on the graph. (The package also ships an `init` generator in source, though it is not currently registered in `generators.json` for consumer use — create the file above manually for now.)
+The plugin's `createNodesV2` scans `**/project.json` for projects whose targets reference its executor and surfaces them on the graph.
 
 Then run:
 
