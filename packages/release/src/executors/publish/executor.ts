@@ -68,11 +68,29 @@ function runSync(
     encoding: 'utf-8',
     stdio: ['pipe', 'pipe', 'pipe'],
   })
+  if (result.signal === 'SIGTERM') {
+    throw new Error(`Command timed out: ${cmd} ${args.join(' ')}`)
+  }
+  if (result.error) {
+    throw new Error(`Command failed to spawn: ${cmd} ${args.join(' ')} — ${result.error.message}`)
+  }
   return {
     ok: result.status === 0,
     stdout: (result.stdout ?? '').trim(),
     stderr: (result.stderr ?? '').trim(),
   }
+}
+
+function runSyncOrThrow(
+  cmd: string,
+  args: string[],
+  opts: { cwd?: string; timeout?: number } = {},
+): { stdout: string; stderr: string } {
+  const result = runSync(cmd, args, opts)
+  if (!result.ok) {
+    throw new Error(`${cmd} ${args.join(' ')} failed: ${result.stderr}`)
+  }
+  return { stdout: result.stdout, stderr: result.stderr }
 }
 
 function npmViewVersion(packageName: string, registry: string): string | null {
@@ -114,14 +132,20 @@ function computeNextVersion(
 }
 
 function compareSemver(a: string, b: string): number {
-  const pa = a.split('.').map(Number)
-  const pb = b.split('.').map(Number)
+  const [aMain, aPre] = a.split('-', 2)
+  const [bMain, bPre] = b.split('-', 2)
+  const pa = aMain.split('.').map(Number)
+  const pb = bMain.split('.').map(Number)
   for (let i = 0; i < 3; i++) {
     const da = pa[i] ?? 0
     const db = pb[i] ?? 0
     if (da > db) return 1
     if (da < db) return -1
   }
+  // Prerelease: a version with prerelease is lower than one without
+  if (aPre && !bPre) return -1
+  if (!aPre && bPre) return 1
+  if (aPre && bPre) return aPre < bPre ? -1 : aPre > bPre ? 1 : 0
   return 0
 }
 
@@ -185,16 +209,13 @@ export async function publishExecutor(
     return result
   }
 
-  // 3. Stamp package.json version (skip if already published — release repair)
-  if (!alreadyPublished || !alreadyTagged) {
-    const stampResult = runSync(
+  // 3. Stamp package.json version (skip if already published — no need to restamp)
+  if (!alreadyPublished) {
+    runSyncOrThrow(
       'npm',
       ['version', nextVersion, '--no-git-tag-version', '--allow-same-version'],
       { cwd: resolved.packagePath },
     )
-    if (!stampResult.ok) {
-      throw new Error(`Failed to stamp version: ${stampResult.stderr}`)
-    }
   }
 
   // 4. Publish to npm (if not already published)
@@ -216,23 +237,21 @@ export async function publishExecutor(
 
   // 5. Commit bump + tag (if not already tagged)
   if (!alreadyTagged) {
-    const gitConfig = runSync('git', ['config', 'user.name', 'github-actions[bot]'])
-    runSync('git', [
+    runSyncOrThrow('git', ['config', 'user.name', 'github-actions[bot]'])
+    runSyncOrThrow('git', [
       'config',
       'user.email',
       '41898282+github-actions[bot]@users.noreply.github.com',
     ])
-    void gitConfig
-    runSync('git', ['add', `${resolved.packagePath}/package.json`])
-    // Also add package-lock.json if it exists
+    runSyncOrThrow('git', ['add', `${resolved.packagePath}/package.json`])
     if (existsSync('package-lock.json')) {
-      runSync('git', ['add', 'package-lock.json'])
+      runSyncOrThrow('git', ['add', 'package-lock.json'])
     }
     const commitResult = runSync('git', ['diff', '--cached', '--quiet'])
     if (!commitResult.ok) {
-      runSync('git', ['commit', '-m', `chore: release ${nextVersion}`])
+      runSyncOrThrow('git', ['commit', '-m', `chore: release ${nextVersion}`])
     }
-    runSync('git', ['tag', tag])
+    runSyncOrThrow('git', ['tag', tag])
     result.tagged = true
   } else {
     result.skipped.push('already tagged')
@@ -240,8 +259,7 @@ export async function publishExecutor(
 
   // 6. Push to branch + tag (if not already tagged)
   if (!alreadyTagged) {
-    // Rebase on remote branch to avoid non-fast-forward
-    runSync('git', ['fetch', 'origin', resolved.branch])
+    runSyncOrThrow('git', ['fetch', 'origin', resolved.branch])
     const rebaseResult = runSync('git', ['rebase', `origin/${resolved.branch}`])
     if (!rebaseResult.ok) {
       throw new Error(`Rebase failed: ${rebaseResult.stderr}`)
@@ -250,7 +268,10 @@ export async function publishExecutor(
     if (!pushResult.ok) {
       throw new Error(`Push to ${resolved.branch} failed: ${pushResult.stderr}`)
     }
-    runSync('git', ['push', 'origin', tag])
+    const tagPushResult = runSync('git', ['push', 'origin', tag])
+    if (!tagPushResult.ok) {
+      throw new Error(`Tag push failed: ${tagPushResult.stderr}`)
+    }
   }
 
   // 7. Create GitHub Release (if not already released)

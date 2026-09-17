@@ -241,12 +241,13 @@ describe('publishPlaceholderExecutor', () => {
 
     const writes: string[] = []
     const originalWrite = process.stderr.write.bind(process.stderr)
-    const spy = vi
-      .spyOn(process.stderr, 'write')
-      .mockImplementation(((chunk: unknown, ...rest: unknown[]) => {
-        writes.push(String(chunk))
-        return originalWrite(chunk as never, ...(rest as never[]))
-      }) as typeof process.stderr.write)
+    const spy = vi.spyOn(process.stderr, 'write').mockImplementation(((
+      chunk: unknown,
+      ...rest: unknown[]
+    ) => {
+      writes.push(String(chunk))
+      return originalWrite(chunk as never, ...(rest as never[]))
+    }) as typeof process.stderr.write)
 
     try {
       const result = await publishPlaceholderExecutor({ trust: true }, { root: workspace })

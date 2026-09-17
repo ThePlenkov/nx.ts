@@ -76,158 +76,146 @@ export const createNodesV2: CreateNodesV2<NxDevkitTypescriptOptions> = [
       )
     })
     const effectiveIncludeRoot =
-      options.includeRoot === true ||
-      (options.includeRoot === undefined && !hasNestedProjects)
+      options.includeRoot === true || (options.includeRoot === undefined && !hasNestedProjects)
 
     logDebug(PLUGIN_SCOPE, `Detected ${filteredConfigFiles.length} ${configFileName} files`)
 
     // Bound concurrency: each project issues several fs probes and up to
     // two recursive glob scans, so an unbounded Promise.all over every
     // detected tsconfig would flood the fs on a large monorepo.
-    const results = await mapWithConcurrency(
-      filteredConfigFiles,
-      8,
-      async (configFile) => {
-        const projectRoot = dirname(configFile)
-        const isWorkspaceRoot =
-          resolve(workspaceRoot, projectRoot) === resolve(workspaceRoot)
+    const results = await mapWithConcurrency(filteredConfigFiles, 8, async (configFile) => {
+      const projectRoot = dirname(configFile)
+      const isWorkspaceRoot = resolve(workspaceRoot, projectRoot) === resolve(workspaceRoot)
 
-        // The workspace root is only a project when includeRoot applies
-        // (explicit or single-package auto). Other skip reasons
-        // (node_modules, escaping the root) still apply regardless.
-        if (shouldSkipPath(projectRoot, workspaceRoot) && !(effectiveIncludeRoot && isWorkspaceRoot)) {
-          logDebug(PLUGIN_SCOPE, `Skipping ${projectRoot}`)
-          return null
+      // The workspace root is only a project when includeRoot applies
+      // (explicit or single-package auto). Other skip reasons
+      // (node_modules, escaping the root) still apply regardless.
+      if (
+        shouldSkipPath(projectRoot, workspaceRoot) &&
+        !(effectiveIncludeRoot && isWorkspaceRoot)
+      ) {
+        logDebug(PLUGIN_SCOPE, `Skipping ${projectRoot}`)
+        return null
+      }
+
+      const projectKey = (
+        relative(workspaceRoot, resolve(workspaceRoot, projectRoot)) || '.'
+      ).replace(/\\/g, '/')
+
+      logDebug(PLUGIN_SCOPE, `Registering targets for ${projectKey}`)
+
+      const relProjectRoot = projectKey
+
+      const hasNativePreview = await checkNativePreview(projectRoot, workspaceRoot)
+
+      const typecheckTarget = inferTypecheckTarget(
+        relProjectRoot,
+        {
+          tsgo,
+          configFile: configFileName,
+          clean,
+        },
+        hasNativePreview,
+      )
+
+      const targets: Record<string, TargetConfiguration> = {
+        typecheck: typecheckTarget,
+      }
+
+      const vitestConfigPath = await findVitestConfig(projectRoot, workspaceRoot)
+      if (vitestConfigPath) {
+        Object.assign(targets, inferVitestTargets(relProjectRoot, vitestConfigPath))
+      } else {
+        const absProjectRoot = resolve(workspaceRoot, projectRoot)
+        const hasTestFiles =
+          (await globMatchAsync(absProjectRoot, testGlob)) ||
+          (await globMatchAsync(absProjectRoot, specGlob))
+        if (hasTestFiles) {
+          Object.assign(
+            targets,
+            inferNativeTestTargets(relProjectRoot, { tap, coverage, testGlob, specGlob }),
+          )
         }
+      }
 
-        const projectKey = (
-          relative(workspaceRoot, resolve(workspaceRoot, projectRoot)) || '.'
-        ).replace(/\\/g, '/')
-
-        logDebug(PLUGIN_SCOPE, `Registering targets for ${projectKey}`)
-
-        const relProjectRoot = projectKey
-
-        const hasNativePreview = await checkNativePreview(projectRoot, workspaceRoot)
-
-        const typecheckTarget = inferTypecheckTarget(
-          relProjectRoot,
-          {
-            tsgo,
-            configFile: configFileName,
-            clean,
-          },
-          hasNativePreview,
-        )
-
-        const targets: Record<string, TargetConfiguration> = {
-          typecheck: typecheckTarget,
+      // Lint-family configs fall back to the workspace root: a root
+      // .oxlintrc/eslint.config/biome.json applies lint/format to every
+      // project (the tools themselves walk up for config discovery).
+      // When the fallback is used, the root config becomes a cache
+      // input so edits invalidate the lint/format caches.
+      const projectOxlintrc = await findConfigFile(projectRoot, workspaceRoot, OXLINTRC_NAMES)
+      const oxlintrcPath =
+        projectOxlintrc ?? (await findConfigFile('.', workspaceRoot, OXLINTRC_NAMES))
+      const oxlintOwnsLint = oxlint && oxlintrcPath !== null
+      if (oxlintOwnsLint) {
+        targets.lint = inferOxlintTarget(relProjectRoot)
+        if (!projectOxlintrc) {
+          targets.lint.inputs.push('{workspaceRoot}/.oxlintrc.*')
         }
+      }
 
-        const vitestConfigPath = await findVitestConfig(projectRoot, workspaceRoot)
-        if (vitestConfigPath) {
-          Object.assign(targets, inferVitestTargets(relProjectRoot, vitestConfigPath))
-        } else {
-          const absProjectRoot = resolve(workspaceRoot, projectRoot)
-          const hasTestFiles =
-            (await globMatchAsync(absProjectRoot, testGlob)) ||
-            (await globMatchAsync(absProjectRoot, specGlob))
-          if (hasTestFiles) {
-            Object.assign(
-              targets,
-              inferNativeTestTargets(relProjectRoot, { tap, coverage, testGlob, specGlob }),
-            )
-          }
-        }
-
-        // Lint-family configs fall back to the workspace root: a root
-        // .oxlintrc/eslint.config/biome.json applies lint/format to every
-        // project (the tools themselves walk up for config discovery).
-        // When the fallback is used, the root config becomes a cache
-        // input so edits invalidate the lint/format caches.
-        const projectOxlintrc = await findConfigFile(
+      if (!oxlintOwnsLint && eslint) {
+        const projectEslintConfig = await findConfigFile(
           projectRoot,
           workspaceRoot,
-          OXLINTRC_NAMES,
+          ESLINT_CONFIG_NAMES,
         )
-        const oxlintrcPath =
-          projectOxlintrc ?? (await findConfigFile('.', workspaceRoot, OXLINTRC_NAMES))
-        const oxlintOwnsLint = oxlint && oxlintrcPath !== null
-        if (oxlintOwnsLint) {
-          targets.lint = inferOxlintTarget(relProjectRoot)
-          if (!projectOxlintrc) {
-            targets.lint.inputs.push('{workspaceRoot}/.oxlintrc.*')
+        const eslintConfigPath =
+          projectEslintConfig ?? (await findConfigFile('.', workspaceRoot, ESLINT_CONFIG_NAMES))
+        if (eslintConfigPath) {
+          targets.lint = inferEslintTarget(relProjectRoot)
+          if (!projectEslintConfig) {
+            targets.lint.inputs.push('{workspaceRoot}/eslint.config.*')
           }
         }
+      }
 
-        if (!oxlintOwnsLint && eslint) {
-          const projectEslintConfig = await findConfigFile(
-            projectRoot,
-            workspaceRoot,
-            ESLINT_CONFIG_NAMES,
-          )
-          const eslintConfigPath =
-            projectEslintConfig ??
-            (await findConfigFile('.', workspaceRoot, ESLINT_CONFIG_NAMES))
-          if (eslintConfigPath) {
-            targets.lint = inferEslintTarget(relProjectRoot)
-            if (!projectEslintConfig) {
-              targets.lint.inputs.push('{workspaceRoot}/eslint.config.*')
+      if (biome) {
+        const projectBiomeConfig = await findConfigFile(
+          projectRoot,
+          workspaceRoot,
+          BIOME_CONFIG_NAMES,
+        )
+        const biomeConfigPath =
+          projectBiomeConfig ?? (await findConfigFile('.', workspaceRoot, BIOME_CONFIG_NAMES))
+        if (biomeConfigPath) {
+          const biomeProvidesLint = !oxlintOwnsLint && !('lint' in targets && targets.lint)
+          const inferred = inferBiomeTargets(relProjectRoot, biomeProvidesLint)
+          if (!projectBiomeConfig) {
+            // Copy before extending — inferBiomeTargets shares the
+            // module-level BIOME_INPUTS array across targets/projects.
+            for (const t of Object.values(inferred)) {
+              t.inputs = [...t.inputs, '{workspaceRoot}/biome.json', '{workspaceRoot}/biome.jsonc']
             }
           }
+          Object.assign(targets, inferred)
         }
+      }
 
-        if (biome) {
-          const projectBiomeConfig = await findConfigFile(
-            projectRoot,
-            workspaceRoot,
-            BIOME_CONFIG_NAMES,
-          )
-          const biomeConfigPath =
-            projectBiomeConfig ?? (await findConfigFile('.', workspaceRoot, BIOME_CONFIG_NAMES))
-          if (biomeConfigPath) {
-            const biomeProvidesLint = !oxlintOwnsLint && !('lint' in targets && targets.lint)
-            const inferred = inferBiomeTargets(relProjectRoot, biomeProvidesLint)
-            if (!projectBiomeConfig) {
-              // Copy before extending — inferBiomeTargets shares the
-              // module-level BIOME_INPUTS array across targets/projects.
-              for (const t of Object.values(inferred)) {
-                t.inputs = [
-                  ...t.inputs,
-                  '{workspaceRoot}/biome.json',
-                  '{workspaceRoot}/biome.jsonc',
-                ]
-              }
-            }
-            Object.assign(targets, inferred)
-          }
+      if (tsdown) {
+        const tsdownConfigPath = await findConfigFile(
+          projectRoot,
+          workspaceRoot,
+          TSDOWN_CONFIG_NAMES,
+        )
+        if (tsdownConfigPath) {
+          targets.build = inferTsdownBuildTarget(relProjectRoot)
+          targets['build:watch'] = inferTsdownWatchTarget(relProjectRoot)
         }
+      }
 
-        if (tsdown) {
-          const tsdownConfigPath = await findConfigFile(
-            projectRoot,
-            workspaceRoot,
-            TSDOWN_CONFIG_NAMES,
-          )
-          if (tsdownConfigPath) {
-            targets.build = inferTsdownBuildTarget(relProjectRoot)
-            targets['build:watch'] = inferTsdownWatchTarget(relProjectRoot)
-          }
-        }
-
-        const result: [string, CreateNodesResult] = [
-          configFile,
-          {
-            projects: {
-              [projectKey]: {
-                targets,
-              },
+      const result: [string, CreateNodesResult] = [
+        configFile,
+        {
+          projects: {
+            [projectKey]: {
+              targets,
             },
           },
-        ]
-        return result
-      },
-    )
+        },
+      ]
+      return result
+    })
 
     return results.filter((r): r is [string, CreateNodesResult] => r !== null)
   },

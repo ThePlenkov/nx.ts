@@ -5,9 +5,7 @@
       "factory": "./dist/generators/init/generator.mjs",
       "schema": "./src/generators/init/schema.json",
       "description": "One-command bootstrap: registers @nx-devkit/typescript in nx.json, removes standalone @nx-devkit/* entries, detects config files, adds devDependencies for detected tools, and prints an inferred-targets summary.",
-      "aliases": [
-        "ng-add"
-      ]
+      "aliases": ["ng-add"]
     }
   }
 }

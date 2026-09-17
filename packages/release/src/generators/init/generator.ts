@@ -179,7 +179,13 @@ export async function initGenerator(
   let packageName = options.packageName
   if (!packageName) {
     const rootPkg = readJson(tree, 'package.json')
-    packageName = (rootPkg?.name as string) ?? 'kilo-ai-cli'
+    const rootName = rootPkg?.name as string | undefined
+    if (!rootName) {
+      throw new Error(
+        'Could not determine package name. Set options.packageName or add "name" to package.json.',
+      )
+    }
+    packageName = rootName
   }
 
   registerPlugin(tree, PLUGIN_NAME)

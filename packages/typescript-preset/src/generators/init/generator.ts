@@ -63,10 +63,7 @@ function getPluginOptions(entry: unknown): Record<string, unknown> {
   return {}
 }
 
-function registerPlugin(
-  tree: Tree,
-  pluginPath: string,
-): Record<string, unknown> {
+function registerPlugin(tree: Tree, pluginPath: string): Record<string, unknown> {
   const nxJson = readJson(tree, 'nx.json') ?? {}
   const plugins = Array.isArray(nxJson.plugins) ? (nxJson.plugins as unknown[]) : []
 
@@ -416,9 +413,7 @@ function printSummary(
       rootConfigs.tsconfig &&
       (presetOptions.includeRoot === true ||
         (presetOptions.includeRoot !== false && !hasNestedConfig))
-    const rootTargets = rootIsProject
-      ? targetLabel(rootConfigs, rootConfigs, presetOptions)
-      : []
+    const rootTargets = rootIsProject ? targetLabel(rootConfigs, rootConfigs, presetOptions) : []
     if (rootTargets.length > 0) {
       console.log(`  . (workspace root) → ${rootTargets.join(', ')}`)
     } else {

@@ -418,7 +418,9 @@ describe('initGenerator', () => {
       // target keys off that file — init must detect the same name.
       const { tree } = createTree({
         'nx.json': JSON.stringify({
-          plugins: [{ plugin: '@nx-devkit/typescript', options: { configFile: 'tsconfig.lib.json' } }],
+          plugins: [
+            { plugin: '@nx-devkit/typescript', options: { configFile: 'tsconfig.lib.json' } },
+          ],
         }),
         'package.json': JSON.stringify({ name: 'test', version: '0.0.0' }),
         'tsconfig.lib.json': JSON.stringify({ compilerOptions: {} }),
@@ -431,7 +433,9 @@ describe('initGenerator', () => {
     it('discovers nested projects that only carry the configured configFile', async () => {
       const { tree } = createTree({
         'nx.json': JSON.stringify({
-          plugins: [{ plugin: '@nx-devkit/typescript', options: { configFile: 'tsconfig.lib.json' } }],
+          plugins: [
+            { plugin: '@nx-devkit/typescript', options: { configFile: 'tsconfig.lib.json' } },
+          ],
         }),
         'package.json': JSON.stringify({ name: 'test', version: '0.0.0' }),
         'tsconfig.lib.json': JSON.stringify({ compilerOptions: {} }),
