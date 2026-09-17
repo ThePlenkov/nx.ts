@@ -105,7 +105,7 @@ describe('publishExecutor', () => {
     mockSpawn.mockImplementation(() => ok())
 
     const result = await publishExecutor({ packagePath: dir, version: 'patch', dryRun: true })
-    expect(result.success).toBe(false)
+    expect(result.success).toBe(true)
     expect(result.skipped).toContain('dry run')
   })
 

@@ -86,7 +86,11 @@ describe('@nx-devkit/biome createNodesV2', () => {
   })
 
   it('skips configs inside node_modules', async () => {
-    const result = await createNodesV2[1](['node_modules/pkg/biome.json'], {}, makeContext('/workspace'))
+    const result = await createNodesV2[1](
+      ['node_modules/pkg/biome.json'],
+      {},
+      makeContext('/workspace'),
+    )
     expect(result).toEqual([])
   })
 

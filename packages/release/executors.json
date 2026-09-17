@@ -1,7 +1,7 @@
 {
   "executors": {
     "publish": {
-      "implementation": "./dist/executors/publish/executor",
+      "implementation": "./dist/executors/publish/executor.mjs",
       "schema": "./src/executors/publish/schema.json",
       "description": "Publishes a package to npm via OIDC, pushes the version bump + tag to main, and creates a GitHub Release with auto-generated changelog. Idempotent."
     }

@@ -65,6 +65,7 @@ export const createNodesV2: CreateNodesV2<NxReleasePluginOptions> = [
         {
           projects: {
             [projectRoot]: {
+              root: projectRoot,
               targets: {
                 [targetName]: {
                   executor: `${PLUGIN_NAME}:publish`,
