@@ -7,6 +7,7 @@ import { join } from 'node:path'
  * so we require both a publishable signal and that conventional entry.
  */
 export async function hasConfigFreeTsdownEntry(absProjectRoot: string): Promise<boolean> {
+  // eslint-disable-next-line -- every failure mode (missing entry, missing/invalid package.json) intentionally returns false inside the try/catch
   try {
     // eslint-disable-next-line security/detect-non-literal-fs-filename -- fixed basenames joined to the Nx-provided project root
     await access(join(absProjectRoot, 'src/index.ts'))
