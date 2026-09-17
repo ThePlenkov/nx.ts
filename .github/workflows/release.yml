@@ -73,6 +73,8 @@ jobs:
         # Consumer-level gate: packs every publishable package, installs the
         # tarballs into a scratch workspace, and runs the real bootstrap.
         # Catches broken artifacts (missing bin/files) before they ship.
+        env:
+          E2E_SKIP_BUILD: "1" # Build step above already produced dist/
         run: bash scripts/e2e-packed.sh
       - name: Verify release versioning intent (dry-run)
         run: npx nx release --skip-publish --dry-run
