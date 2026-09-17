@@ -13,7 +13,6 @@ export interface NxReleaseInitOptions {
 
 const DEFAULT_PROJECT_NAME = 'tools'
 const DEFAULT_PACKAGE_PATH = 'packages/cli'
-const DEFAULT_BRANCH = 'main'
 const PLUGIN_NAME = '@nx-devkit/release'
 
 function readJson(tree: Tree, path: string): Record<string, unknown> | null {
@@ -85,7 +84,7 @@ function ensureToolsProject(
   tree.write(joinPathFragments(projectName, '.gitkeep'), '')
 }
 
-function createReleaseWorkflow(tree: Tree, projectName: string, branch: string): void {
+function createReleaseWorkflow(tree: Tree, projectName: string): void {
   const workflowPath = '.github/workflows/release.yml'
 
   if (tree.exists(workflowPath)) {
@@ -173,7 +172,6 @@ export async function initGenerator(
 ): Promise<GeneratorCallback> {
   const projectName = options.projectName ?? DEFAULT_PROJECT_NAME
   const packagePath = options.packagePath ?? DEFAULT_PACKAGE_PATH
-  const branch = options.branch ?? DEFAULT_BRANCH
 
   // Derive package name from root package.json if not provided
   let packageName = options.packageName
@@ -190,7 +188,7 @@ export async function initGenerator(
 
   registerPlugin(tree, PLUGIN_NAME)
   ensureToolsProject(tree, projectName, packageName, packagePath)
-  createReleaseWorkflow(tree, projectName, branch)
+  createReleaseWorkflow(tree, projectName)
 
   const checklist = [
     `1. Install the plugin: npm install -D ${PLUGIN_NAME}`,
