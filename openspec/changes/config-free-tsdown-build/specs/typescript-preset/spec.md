@@ -9,6 +9,10 @@ When `tsdown: true` (default) and a project has NO `tsdown.config.*` but has `sr
 - **WHEN** a project has `tsconfig.json`, `src/index.ts`, and `package.json` with an `exports` field but no `tsdown.config.*`
 - **THEN** the plugin infers `build` (executor `@nx-devkit/typescript:build`, outputs `{projectRoot}/dist`, `dependsOn: ['^build']`) and `build:watch` targets
 
+#### Scenario: Publishable package with main + files gets build targets
+- **WHEN** a project has `tsconfig.json`, `src/index.ts`, and `package.json` with both `main` and `files` fields but no `tsdown.config.*`
+- **THEN** the plugin infers `build` and `build:watch` targets
+
 #### Scenario: Publishable package with bin gets build targets
 - **WHEN** a project has `tsconfig.json`, `src/index.ts`, and `package.json` with a `bin` field but no `tsdown.config.*`
 - **THEN** the plugin infers `build` and `build:watch` targets
