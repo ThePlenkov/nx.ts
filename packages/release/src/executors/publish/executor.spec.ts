@@ -222,4 +222,12 @@ describe('publishExecutor', () => {
     expect(result.tagged).toBe(true)
     expect(result.releaseCreated).toBe(true)
   })
+
+  it('mode=publish refuses a missing/invalid committed version', async () => {
+    const dir = makePkgDir('@test/pkg', 'invalid')
+    mockSpawn.mockImplementation(() => ok())
+    await expect(publishExecutor({ packagePath: dir, mode: 'publish' })).rejects.toThrow(
+      'requires a committed semver version',
+    )
+  })
 })
