@@ -845,6 +845,91 @@ describe('tsdown build delegation', () => {
       rmSync(root, { recursive: true, force: true })
     }
   })
+
+  it('infers config-free build from publishable package.json + src/index.ts', async () => {
+    const root = makeWorkspace()
+    try {
+      const ts = touch(root, 'packages/foo/tsconfig.json')
+      writeFileSync(
+        join(root, 'packages/foo/package.json'),
+        JSON.stringify({ name: 'foo', exports: { '.': './dist/index.mjs' } }),
+      )
+      touch(root, 'packages/foo/src/index.ts')
+      const result = await callCreateNodes([ts], {}, root)
+      const proj = firstProject(result, 'packages/foo')
+      const build = proj.targets?.build as Record<string, unknown>
+      expect(build?.executor).toBe('@nx-devkit/typescript:build')
+      expect(proj.targets?.['build:watch']).toBeDefined()
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  it('infers config-free build from bin field + src/index.ts', async () => {
+    const root = makeWorkspace()
+    try {
+      const ts = touch(root, 'packages/foo/tsconfig.json')
+      writeFileSync(
+        join(root, 'packages/foo/package.json'),
+        JSON.stringify({ name: 'foo', bin: { foo: './dist/cli.mjs' } }),
+      )
+      touch(root, 'packages/foo/src/index.ts')
+      const result = await callCreateNodes([ts], {}, root)
+      const proj = firstProject(result, 'packages/foo')
+      expect(proj.targets?.build).toBeDefined()
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  it('does not infer build from src/index.ts without publishable package.json fields', async () => {
+    const root = makeWorkspace()
+    try {
+      const ts = touch(root, 'packages/foo/tsconfig.json')
+      touch(root, 'packages/foo/package.json')
+      touch(root, 'packages/foo/src/index.ts')
+      const result = await callCreateNodes([ts], {}, root)
+      const proj = firstProject(result, 'packages/foo')
+      expect(proj.targets?.build).toBeUndefined()
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  it('does not infer build from package.json exports without src/index.ts', async () => {
+    const root = makeWorkspace()
+    try {
+      const ts = touch(root, 'packages/foo/tsconfig.json')
+      writeFileSync(
+        join(root, 'packages/foo/package.json'),
+        JSON.stringify({ name: 'foo', exports: { '.': './dist/index.mjs' } }),
+      )
+      touch(root, 'packages/foo/src/foo.ts')
+      const result = await callCreateNodes([ts], {}, root)
+      const proj = firstProject(result, 'packages/foo')
+      expect(proj.targets?.build).toBeUndefined()
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  it('tsdown.config.ts still wins over package.json inference', async () => {
+    const root = makeWorkspace()
+    try {
+      const ts = touch(root, 'packages/foo/tsconfig.json')
+      touch(root, 'packages/foo/tsdown.config.ts')
+      writeFileSync(
+        join(root, 'packages/foo/package.json'),
+        JSON.stringify({ name: 'foo', exports: { '.': './dist/index.mjs' } }),
+      )
+      touch(root, 'packages/foo/src/index.ts')
+      const result = await callCreateNodes([ts], {}, root)
+      const proj = firstProject(result, 'packages/foo')
+      expect(proj.targets?.build).toBeDefined()
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
 })
 
 // ---------------------------------------------------------------------------
