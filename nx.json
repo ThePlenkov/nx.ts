@@ -18,7 +18,8 @@
       "packages/typescript-preset",
       "packages/prepare-for-release",
       "packages/skill",
-      "packages/skillspector"
+      "packages/skillspector",
+      "packages/release"
     ],
     "version": {
       "generatorOptions": {
