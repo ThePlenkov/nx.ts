@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
+import type { Tree } from '@nx/devkit'
 import { initGenerator } from './generator.ts'
 
 class MemTree {
@@ -41,7 +42,7 @@ describe('initGenerator', () => {
     tree.write('package.json', JSON.stringify({ name: '@test/monorepo' }))
     tree.write('nx.json', JSON.stringify({}))
 
-    await initGenerator(tree, { packagePath: 'packages/cli' })
+    await initGenerator(tree as unknown as Tree, { packagePath: 'packages/cli' })
 
     expect(tree.exists('tools/project.json')).toBe(true)
     const projectJson = JSON.parse(tree.read('tools/project.json') ?? '{}')
@@ -54,7 +55,7 @@ describe('initGenerator', () => {
     tree.write('package.json', JSON.stringify({ name: '@test/monorepo' }))
     tree.write('nx.json', JSON.stringify({}))
 
-    await initGenerator(tree, {})
+    await initGenerator(tree as unknown as Tree, {})
 
     const nxJson = JSON.parse(tree.read('nx.json') ?? '{}')
     const plugins = nxJson.plugins as Array<{ plugin: string }>
@@ -66,7 +67,7 @@ describe('initGenerator', () => {
     tree.write('package.json', JSON.stringify({ name: '@test/monorepo' }))
     tree.write('nx.json', JSON.stringify({}))
 
-    await initGenerator(tree, { projectName: 'tools' })
+    await initGenerator(tree as unknown as Tree, { projectName: 'tools' })
 
     expect(tree.exists('.github/workflows/release.yml')).toBe(true)
     const workflow = tree.read('.github/workflows/release.yml') ?? ''
@@ -83,7 +84,7 @@ describe('initGenerator', () => {
     tree.write('nx.json', JSON.stringify({}))
     tree.write('.github/workflows/release.yml', 'custom workflow')
 
-    await initGenerator(tree, {})
+    await initGenerator(tree as unknown as Tree, {})
 
     const workflow = tree.read('.github/workflows/release.yml') ?? ''
     expect(workflow).toBe('custom workflow')
@@ -94,7 +95,10 @@ describe('initGenerator', () => {
     tree.write('package.json', JSON.stringify({ name: '@test/monorepo' }))
     tree.write('nx.json', JSON.stringify({}))
 
-    await initGenerator(tree, { packageName: '@my/custom-pkg', packagePath: 'apps/cli' })
+    await initGenerator(tree as unknown as Tree, {
+      packageName: '@my/custom-pkg',
+      packagePath: 'apps/cli',
+    })
 
     const projectJson = JSON.parse(tree.read('tools/project.json') ?? '{}')
     expect(projectJson.targets.release.options.packageName).toBe('@my/custom-pkg')

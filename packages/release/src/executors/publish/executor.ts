@@ -128,12 +128,12 @@ function computeNextVersion(
   }
   const base =
     npmVersion && compareSemver(npmVersion, localVersion) >= 0 ? npmVersion : localVersion
-  return bumpSemver(base, requested)
+  return bumpSemver(base, requested as 'patch' | 'minor' | 'major')
 }
 
 function compareSemver(a: string, b: string): number {
-  const [aMain, aPre] = a.split('-', 2)
-  const [bMain, bPre] = b.split('-', 2)
+  const [aMain = '0', aPre] = a.split('-', 2)
+  const [bMain = '0', bPre] = b.split('-', 2)
   const pa = aMain.split('.').map(Number)
   const pb = bMain.split('.').map(Number)
   for (let i = 0; i < 3; i++) {
