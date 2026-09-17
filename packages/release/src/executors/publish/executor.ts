@@ -66,7 +66,9 @@ function readPackageJson(packagePath: string): { name: string; version: string }
   try {
     raw = JSON.parse(readFileSync(pkgPath, 'utf-8'))
   } catch (err) {
-    throw new Error(`Invalid JSON in ${pkgPath}: ${(err as Error).message}`)
+    throw new Error(`Invalid JSON in ${pkgPath}: ${(err as Error).message}`, {
+      cause: err,
+    })
   }
   if (!raw.name) {
     throw new Error(`package.json at ${pkgPath} has no "name" field`)
