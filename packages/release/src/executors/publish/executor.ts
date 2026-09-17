@@ -157,10 +157,10 @@ function compareSemver(a: string, b: string): number {
     if (da < db) return -1
   }
   // Prerelease: a version with prerelease is lower than one without
-  if (aPre && !bPre) return -1
-  if (!aPre && bPre) return 1
-  if (aPre && bPre) return aPre < bPre ? -1 : aPre > bPre ? 1 : 0
-  return 0
+  if (aPre === bPre) return 0
+  if (!aPre) return 1
+  if (!bPre) return -1
+  return aPre < bPre ? -1 : 1
 }
 
 function bumpSemver(base: string, kind: 'patch' | 'minor' | 'major'): string {
