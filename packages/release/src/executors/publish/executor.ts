@@ -1,6 +1,9 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { spawnSync } from 'node:child_process'
 
+/** Release execution mode. Default: "full". */
+export type ReleaseMode = 'full' | 'bump' | 'publish'
+
 export interface NxReleasePublishOptions {
   /** npm package name to publish. Default: derived from package.json `name`. */
   packageName?: string
@@ -8,11 +11,18 @@ export interface NxReleasePublishOptions {
   packagePath?: string
   /** Version to release (x.y.z, or patch|minor|major vs npm latest). Default: "patch". */
   version?: string
+  /**
+   * Execution mode:
+   * - `full` (default): publish → bump commit + tag → push branch + tag → GitHub Release.
+   * - `bump`: compute next version, commit it on `release/v<x.y.z>`, push the branch, open a PR. No publish/tag.
+   * - `publish`: take the version already in package.json, publish, tag HEAD, push only the tag, create the release. No commit, no branch push.
+   */
+  mode?: ReleaseMode
   /** If true, do not publish, tag, push, or create a release. Default: false. */
   dryRun?: boolean
   /** npm registry URL. Default: https://registry.npmjs.org/. */
   registry?: string
-  /** Branch to push the bump commit to. Default: "main". */
+  /** Branch to push the bump commit to / target the release PR at. Default: "main". */
   branch?: string
   /** If true, create a GitHub Release with auto-generated changelog. Default: true. */
   generateNotes?: boolean
@@ -26,6 +36,7 @@ export interface PublishResult {
   published: boolean
   tagged: boolean
   releaseCreated: boolean
+  prCreated: boolean
   skipped: string[]
 }
 
@@ -38,6 +49,7 @@ interface ResolvedOptions {
   packageName: string
   packagePath: string
   version: string
+  mode: ReleaseMode
   dryRun: boolean
   registry: string
   branch: string
@@ -165,6 +177,7 @@ export async function publishExecutor(
     packageName: options.packageName ?? pkg.name,
     packagePath,
     version: options.version ?? 'patch',
+    mode: options.mode ?? 'full',
     dryRun: options.dryRun ?? false,
     registry: options.registry ?? DEFAULT_REGISTRY,
     branch: options.branch ?? DEFAULT_BRANCH,
@@ -178,16 +191,15 @@ export async function publishExecutor(
     published: false,
     tagged: false,
     releaseCreated: false,
+    prCreated: false,
     skipped: [],
   }
 
-  // 1. Compute next version
-  const nextVersion = computeNextVersion(
-    resolved.version,
-    resolved.packageName,
-    pkg.version,
-    resolved.registry,
-  )
+  // 1. Resolve target version (publish mode takes the committed package.json version)
+  const nextVersion =
+    resolved.mode === 'publish'
+      ? pkg.version
+      : computeNextVersion(resolved.version, resolved.packageName, pkg.version, resolved.registry)
   result.version = nextVersion
   const tag = `v${nextVersion}`
 
@@ -209,8 +221,69 @@ export async function publishExecutor(
     return result
   }
 
-  // 3. Stamp package.json version (skip if already published — no need to restamp)
-  if (!alreadyPublished) {
+  // bump mode: cut release/v<x.y.z> branch, commit the stamp, push, open a PR — no publish/tag
+  if (resolved.mode === 'bump') {
+    const releaseBranch = `release/v${nextVersion}`
+    const branchExists = runSync('git', [
+      'ls-remote',
+      '--exit-code',
+      '--heads',
+      'origin',
+      `refs/heads/${releaseBranch}`,
+    ]).ok
+    if (branchExists) {
+      result.success = true
+      result.skipped.push('release branch already exists')
+      return result
+    }
+    runSyncOrThrow('git', ['config', 'user.name', 'github-actions[bot]'])
+    runSyncOrThrow('git', [
+      'config',
+      'user.email',
+      '41898282+github-actions[bot]@users.noreply.github.com',
+    ])
+    runSyncOrThrow('git', ['checkout', '-B', releaseBranch])
+    runSyncOrThrow(
+      'npm',
+      ['version', nextVersion, '--no-git-tag-version', '--allow-same-version'],
+      { cwd: resolved.packagePath },
+    )
+    runSyncOrThrow('git', ['add', `${resolved.packagePath}/package.json`])
+    if (existsSync('package-lock.json')) {
+      runSyncOrThrow('git', ['add', 'package-lock.json'])
+    }
+    const diffResult = runSync('git', ['diff', '--cached', '--quiet'])
+    if (!diffResult.ok) {
+      runSyncOrThrow('git', ['commit', '-m', `chore: release ${nextVersion}`])
+    }
+    runSyncOrThrow('git', ['push', 'origin', releaseBranch])
+    const prResult = runSync('gh', [
+      'pr',
+      'create',
+      '--title',
+      `chore: release v${nextVersion}`,
+      '--body',
+      `Automated release PR for \`${resolved.packageName}@${nextVersion}\`. Merge to publish to npm and create the \`${tag}\` release.`,
+      '--head',
+      releaseBranch,
+      '--base',
+      resolved.branch,
+    ])
+    if (!prResult.ok) {
+      if (prResult.stderr.includes('already exists')) {
+        result.skipped.push('release PR already exists')
+      } else {
+        throw new Error(`gh pr create failed: ${prResult.stderr}`)
+      }
+    } else {
+      result.prCreated = true
+    }
+    result.success = true
+    return result
+  }
+
+  // 3. Stamp package.json version (full mode only; publish mode takes it as committed)
+  if (!alreadyPublished && resolved.mode === 'full') {
     runSyncOrThrow(
       'npm',
       ['version', nextVersion, '--no-git-tag-version', '--allow-same-version'],
@@ -235,21 +308,23 @@ export async function publishExecutor(
     result.skipped.push('already published')
   }
 
-  // 5. Commit bump + tag (if not already tagged)
+  // 5. Commit bump (full mode) + tag HEAD (if not already tagged)
   if (!alreadyTagged) {
-    runSyncOrThrow('git', ['config', 'user.name', 'github-actions[bot]'])
-    runSyncOrThrow('git', [
-      'config',
-      'user.email',
-      '41898282+github-actions[bot]@users.noreply.github.com',
-    ])
-    runSyncOrThrow('git', ['add', `${resolved.packagePath}/package.json`])
-    if (existsSync('package-lock.json')) {
-      runSyncOrThrow('git', ['add', 'package-lock.json'])
-    }
-    const commitResult = runSync('git', ['diff', '--cached', '--quiet'])
-    if (!commitResult.ok) {
-      runSyncOrThrow('git', ['commit', '-m', `chore: release ${nextVersion}`])
+    if (resolved.mode === 'full') {
+      runSyncOrThrow('git', ['config', 'user.name', 'github-actions[bot]'])
+      runSyncOrThrow('git', [
+        'config',
+        'user.email',
+        '41898282+github-actions[bot]@users.noreply.github.com',
+      ])
+      runSyncOrThrow('git', ['add', `${resolved.packagePath}/package.json`])
+      if (existsSync('package-lock.json')) {
+        runSyncOrThrow('git', ['add', 'package-lock.json'])
+      }
+      const commitResult = runSync('git', ['diff', '--cached', '--quiet'])
+      if (!commitResult.ok) {
+        runSyncOrThrow('git', ['commit', '-m', `chore: release ${nextVersion}`])
+      }
     }
     runSyncOrThrow('git', ['tag', tag])
     result.tagged = true
@@ -257,16 +332,18 @@ export async function publishExecutor(
     result.skipped.push('already tagged')
   }
 
-  // 6. Push to branch + tag (if not already tagged)
+  // 6. Push branch (full mode only) + tag (if not already tagged)
   if (!alreadyTagged) {
-    runSyncOrThrow('git', ['fetch', 'origin', resolved.branch])
-    const rebaseResult = runSync('git', ['rebase', `origin/${resolved.branch}`])
-    if (!rebaseResult.ok) {
-      throw new Error(`Rebase failed: ${rebaseResult.stderr}`)
-    }
-    const pushResult = runSync('git', ['push', 'origin', resolved.branch])
-    if (!pushResult.ok) {
-      throw new Error(`Push to ${resolved.branch} failed: ${pushResult.stderr}`)
+    if (resolved.mode === 'full') {
+      runSyncOrThrow('git', ['fetch', 'origin', resolved.branch])
+      const rebaseResult = runSync('git', ['rebase', `origin/${resolved.branch}`])
+      if (!rebaseResult.ok) {
+        throw new Error(`Rebase failed: ${rebaseResult.stderr}`)
+      }
+      const pushResult = runSync('git', ['push', 'origin', resolved.branch])
+      if (!pushResult.ok) {
+        throw new Error(`Push to ${resolved.branch} failed: ${pushResult.stderr}`)
+      }
     }
     const tagPushResult = runSync('git', ['push', 'origin', tag])
     if (!tagPushResult.ok) {
