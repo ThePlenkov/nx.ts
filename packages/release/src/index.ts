@@ -1,0 +1,5 @@
+export { createNodesV2, isReleaseProject } from './plugin.ts'
+export { publishExecutor } from './executors/publish/executor.ts'
+export type { NxReleasePublishOptions, PublishResult } from './executors/publish/executor.ts'
+export { initGenerator } from './generators/init/generator.ts'
+export type { NxReleaseInitOptions } from './generators/init/generator.ts'

@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/schema",
+  "version": 2,
+  "title": "init generator",
+  "description": "Sets up the release workflow: creates a tools project with the publish target, registers the plugin, and creates .github/workflows/release.yml.",
+  "type": "object",
+  "properties": {
+    "projectName": {
+      "type": "string",
+      "description": "Name of the tools project to create or update. Default: tools.",
+      "default": "tools"
+    },
+    "packageName": {
+      "type": "string",
+      "description": "npm package name to publish. Default: derived from the root package.json name."
+    },
+    "packagePath": {
+      "type": "string",
+      "description": "Path to the package directory containing package.json. Default: packages/cli."
+    },
+    "branch": {
+      "type": "string",
+      "description": "Branch to push the bump commit to. Default: main.",
+      "default": "main"
+    }
+  },
+  "additionalProperties": false
+}
