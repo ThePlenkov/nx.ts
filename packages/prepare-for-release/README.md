@@ -60,7 +60,7 @@ For each package under `packages/*` (or your `scope` filter):
 3. Publishes it with `npm publish --tag placeholder`.
 4. Optionally runs `npm trust github` to bind OIDC trusted publishing to your repo.
 
-Already-published packages are skipped on every run.
+Already-published packages are skipped on every run. Packages marked `private: true` are ignored entirely — no `npm view`, no publish.
 
 ## Options
 
