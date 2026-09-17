@@ -42,7 +42,7 @@ export interface PublishResult {
 
 const DEFAULT_REGISTRY = 'https://registry.npmjs.org/'
 const DEFAULT_BRANCH = 'main'
-const SEMVER_RE = /^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$/
+const SEMVER_RE = /^\d+\.\d+\.\d+(-[\dA-Za-z.-]+)?$/
 const NPM_TIMEOUT_MS = 120_000
 
 interface ResolvedOptions {
@@ -204,6 +204,57 @@ function commitBumpFiles(packagePath: string, version: string): void {
   }
 }
 
+// bump mode: cut release/v<x.y.z>, commit the stamp, push the branch, open a PR — no publish/tag
+function runBumpMode(
+  resolved: ResolvedOptions,
+  nextVersion: string,
+  result: PublishResult,
+): PublishResult {
+  const releaseBranch = `release/v${nextVersion}`
+  const branchExists = runSync('git', [
+    'ls-remote',
+    '--exit-code',
+    '--heads',
+    'origin',
+    `refs/heads/${releaseBranch}`,
+  ]).ok
+  if (branchExists) {
+    result.success = true
+    result.skipped.push('release branch already exists')
+    return result
+  }
+  const dirty = runSync('git', ['status', '--porcelain'])
+  if (dirty.ok && dirty.stdout) {
+    throw new Error('Working tree is dirty — commit or stash changes before bump mode')
+  }
+  gitConfigBot()
+  runSyncOrThrow('git', ['checkout', '-B', releaseBranch])
+  stampVersion(resolved.packagePath, nextVersion)
+  commitBumpFiles(resolved.packagePath, nextVersion)
+  runSyncOrThrow('git', ['push', 'origin', releaseBranch])
+  const prResult = runSync('gh', [
+    'pr',
+    'create',
+    '--title',
+    `chore: release v${nextVersion}`,
+    '--body',
+    `Automated release PR for \`${resolved.packageName}@${nextVersion}\`. Merge to publish to npm and create the \`v${nextVersion}\` release.`,
+    '--head',
+    releaseBranch,
+    '--base',
+    resolved.branch,
+  ])
+  if (prResult.ok) {
+    result.prCreated = true
+  } else if (prResult.stderr.includes('already exists')) {
+    result.skipped.push('release PR already exists')
+  } else {
+    throw new Error(`gh pr create failed: ${prResult.stderr}`)
+  }
+  result.success = true
+  return result
+}
+
 export async function publishExecutor(
   options: NxReleasePublishOptions = {},
 ): Promise<PublishResult> {
@@ -263,53 +314,8 @@ export async function publishExecutor(
     return result
   }
 
-  // bump mode: cut release/v<x.y.z> branch, commit the stamp, push, open a PR — no publish/tag
   if (resolved.mode === 'bump') {
-    const releaseBranch = `release/v${nextVersion}`
-    const branchExists = runSync('git', [
-      'ls-remote',
-      '--exit-code',
-      '--heads',
-      'origin',
-      `refs/heads/${releaseBranch}`,
-    ]).ok
-    if (branchExists) {
-      result.success = true
-      result.skipped.push('release branch already exists')
-      return result
-    }
-    const dirty = runSync('git', ['status', '--porcelain'])
-    if (dirty.ok && dirty.stdout) {
-      throw new Error('Working tree is dirty — commit or stash changes before bump mode')
-    }
-    gitConfigBot()
-    runSyncOrThrow('git', ['checkout', '-B', releaseBranch])
-    stampVersion(resolved.packagePath, nextVersion)
-    commitBumpFiles(resolved.packagePath, nextVersion)
-    runSyncOrThrow('git', ['push', 'origin', releaseBranch])
-    const prResult = runSync('gh', [
-      'pr',
-      'create',
-      '--title',
-      `chore: release v${nextVersion}`,
-      '--body',
-      `Automated release PR for \`${resolved.packageName}@${nextVersion}\`. Merge to publish to npm and create the \`${tag}\` release.`,
-      '--head',
-      releaseBranch,
-      '--base',
-      resolved.branch,
-    ])
-    if (!prResult.ok) {
-      if (prResult.stderr.includes('already exists')) {
-        result.skipped.push('release PR already exists')
-      } else {
-        throw new Error(`gh pr create failed: ${prResult.stderr}`)
-      }
-    } else {
-      result.prCreated = true
-    }
-    result.success = true
-    return result
+    return runBumpMode(resolved, nextVersion, result)
   }
 
   // 3. Stamp package.json version (full mode only; publish mode takes it as committed)
