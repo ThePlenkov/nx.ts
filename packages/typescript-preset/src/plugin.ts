@@ -206,7 +206,10 @@ export const createNodesV2: CreateNodesV2<NxDevkitTypescriptOptions> = [
           workspaceRoot,
           TSDOWN_CONFIG_NAMES,
         )
-        if (tsdownConfigPath || hasConfigFreeTsdownEntry(resolve(workspaceRoot, projectRoot))) {
+        if (
+          tsdownConfigPath ||
+          (await hasConfigFreeTsdownEntry(resolve(workspaceRoot, projectRoot)))
+        ) {
           targets.build = inferTsdownBuildTarget(relProjectRoot)
           targets['build:watch'] = inferTsdownWatchTarget(relProjectRoot)
         }

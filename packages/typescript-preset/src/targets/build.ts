@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from 'node:fs'
+import { access, readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 
 /**
@@ -6,12 +6,10 @@ import { join } from 'node:path'
  * tsdown falls back to `src/index.ts` as entry when no config exists,
  * so we require both a publishable signal and that conventional entry.
  */
-export function hasConfigFreeTsdownEntry(absProjectRoot: string): boolean {
-  if (!existsSync(join(absProjectRoot, 'src/index.ts'))) {
-    return false
-  }
+export async function hasConfigFreeTsdownEntry(absProjectRoot: string): Promise<boolean> {
   try {
-    const pkg = JSON.parse(readFileSync(join(absProjectRoot, 'package.json'), 'utf8'))
+    await access(join(absProjectRoot, 'src/index.ts'))
+    const pkg = JSON.parse(await readFile(join(absProjectRoot, 'package.json'), 'utf8'))
     return Boolean(pkg?.exports || pkg?.bin || (pkg?.main && pkg?.files))
   } catch {
     return false
