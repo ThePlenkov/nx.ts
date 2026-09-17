@@ -1,0 +1,44 @@
+{
+  "name": "@nx-devkit/release",
+  "version": "0.0.1",
+  "license": "MIT",
+  "private": false,
+  "type": "module",
+  "main": "./src/index.ts",
+  "module": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./plugin": {
+      "types": "./src/plugin.ts",
+      "default": "./src/plugin.ts"
+    }
+  },
+  "executors": "./executors.json",
+  "generators": "./generators.json",
+  "files": [
+    "dist",
+    "executors.json",
+    "generators.json",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsdown",
+    "test": "vitest run"
+  },
+  "peerDependencies": {
+    "@nx/devkit": "^22.0.0 || ^23.0.0"
+  },
+  "dependencies": {
+    "@nx/devkit": "22.7.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.0",
+    "memfs": "^4.50.0",
+    "tsdown": "^0.22.3",
+    "vitest": "^2.1.0"
+  }
+}

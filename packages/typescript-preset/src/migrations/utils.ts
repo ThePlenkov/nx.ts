@@ -12,9 +12,7 @@ import type { ProjectConfiguration, TargetConfiguration } from '@nx/devkit'
  * array — a custom executor cannot represent sequential commands, so
  * migrating would silently drop steps.
  */
-export function getSingleRunCommand(
-  target: TargetConfiguration | undefined,
-): string | null {
+export function getSingleRunCommand(target: TargetConfiguration | undefined): string | null {
   if (!target || target.executor !== 'nx:run-commands') return null
   const options = target.options as
     | {

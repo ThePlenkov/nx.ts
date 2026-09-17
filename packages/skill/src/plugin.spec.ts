@@ -175,9 +175,7 @@ describe('@nx-devkit/skill createNodesV2', () => {
 
     expect(validate.executor).toBe('nx:run-commands')
     expect(validate.cache).toBe(true)
-    expect(validate.options!.command).toBe(
-      `tsx scripts/validate-skill.ts --skill '{projectRoot}'`,
-    )
+    expect(validate.options!.command).toBe(`tsx scripts/validate-skill.ts --skill '{projectRoot}'`)
     expect(validate.options!.cwd).toBe('{workspaceRoot}')
     expect(validate.inputs).toEqual(['{projectRoot}/SKILL.md', '{projectRoot}/agents/openai.yaml'])
   })

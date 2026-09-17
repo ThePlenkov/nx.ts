@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/schema",
+  "version": 2,
+  "title": "publish executor",
+  "description": "Publishes a package to npm via OIDC, pushes the version bump + tag to main, and creates a GitHub Release with auto-generated changelog. Idempotent.",
+  "type": "object",
+  "properties": {
+    "packageName": {
+      "type": "string",
+      "description": "npm package name to publish. Default: derived from package.json name."
+    },
+    "packagePath": {
+      "type": "string",
+      "description": "Path to the package directory containing package.json. Default: the project root."
+    },
+    "version": {
+      "type": "string",
+      "description": "Version to release (x.y.z, or patch|minor|major vs npm latest). Default: patch."
+    },
+    "dryRun": {
+      "type": "boolean",
+      "description": "If true, do not publish, tag, push, or create a release. Default: false.",
+      "default": false
+    },
+    "registry": {
+      "type": "string",
+      "description": "npm registry URL. Default: https://registry.npmjs.org/",
+      "default": "https://registry.npmjs.org/"
+    },
+    "branch": {
+      "type": "string",
+      "description": "Branch to push the bump commit to. Default: main.",
+      "default": "main"
+    },
+    "generateNotes": {
+      "type": "boolean",
+      "description": "If true, create a GitHub Release with auto-generated changelog. Default: true.",
+      "default": true
+    },
+    "provenance": {
+      "type": "boolean",
+      "description": "If true, publish with --provenance (npm OIDC). Default: true.",
+      "default": true
+    }
+  },
+  "additionalProperties": false
+}

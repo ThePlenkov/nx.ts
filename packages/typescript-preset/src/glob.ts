@@ -37,7 +37,11 @@ export function globMatch(rootDir: string, pattern: string): boolean {
     // Only swallow ENOENT (directory missing). Surface other errors
     // (permission denied, invalid pattern, missing fs.globSync) so
     // callers don't silently treat real failures as "no test files".
-    if (error instanceof Error && 'code' in error && (error as { code: string }).code === 'ENOENT') {
+    if (
+      error instanceof Error &&
+      'code' in error &&
+      (error as { code: string }).code === 'ENOENT'
+    ) {
       return false
     }
     throw error
@@ -80,7 +84,11 @@ export async function globMatchAsync(rootDir: string, pattern: string): Promise<
     // Only swallow ENOENT (directory missing). Surface other errors
     // (permission denied, invalid pattern, missing fs.promises.glob) so
     // callers don't silently treat real failures as "no test files".
-    if (error instanceof Error && 'code' in error && (error as { code: string }).code === 'ENOENT') {
+    if (
+      error instanceof Error &&
+      'code' in error &&
+      (error as { code: string }).code === 'ENOENT'
+    ) {
       return false
     }
     throw error

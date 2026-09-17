@@ -574,9 +574,7 @@ describe('oxlint lint delegation', () => {
       touch(root, 'biome.json')
       const result = await callCreateNodes([ts], {}, root)
       const proj = firstProject(result, 'packages/foo')
-      const formatCheck = proj.targets?.['format-check'] as
-        | Record<string, unknown>
-        | undefined
+      const formatCheck = proj.targets?.['format-check'] as Record<string, unknown> | undefined
       expect(formatCheck).toBeDefined()
       expect(formatCheck?.inputs).toContain('{workspaceRoot}/biome.json')
     } finally {
