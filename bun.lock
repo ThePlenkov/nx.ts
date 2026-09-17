@@ -36,7 +36,7 @@
     },
     "packages/biome": {
       "name": "@nx-devkit/biome",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "devDependencies": {
         "@biomejs/biome": "^2.0.0",
         "@nx-devkit/internal": "workspace:*",
@@ -59,7 +59,7 @@
     },
     "packages/oxlint": {
       "name": "@nx-devkit/oxlint",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "devDependencies": {
         "@nx-devkit/internal": "workspace:*",
         "@types/node": "^26.0.0",
@@ -77,7 +77,7 @@
     },
     "packages/prepare-for-release": {
       "name": "@nx-devkit/prepare-for-release",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "dependencies": {
         "tinyglobby": "^0.2.0",
       },
