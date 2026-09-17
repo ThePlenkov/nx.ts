@@ -62,7 +62,12 @@ function readPackageJson(packagePath: string): { name: string; version: string }
   if (!existsSync(pkgPath)) {
     throw new Error(`No package.json found at ${pkgPath}`)
   }
-  const raw = JSON.parse(readFileSync(pkgPath, 'utf-8')) as { name?: string; version?: string }
+  let raw: { name?: string; version?: string }
+  try {
+    raw = JSON.parse(readFileSync(pkgPath, 'utf-8'))
+  } catch (err) {
+    throw new Error(`Invalid JSON in ${pkgPath}: ${(err as Error).message}`)
+  }
   if (!raw.name) {
     throw new Error(`package.json at ${pkgPath} has no "name" field`)
   }
@@ -162,10 +167,39 @@ function compareSemver(a: string, b: string): number {
 }
 
 function bumpSemver(base: string, kind: 'patch' | 'minor' | 'major'): string {
+  if (!SEMVER_RE.test(base)) {
+    throw new Error(`Cannot bump invalid version: ${base}`)
+  }
   const [maj, min, pat] = base.split('.').map(Number)
   if (kind === 'major') return `${(maj ?? 0) + 1}.0.0`
   if (kind === 'minor') return `${maj ?? 0}.${(min ?? 0) + 1}.0`
   return `${maj ?? 0}.${min ?? 0}.${(pat ?? 0) + 1}`
+}
+
+function gitConfigBot(): void {
+  runSyncOrThrow('git', ['config', 'user.name', 'github-actions[bot]'])
+  runSyncOrThrow('git', [
+    'config',
+    'user.email',
+    '41898282+github-actions[bot]@users.noreply.github.com',
+  ])
+}
+
+function stampVersion(packagePath: string, version: string): void {
+  runSyncOrThrow('npm', ['version', version, '--no-git-tag-version', '--allow-same-version'], {
+    cwd: packagePath,
+  })
+}
+
+function commitBumpFiles(packagePath: string, version: string): void {
+  runSyncOrThrow('git', ['add', `${packagePath}/package.json`])
+  if (existsSync('package-lock.json')) {
+    runSyncOrThrow('git', ['add', 'package-lock.json'])
+  }
+  const diffResult = runSync('git', ['diff', '--cached', '--quiet'])
+  if (!diffResult.ok) {
+    runSyncOrThrow('git', ['commit', '-m', `chore: release ${version}`])
+  }
 }
 
 export async function publishExecutor(
@@ -200,6 +234,12 @@ export async function publishExecutor(
     resolved.mode === 'publish'
       ? pkg.version
       : computeNextVersion(resolved.version, resolved.packageName, pkg.version, resolved.registry)
+  if (resolved.mode === 'publish' && (pkg.version === '0.0.0' || !SEMVER_RE.test(pkg.version))) {
+    throw new Error(
+      `publish mode requires a committed semver version in package.json (got "${pkg.version}")`,
+    )
+  }
+
   result.version = nextVersion
   const tag = `v${nextVersion}`
 
@@ -236,26 +276,14 @@ export async function publishExecutor(
       result.skipped.push('release branch already exists')
       return result
     }
-    runSyncOrThrow('git', ['config', 'user.name', 'github-actions[bot]'])
-    runSyncOrThrow('git', [
-      'config',
-      'user.email',
-      '41898282+github-actions[bot]@users.noreply.github.com',
-    ])
+    const dirty = runSync('git', ['status', '--porcelain'])
+    if (dirty.ok && dirty.stdout) {
+      throw new Error('Working tree is dirty — commit or stash changes before bump mode')
+    }
+    gitConfigBot()
     runSyncOrThrow('git', ['checkout', '-B', releaseBranch])
-    runSyncOrThrow(
-      'npm',
-      ['version', nextVersion, '--no-git-tag-version', '--allow-same-version'],
-      { cwd: resolved.packagePath },
-    )
-    runSyncOrThrow('git', ['add', `${resolved.packagePath}/package.json`])
-    if (existsSync('package-lock.json')) {
-      runSyncOrThrow('git', ['add', 'package-lock.json'])
-    }
-    const diffResult = runSync('git', ['diff', '--cached', '--quiet'])
-    if (!diffResult.ok) {
-      runSyncOrThrow('git', ['commit', '-m', `chore: release ${nextVersion}`])
-    }
+    stampVersion(resolved.packagePath, nextVersion)
+    commitBumpFiles(resolved.packagePath, nextVersion)
     runSyncOrThrow('git', ['push', 'origin', releaseBranch])
     const prResult = runSync('gh', [
       'pr',
@@ -284,11 +312,7 @@ export async function publishExecutor(
 
   // 3. Stamp package.json version (full mode only; publish mode takes it as committed)
   if (!alreadyPublished && resolved.mode === 'full') {
-    runSyncOrThrow(
-      'npm',
-      ['version', nextVersion, '--no-git-tag-version', '--allow-same-version'],
-      { cwd: resolved.packagePath },
-    )
+    stampVersion(resolved.packagePath, nextVersion)
   }
 
   // 4. Publish to npm (if not already published)
@@ -311,20 +335,8 @@ export async function publishExecutor(
   // 5. Commit bump (full mode) + tag HEAD (if not already tagged)
   if (!alreadyTagged) {
     if (resolved.mode === 'full') {
-      runSyncOrThrow('git', ['config', 'user.name', 'github-actions[bot]'])
-      runSyncOrThrow('git', [
-        'config',
-        'user.email',
-        '41898282+github-actions[bot]@users.noreply.github.com',
-      ])
-      runSyncOrThrow('git', ['add', `${resolved.packagePath}/package.json`])
-      if (existsSync('package-lock.json')) {
-        runSyncOrThrow('git', ['add', 'package-lock.json'])
-      }
-      const commitResult = runSync('git', ['diff', '--cached', '--quiet'])
-      if (!commitResult.ok) {
-        runSyncOrThrow('git', ['commit', '-m', `chore: release ${nextVersion}`])
-      }
+      gitConfigBot()
+      commitBumpFiles(resolved.packagePath, nextVersion)
     }
     runSyncOrThrow('git', ['tag', tag])
     result.tagged = true
