@@ -8,7 +8,9 @@ import { join } from 'node:path'
  */
 export async function hasConfigFreeTsdownEntry(absProjectRoot: string): Promise<boolean> {
   try {
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- fixed basenames joined to the Nx-provided project root
     await access(join(absProjectRoot, 'src/index.ts'))
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- fixed basename joined to the Nx-provided project root
     const pkg = JSON.parse(await readFile(join(absProjectRoot, 'package.json'), 'utf8'))
     return Boolean(pkg?.exports || pkg?.bin || (pkg?.main && pkg?.files))
   } catch {

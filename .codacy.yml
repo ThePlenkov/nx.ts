@@ -11,4 +11,3 @@ engines:
   eslint-8:
     exclude_paths:
       - "packages/typescript-preset/src/plugin.ts"
-      - "packages/typescript-preset/src/targets/build.ts"

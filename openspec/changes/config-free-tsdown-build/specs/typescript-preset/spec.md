@@ -14,11 +14,11 @@ When `tsdown: true` (default) and a project has NO `tsdown.config.*` but has `sr
 - **THEN** the plugin infers `build` and `build:watch` targets
 
 #### Scenario: Bare src/index.ts is not enough
-- **WHEN** a project has `tsconfig.json` and `src/index.ts` but `package.json` has no `exports`, `bin`, or `main` + `files`
+- **WHEN** a project has `tsconfig.json` and `src/index.ts` but `package.json` has no `exports`, `bin`, or `main` + `files` and no `tsdown.config.*`
 - **THEN** the plugin does NOT infer `build`/`build:watch`
 
 #### Scenario: Publishable package without conventional entry gets no build
-- **WHEN** a project has `tsconfig.json` and `package.json` with `exports` but no `src/index.ts`
+- **WHEN** a project has `tsconfig.json` and `package.json` with `exports` but no `src/index.ts` and no `tsdown.config.*`
 - **THEN** the plugin does NOT infer `build`/`build:watch` (tsdown would fail with "No input files")
 
 #### Scenario: Explicit config still wins
@@ -28,3 +28,14 @@ When `tsdown: true` (default) and a project has NO `tsdown.config.*` but has `sr
 #### Scenario: tsdown option disables config-free inference
 - **WHEN** `tsdown: false` is set and a project satisfies the publishable-package heuristic
 - **THEN** the plugin does NOT infer `build`/`build:watch`
+
+### Requirement: Build executor accepts config-free projects
+The `@nx-devkit/typescript:build` executor MUST run tsdown when the project has no `tsdown.config.*` but has the conventional `src/index.ts` entry (tsdown's own fallback). It MUST still fail when neither exists.
+
+#### Scenario: Config-free project builds via executor
+- **WHEN** a project has `src/index.ts` but no `tsdown.config.*`
+- **THEN** the executor invokes tsdown (which resolves `src/index.ts` as its default entry) instead of returning `{ success: false }`
+
+#### Scenario: No config and no entry still fails
+- **WHEN** a project has neither `tsdown.config.*` nor `src/index.ts`
+- **THEN** the executor returns `{ success: false }` with an error naming both missing inputs

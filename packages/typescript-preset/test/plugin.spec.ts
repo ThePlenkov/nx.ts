@@ -882,6 +882,24 @@ describe('tsdown build delegation', () => {
     }
   })
 
+  it('infers config-free build from main + files + src/index.ts', async () => {
+    const root = makeWorkspace()
+    try {
+      const ts = touch(root, 'packages/foo/tsconfig.json')
+      writeFileSync(
+        join(root, 'packages/foo/package.json'),
+        JSON.stringify({ name: 'foo', main: './dist/index.cjs', files: ['dist'] }),
+      )
+      touch(root, 'packages/foo/src/index.ts')
+      const result = await callCreateNodes([ts], {}, root)
+      const proj = firstProject(result, 'packages/foo')
+      expect(proj.targets?.build).toBeDefined()
+      expect(proj.targets?.['build:watch']).toBeDefined()
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
   it('does not infer build from src/index.ts without publishable package.json fields', async () => {
     const root = makeWorkspace()
     try {
@@ -913,15 +931,32 @@ describe('tsdown build delegation', () => {
     }
   })
 
+  it('does not infer config-free build when tsdown:false', async () => {
+    const root = makeWorkspace()
+    try {
+      const ts = touch(root, 'packages/foo/tsconfig.json')
+      writeFileSync(
+        join(root, 'packages/foo/package.json'),
+        JSON.stringify({ name: 'foo', exports: { '.': './dist/index.mjs' } }),
+      )
+      touch(root, 'packages/foo/src/index.ts')
+      const result = await callCreateNodes([ts], { tsdown: false }, root)
+      const proj = firstProject(result, 'packages/foo')
+      expect(proj.targets?.build).toBeUndefined()
+      expect(proj.targets?.['build:watch']).toBeUndefined()
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
   it('tsdown.config.ts still wins over package.json inference', async () => {
     const root = makeWorkspace()
     try {
       const ts = touch(root, 'packages/foo/tsconfig.json')
       touch(root, 'packages/foo/tsdown.config.ts')
-      writeFileSync(
-        join(root, 'packages/foo/package.json'),
-        JSON.stringify({ name: 'foo', exports: { '.': './dist/index.mjs' } }),
-      )
+      // Invalid JSON makes the config-free heuristic false, so the
+      // assertion proves the explicit config path inferred the target.
+      writeFileSync(join(root, 'packages/foo/package.json'), '{')
       touch(root, 'packages/foo/src/index.ts')
       const result = await callCreateNodes([ts], {}, root)
       const proj = firstProject(result, 'packages/foo')

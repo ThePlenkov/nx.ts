@@ -24,7 +24,7 @@
 
 ## 4. Verification
 
-- [ ] `bun test` (package) — green
-- [ ] `bun run build` — green
-- [ ] `bun run lint` + `bun run format:check` — clean
-- [ ] `bunx openspec validate config-free-tsdown-build --strict` — clean
+- [x] `bun test` (package) — green
+- [x] `bun run build` — green
+- [x] `bun run lint` + `bun run format:check` — clean (CI; biome's glibc binary can't execute in the Nix dev env — formatted via the musl variant)
+- [x] `bunx openspec validate config-free-tsdown-build --strict` — clean
