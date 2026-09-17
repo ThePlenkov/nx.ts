@@ -138,16 +138,11 @@ function computeNextVersion(
     throw new Error(`Invalid version: ${requested}. Use x.y.z or patch|minor|major.`)
   }
   const npmVersion = npmViewVersion(packageName, registry)
-  if (npmVersion) {
-    // npm ahead of local → reuse npm version (previous run published but didn't sync)
-    const cmp = compareSemver(npmVersion, localVersion)
-    if (cmp > 0) {
-      return npmVersion
-    }
+  // npm ahead of local → reuse npm version (previous run published but didn't sync)
+  if (npmVersion && compareSemver(npmVersion, localVersion) > 0) {
+    return npmVersion
   }
-  const base =
-    npmVersion && compareSemver(npmVersion, localVersion) >= 0 ? npmVersion : localVersion
-  return bumpSemver(base, requested as 'patch' | 'minor' | 'major')
+  return bumpSemver(localVersion, requested as 'patch' | 'minor' | 'major')
 }
 
 function compareSemver(a: string, b: string): number {
@@ -255,6 +250,76 @@ function runBumpMode(
   return result
 }
 
+function publishToNpm(
+  resolved: ResolvedOptions,
+  result: PublishResult,
+  alreadyPublished: boolean,
+): void {
+  if (alreadyPublished) {
+    result.skipped.push('already published')
+    return
+  }
+  const publishArgs = ['publish', '--access', 'public']
+  if (resolved.provenance) publishArgs.push('--provenance')
+  publishArgs.push('--registry', resolved.registry)
+  const publishResult = runSync('npm', publishArgs, {
+    cwd: resolved.packagePath,
+    timeout: 180_000,
+  })
+  if (!publishResult.ok) {
+    throw new Error(`npm publish failed: ${publishResult.stderr}`)
+  }
+  result.published = true
+}
+
+function tagAndPush(
+  resolved: ResolvedOptions,
+  tag: string,
+  nextVersion: string,
+  result: PublishResult,
+): void {
+  if (resolved.mode === 'full') {
+    gitConfigBot()
+    commitBumpFiles(resolved.packagePath, nextVersion)
+  }
+  runSyncOrThrow('git', ['tag', tag])
+  result.tagged = true
+  if (resolved.mode === 'full') {
+    runSyncOrThrow('git', ['fetch', 'origin', resolved.branch])
+    const rebaseResult = runSync('git', ['rebase', `origin/${resolved.branch}`])
+    if (!rebaseResult.ok) {
+      throw new Error(`Rebase failed: ${rebaseResult.stderr}`)
+    }
+    const pushResult = runSync('git', ['push', 'origin', resolved.branch])
+    if (!pushResult.ok) {
+      throw new Error(`Push to ${resolved.branch} failed: ${pushResult.stderr}`)
+    }
+  }
+  const tagPushResult = runSync('git', ['push', 'origin', tag])
+  if (!tagPushResult.ok) {
+    throw new Error(`Tag push failed: ${tagPushResult.stderr}`)
+  }
+}
+
+function createGithubRelease(resolved: ResolvedOptions, tag: string, result: PublishResult): void {
+  const releaseResult = runSync('gh', [
+    'release',
+    'create',
+    tag,
+    '--title',
+    tag,
+    '--generate-notes',
+    '--target',
+    resolved.branch,
+  ])
+  if (releaseResult.ok) {
+    result.releaseCreated = true
+  } else {
+    // Release creation failure is non-fatal — publish + tag succeeded
+    result.skipped.push(`release creation failed: ${releaseResult.stderr}`)
+  }
+}
+
 export async function publishExecutor(
   options: NxReleasePublishOptions = {},
 ): Promise<PublishResult> {
@@ -323,73 +388,17 @@ export async function publishExecutor(
     stampVersion(resolved.packagePath, nextVersion)
   }
 
-  // 4. Publish to npm (if not already published)
-  if (!alreadyPublished) {
-    const publishArgs = ['publish', '--access', 'public']
-    if (resolved.provenance) publishArgs.push('--provenance')
-    publishArgs.push('--registry', resolved.registry)
-    const publishResult = runSync('npm', publishArgs, {
-      cwd: resolved.packagePath,
-      timeout: 180_000,
-    })
-    if (!publishResult.ok) {
-      throw new Error(`npm publish failed: ${publishResult.stderr}`)
-    }
-    result.published = true
-  } else {
-    result.skipped.push('already published')
-  }
-
-  // 5. Commit bump (full mode) + tag HEAD (if not already tagged)
+  // 4-6. Publish, tag, push (tag-only in publish mode)
+  publishToNpm(resolved, result, alreadyPublished)
   if (!alreadyTagged) {
-    if (resolved.mode === 'full') {
-      gitConfigBot()
-      commitBumpFiles(resolved.packagePath, nextVersion)
-    }
-    runSyncOrThrow('git', ['tag', tag])
-    result.tagged = true
+    tagAndPush(resolved, tag, nextVersion, result)
   } else {
     result.skipped.push('already tagged')
   }
 
-  // 6. Push branch (full mode only) + tag (if not already tagged)
-  if (!alreadyTagged) {
-    if (resolved.mode === 'full') {
-      runSyncOrThrow('git', ['fetch', 'origin', resolved.branch])
-      const rebaseResult = runSync('git', ['rebase', `origin/${resolved.branch}`])
-      if (!rebaseResult.ok) {
-        throw new Error(`Rebase failed: ${rebaseResult.stderr}`)
-      }
-      const pushResult = runSync('git', ['push', 'origin', resolved.branch])
-      if (!pushResult.ok) {
-        throw new Error(`Push to ${resolved.branch} failed: ${pushResult.stderr}`)
-      }
-    }
-    const tagPushResult = runSync('git', ['push', 'origin', tag])
-    if (!tagPushResult.ok) {
-      throw new Error(`Tag push failed: ${tagPushResult.stderr}`)
-    }
-  }
-
   // 7. Create GitHub Release (if not already released)
   if (resolved.generateNotes && !alreadyReleased) {
-    const releaseArgs = [
-      'release',
-      'create',
-      tag,
-      '--title',
-      tag,
-      '--generate-notes',
-      '--target',
-      resolved.branch,
-    ]
-    const releaseResult = runSync('gh', releaseArgs)
-    if (!releaseResult.ok) {
-      // Release creation failure is non-fatal — publish + tag succeeded
-      result.skipped.push(`release creation failed: ${releaseResult.stderr}`)
-    } else {
-      result.releaseCreated = true
-    }
+    createGithubRelease(resolved, tag, result)
   }
 
   result.success = true
