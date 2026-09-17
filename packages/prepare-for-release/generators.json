@@ -1,0 +1,10 @@
+{
+  "$schema": "https://json-schema.org/schema",
+  "generators": {
+    "init": {
+      "factory": "./dist/generators/init/generator.mjs",
+      "schema": "./src/generators/init/schema.json",
+      "description": "Wires @nx-devkit/prepare-for-release into an Nx workspace: adds the plugin to nx.json, creates a `tools` project with a `prepare-for-release` target, and prints the post-setup checklist."
+    }
+  }
+}

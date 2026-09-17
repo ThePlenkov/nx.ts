@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join, sep } from 'node:path'
+import { basename, join, sep } from 'node:path'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { createNodesV2 } from './plugin.ts'
 
@@ -106,6 +106,26 @@ describe('@nx-devkit/oxlint createNodesV2', () => {
   it('skips the workspace root', () => {
     const result = callWith(join(tmp, '.oxlintrc.json'))
     expect(result).toEqual([])
+  })
+
+  it('skips configs inside node_modules', () => {
+    const dir = join(tmp, 'node_modules', 'pkg')
+    mkdirSync(dir, { recursive: true })
+    writeFileSync(join(dir, '.oxlintrc.json'), '{}')
+    const result = callWith(join(tmp, 'node_modules', 'pkg', '.oxlintrc.json'))
+    expect(result).toEqual([])
+  })
+
+  it('skips configs that escape the workspace root', () => {
+    const outside = mkdtempSync(join(tmpdir(), 'oxlint-outside-'))
+    try {
+      writeFileSync(join(outside, '.oxlintrc.json'), '{}')
+      const rel = `../${basename(outside)}/.oxlintrc.json`
+      const result = createNodesV2[1]([rel], { configFile: '.oxlintrc.json' }, ctx)
+      expect(result).toEqual([])
+    } finally {
+      rmSync(outside, { recursive: true, force: true })
+    }
   })
 
   it('configures lint target with nx:run-commands executor, oxlint ., cwd projectRoot, cache true', () => {
