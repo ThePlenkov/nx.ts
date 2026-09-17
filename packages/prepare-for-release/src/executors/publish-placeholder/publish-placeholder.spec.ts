@@ -181,6 +181,20 @@ describe('publishPlaceholderExecutor', () => {
     expect(packCall).toBeUndefined()
   })
 
+  it('ignores a private package entirely (no publish, no npm view)', async () => {
+    const pkgRoot = makePackage(workspace, '@nx-devkit/internal', '0.0.0')
+    const pkgJson = readJson(join(pkgRoot, 'package.json'))
+    pkgJson.private = true
+    writeFileSync(join(pkgRoot, 'package.json'), JSON.stringify(pkgJson, null, 2))
+
+    const result = await publishPlaceholderExecutor({}, { root: workspace })
+
+    expect(result.published).toEqual([])
+    expect(result.skipped).toEqual([])
+    expect(state.calls.find((c) => c.args[0] === 'publish')).toBeUndefined()
+    expect(state.calls.find((c) => c.args[0] === 'view')).toBeUndefined()
+  })
+
   it('emits trust commands so the user can run `npm trust github` against each placeholder', async () => {
     makePackage(workspace, '@nx-devkit/prepare-for-release', '0.0.0')
     state.responses.set('npm view', { status: 1, stderr: 'E404', stdout: '' })

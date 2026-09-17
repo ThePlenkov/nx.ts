@@ -347,7 +347,7 @@ async function processPackage(
     return 'ignored'
   }
   const name = typeof parsed.name === 'string' ? parsed.name : null
-  if (!name) {
+  if (!name || parsed.private === true) {
     return 'ignored'
   }
   if (!matchesScope(name, resolved.scope)) {
