@@ -204,7 +204,7 @@ export async function publishExecutor(
   }
 
   if (resolved.dryRun) {
-    result.success = false
+    result.success = true
     result.skipped.push('dry run')
     return result
   }

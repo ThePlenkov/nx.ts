@@ -15,7 +15,8 @@
     "./plugin": {
       "types": "./src/plugin.ts",
       "default": "./src/plugin.ts"
-    }
+    },
+    "./package.json": "./package.json"
   },
   "executors": "./executors.json",
   "generators": "./generators.json",
