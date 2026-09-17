@@ -132,4 +132,94 @@ describe('publishExecutor', () => {
     expect(result.success).toBe(true)
     expect(result.version).toBe('1.0.0')
   })
+
+  it('mode=bump creates a release branch + PR, never publishes or tags', async () => {
+    const dir = makePkgDir('@test/pkg', '0.4.1')
+    const calls: string[][] = []
+    mockSpawn.mockImplementation((cmd: string, args: string[]) => {
+      calls.push([cmd, ...args])
+      if (cmd === 'npm' && args[0] === 'view') return ok('0.4.1')
+      if (cmd === 'git' && args[0] === 'ls-remote' && args.includes('--heads'))
+        return fail('no branch')
+      if (cmd === 'git' && args[0] === 'ls-remote' && args.includes('--tags')) return fail('no tag')
+      if (cmd === 'git' && args[0] === 'diff') return fail('diff') // non-empty staged diff
+      if (cmd === 'gh' && args[0] === 'pr' && args[1] === 'create')
+        return ok('https://github.com/x/y/pull/1')
+      return ok()
+    })
+
+    const result = await publishExecutor({ packagePath: dir, version: 'patch', mode: 'bump' })
+    expect(result.success).toBe(true)
+    expect(result.version).toBe('0.4.2')
+    expect(result.published).toBe(false)
+    expect(result.tagged).toBe(false)
+    expect(result.prCreated).toBe(true)
+    const joined = calls.map((c) => c.join(' '))
+    expect(joined).toContainEqual(expect.stringContaining('checkout -B release/v0.4.2'))
+    expect(joined).toContainEqual(expect.stringContaining('push origin release/v0.4.2'))
+    expect(joined.some((c) => c.startsWith('npm publish'))).toBe(false)
+    expect(joined.some((c) => c.startsWith('git tag'))).toBe(false)
+  })
+
+  it('mode=bump skips when the release branch already exists remotely', async () => {
+    const dir = makePkgDir('@test/pkg', '0.4.1')
+    mockSpawn.mockImplementation((cmd: string, args: string[]) => {
+      if (cmd === 'npm' && args[0] === 'view') return ok('0.4.1')
+      if (cmd === 'git' && args[0] === 'ls-remote' && args.includes('--heads'))
+        return ok('refs/heads/release/v0.4.2')
+      if (cmd === 'git' && args[0] === 'ls-remote' && args.includes('--tags')) return fail('no tag')
+      return ok()
+    })
+
+    const result = await publishExecutor({ packagePath: dir, version: 'patch', mode: 'bump' })
+    expect(result.success).toBe(true)
+    expect(result.prCreated).toBe(false)
+    expect(result.skipped).toContain('release branch already exists')
+  })
+
+  it('mode=publish uses package.json version and never pushes the branch', async () => {
+    const dir = makePkgDir('@test/pkg', '0.4.2')
+    const calls: string[][] = []
+    mockSpawn.mockImplementation((cmd: string, args: string[]) => {
+      calls.push([cmd, ...args])
+      if (cmd === 'npm' && args[0] === 'view') return ok('0.4.1')
+      if (cmd === 'git' && args[0] === 'ls-remote') return fail('not found')
+      if (cmd === 'npm' && args[0] === 'publish') return ok()
+      if (cmd === 'git' && args[0] === 'tag') return ok()
+      if (cmd === 'git' && args[0] === 'push') return ok()
+      if (cmd === 'gh' && args[0] === 'release') return ok()
+      return ok()
+    })
+
+    const result = await publishExecutor({ packagePath: dir, mode: 'publish' })
+    expect(result.success).toBe(true)
+    expect(result.version).toBe('0.4.2')
+    expect(result.published).toBe(true)
+    expect(result.tagged).toBe(true)
+    expect(result.releaseCreated).toBe(true)
+    const joined = calls.map((c) => c.join(' '))
+    expect(joined).toContainEqual('git push origin v0.4.2')
+    expect(joined.some((c) => c === 'git push origin main')).toBe(false)
+    expect(joined.some((c) => c.startsWith('git commit'))).toBe(false)
+    expect(joined.some((c) => c.startsWith('npm version'))).toBe(false)
+  })
+
+  it('mode=publish repairs a half-release: skips publish, still tags + releases', async () => {
+    const dir = makePkgDir('@test/pkg', '0.4.2')
+    mockSpawn.mockImplementation((cmd: string, args: string[]) => {
+      if (cmd === 'npm' && args[0] === 'view') return ok('0.4.2')
+      if (cmd === 'git' && args[0] === 'ls-remote') return fail('not found')
+      if (cmd === 'git' && args[0] === 'tag') return ok()
+      if (cmd === 'git' && args[0] === 'push') return ok()
+      if (cmd === 'gh' && args[0] === 'release' && args[1] === 'view') return fail('not found')
+      if (cmd === 'gh' && args[0] === 'release' && args[1] === 'create') return ok()
+      return ok()
+    })
+
+    const result = await publishExecutor({ packagePath: dir, mode: 'publish' })
+    expect(result.success).toBe(true)
+    expect(result.published).toBe(false)
+    expect(result.tagged).toBe(true)
+    expect(result.releaseCreated).toBe(true)
+  })
 })
