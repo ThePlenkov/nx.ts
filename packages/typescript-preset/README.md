@@ -51,6 +51,7 @@ bun add -D vitest oxlint eslint @biomejs/biome tsdown
 | `eslint.config.*` + `eslint: true` | `lint` (if oxlint did not provide it) | `eslint .` |
 | `biome.json{,c}` + `biome: true` | `format`, `format-check` (+ `lint` if no earlier tool provided it) | `biome format --write .` / `biome format .` / `biome lint .` |
 | `tsdown.config.*` | `build`, `build:watch` | `@nx-devkit/typescript:build` executor — `tsdown` / `tsdown --watch` |
+| publishable `package.json` + `src/index.ts` (no `tsdown.config.*`) | `build`, `build:watch` | config-free tsdown — same executor; publishable = `exports` or `bin` field, or `main` + `files` |
 
 All `nx:run-commands` targets run with `cwd` = the project root and resolve binaries from `node_modules/.bin`. The executors resolve the tool's Node entry directly and walk up ancestor `node_modules` directories — hoisted monorepo installs work, on Windows too.
 
@@ -107,7 +108,7 @@ Pass via the plugin tuple in `nx.json`:
 | `oxlint` | `boolean` | `true` | `.oxlintrc.*` infers `lint`. |
 | `eslint` | `boolean` | `true` | `eslint.config.*` infers `lint` (below oxlint in precedence). |
 | `biome` | `boolean` | `true` | `biome.json{,c}` infers `format`/`format-check` (+ `lint` fallback). |
-| `tsdown` | `boolean` | `true` | `tsdown.config.*` infers `build`/`build:watch`. |
+| `tsdown` | `boolean` | `true` | `tsdown.config.*` — or a publishable `package.json` + `src/index.ts` — infers `build`/`build:watch`. |
 | `testGlob` | `string` | `"**/*.test.{ts,js,mts,mjs}"` | Glob for native test files. |
 | `specGlob` | `string` | `"**/*.spec.{ts,js,mts,mjs}"` | Glob for spec files. |
 | `includeRoot` | `boolean` | auto | `true`: root is always a project. `false`: never. Unset: only when it is the sole project — self-corrects when nested configs appear. |

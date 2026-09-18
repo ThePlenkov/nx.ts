@@ -59,8 +59,12 @@ export async function buildExecutor(
 
   // eslint-disable-next-line security/detect-non-literal-fs-filename -- candidate names are fixed config basenames joined to the project root
   const hasConfig = configNames.some((name) => existsSync(join(absProjectRoot, name)))
-  if (!hasConfig) {
-    console.error(`[nx-devkit/build] No tsdown.config.* found in ${absProjectRoot}`)
+  // Config-free fallback: tsdown itself defaults to src/index.ts when no
+  // config exists, so a conventional entry is enough to run it.
+  // eslint-disable-next-line security/detect-non-literal-fs-filename -- fixed basename joined to the Nx-provided project root
+  const hasDefaultEntry = existsSync(join(absProjectRoot, 'src/index.ts'))
+  if (!hasConfig && !hasDefaultEntry) {
+    console.error(`[nx-devkit/build] No tsdown.config.* or src/index.ts found in ${absProjectRoot}`)
     return { success: false }
   }
 

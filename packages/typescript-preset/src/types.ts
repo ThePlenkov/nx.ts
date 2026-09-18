@@ -12,7 +12,7 @@ export interface NxDevkitTypescriptOptions {
   eslint?: boolean
   /** Infer `format`/`format-check`/`lint` from `biome.json`. Default: true. */
   biome?: boolean
-  /** Infer `build` target from `tsdown.config.ts`. Default: true. */
+  /** Infer `build` target from `tsdown.config.*` or a publishable `package.json` + `src/index.ts`. Default: true. */
   tsdown?: boolean
   /** Glob for native test files. Default: double-star-slash-star.test.ts-js-mts-mjs. */
   testGlob?: string
