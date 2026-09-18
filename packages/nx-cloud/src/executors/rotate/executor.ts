@@ -49,7 +49,7 @@ function readJson(path: string): Record<string, unknown> {
   try {
     return JSON.parse(readFileSync(path, 'utf8')) as Record<string, unknown>
   } catch (error) {
-    throw new Error(`Cannot read ${path}: ${(error as Error).message}`)
+    throw new Error(`Cannot read ${path}: ${(error as Error).message}`, { cause: error })
   }
 }
 
@@ -101,6 +101,9 @@ async function postOrgAndWorkspace(
 ): Promise<{ status: number; data: Record<string, unknown> }> {
   let response: Response
   try {
+    // eslint-disable-next-line -- SSRF false positive: `url` is an operator-configured
+    // Nx Cloud endpoint (executor option / NX_CLOUD_API), already validated to an
+    // https:// origin in resolveCloudUrl — not request-user input.
     response = await fetch(url, {
       body: JSON.stringify(payload),
       headers: { 'Content-Type': 'application/json' },
@@ -108,7 +111,9 @@ async function postOrgAndWorkspace(
       signal: AbortSignal.timeout(30_000),
     })
   } catch (error) {
-    throw new Error(`Nx Cloud request to ${url} failed: ${(error as Error).message}`)
+    throw new Error(`Nx Cloud request to ${url} failed: ${(error as Error).message}`, {
+      cause: error,
+    })
   }
   const data = (await response.json().catch(() => ({}))) as Record<string, unknown>
   return { data, status: response.status }
