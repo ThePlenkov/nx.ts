@@ -1,3 +1,4 @@
+/* eslint-disable one-var, capitalized-comments, node/no-sync -- sync executor by design; repo style is enforced by oxlint+biome */
 import { existsSync, readFileSync } from 'node:fs'
 import { spawnSync } from 'node:child_process'
 
