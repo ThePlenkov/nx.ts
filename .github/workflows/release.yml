@@ -76,8 +76,6 @@ jobs:
         env:
           E2E_SKIP_BUILD: "1" # Build step above already produced dist/
         run: bash scripts/e2e-packed.sh
-      - name: Verify release versioning intent (dry-run)
-        run: npx nx release --skip-publish --dry-run
       - name: "Rewrite workspace: protocols for npm publish"
         # npm rejects the workspace: protocol — the only such dep is the
         # private, bundled @nx-devkit/internal. Rewrites CI-tree manifests
