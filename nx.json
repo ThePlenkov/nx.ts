@@ -3,7 +3,7 @@
   "$schema": "./node_modules/nx/schemas/nx-schema.json",
   "packageManager": "bun@1.3.14",
   "cli": {
-    "packageManager": "npm"
+    "packageManager": "bun"
   },
   "version": 2,
   "plugins": [
@@ -21,14 +21,21 @@
       "packages/skillspector",
       "packages/release"
     ],
+    "projectsRelationship": "independent",
     "version": {
+      "conventionalCommits": {
+        "useCommitScope": false
+      },
+      "fallbackCurrentVersionResolver": "disk",
       "generatorOptions": {
         "packageRoot": "packages/{projectName}"
+      },
+      "git": {
+        "commit": true,
+        "commitMessage": "chore(release): publish {version}",
+        "tag": true,
+        "push": true
       }
-    },
-    "git": {
-      "commitMessage": "chore(release): publish {version}",
-      "tag": true
     }
   },
   "namedInputs": {
