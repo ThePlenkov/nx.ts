@@ -1,0 +1,86 @@
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { createNodesV2 } from './plugin.ts'
+
+function makeWorkspace(): string {
+  return mkdtempSync(join(tmpdir(), 'nx-cloud-plugin-'))
+}
+
+describe('createNodesV2', () => {
+  let workspace: string
+  beforeEach(() => {
+    workspace = makeWorkspace()
+  })
+  afterEach(() => {
+    rmSync(workspace, { force: true, recursive: true })
+  })
+
+  it('infers an nx-cloud-rotate target on the root project', () => {
+    writeFileSync(join(workspace, 'nx.json'), JSON.stringify({}))
+
+    const result = createNodesV2[1](
+      ['nx.json'],
+      {},
+      {
+        nxJsonConfiguration: {},
+        workspaceRoot: workspace,
+      },
+    )
+
+    const projects = (
+      result as (readonly [
+        string,
+        { projects: Record<string, { targets?: Record<string, unknown> }> },
+      ])[]
+    ).map(([_file, body]) => body.projects)[0]
+
+    expect(Object.keys(projects)).toEqual(['.'])
+    expect(projects['.'].targets).toEqual({
+      'nx-cloud-rotate': {
+        executor: '@nx-devkit/nx-cloud:rotate',
+        options: {},
+      },
+    })
+  })
+
+  it('respects a custom targetName plugin option', () => {
+    writeFileSync(join(workspace, 'nx.json'), JSON.stringify({}))
+
+    const result = createNodesV2[1](
+      ['nx.json'],
+      { targetName: 'cloud:rotate' },
+      {
+        nxJsonConfiguration: {},
+        workspaceRoot: workspace,
+      },
+    )
+
+    const projects = (
+      result as (readonly [
+        string,
+        { projects: Record<string, { targets?: Record<string, unknown> }> },
+      ])[]
+    ).map(([_file, body]) => body.projects)[0]
+
+    expect(Object.keys(projects['.'].targets ?? {})).toEqual(['cloud:rotate'])
+  })
+
+  it('ignores nx.json files outside the workspace root', () => {
+    const nestedDir = join(workspace, 'packages/lib')
+    mkdirSync(nestedDir, { recursive: true })
+    writeFileSync(join(nestedDir, 'nx.json'), JSON.stringify({}))
+
+    const result = createNodesV2[1](
+      ['packages/lib/nx.json'],
+      {},
+      {
+        nxJsonConfiguration: {},
+        workspaceRoot: workspace,
+      },
+    )
+
+    expect(result).toEqual([])
+  })
+})

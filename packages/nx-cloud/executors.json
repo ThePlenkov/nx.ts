@@ -1,0 +1,9 @@
+{
+  "executors": {
+    "rotate": {
+      "implementation": "./dist/executors/rotate/executor.mjs",
+      "schema": "./src/executors/rotate/schema.json",
+      "description": "Creates a fresh Nx Cloud organization + workspace via the create-org-and-workspace API and rebinds this workspace by writing the returned nxCloudId into nx.json. Deleting the old organization is a manual step (no public API exists)."
+    }
+  }
+}
