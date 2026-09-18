@@ -95,29 +95,40 @@ function getNxInitDate(root: string): string {
   return new Date().toISOString()
 }
 
+const CLOUD_API_PATHS = [
+  '/nx-cloud/v2/create-org-and-workspace',
+  '/nx-cloud/create-org-and-workspace',
+] as const
+
 interface OrgRequest {
+  /** Validated https:// origin — anchors the endpoint allowlist below. */
+  cloudUrl: string
   url: string
   payload: { installationSource: string; nxInitDate: string; workspaceName: string }
 }
 
 async function postOrgAndWorkspace({
+  cloudUrl,
   url,
   payload,
 }: OrgRequest): Promise<{ status: number; data: Record<string, unknown> }> {
+  const approvedEndpoints = CLOUD_API_PATHS.map((path) => `${cloudUrl}${path}`)
   let response: Response
-  try {
-    // `url` is an operator-configured Nx Cloud endpoint (executor option /
-    // NX_CLOUD_API), already validated to an https:// origin in resolveCloudUrl.
-    response = await fetch(url, {
-      body: JSON.stringify(payload),
-      headers: { 'Content-Type': 'application/json' },
-      method: 'POST',
-      signal: AbortSignal.timeout(30_000),
-    })
-  } catch (error) {
-    throw new Error(`Nx Cloud request to ${url} failed: ${(error as Error).message}`, {
-      cause: error,
-    })
+  if (approvedEndpoints.includes(url)) {
+    try {
+      response = await fetch(url, {
+        body: JSON.stringify(payload),
+        headers: { 'Content-Type': 'application/json' },
+        method: 'POST',
+        signal: AbortSignal.timeout(30_000),
+      })
+    } catch (error) {
+      throw new Error(`Nx Cloud request to ${url} failed: ${(error as Error).message}`, {
+        cause: error,
+      })
+    }
+  } else {
+    throw new Error(`Refusing to POST to unapproved Nx Cloud endpoint: ${url}`)
   }
   const data = (await response.json().catch(() => ({}))) as Record<string, unknown>
   return { data, status: response.status }
@@ -141,7 +152,8 @@ async function createNxCloudWorkspaceV2(
   nxInitDate: string,
 ): Promise<{ nxCloudId: string; url: string } | null> {
   const { data, status } = await postOrgAndWorkspace({
-    url: `${resolved.cloudUrl}/nx-cloud/v2/create-org-and-workspace`,
+    cloudUrl: resolved.cloudUrl,
+    url: `${resolved.cloudUrl}${CLOUD_API_PATHS[0]}`,
     payload: {
       installationSource: resolved.installationSource,
       nxInitDate,
@@ -166,7 +178,8 @@ async function createNxCloudWorkspaceV1(
   nxInitDate: string,
 ): Promise<{ token: string; url: string }> {
   const { data, status } = await postOrgAndWorkspace({
-    url: `${resolved.cloudUrl}/nx-cloud/create-org-and-workspace`,
+    cloudUrl: resolved.cloudUrl,
+    url: `${resolved.cloudUrl}${CLOUD_API_PATHS[1]}`,
     payload: {
       installationSource: resolved.installationSource,
       nxInitDate,
