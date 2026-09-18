@@ -20,6 +20,22 @@ This:
 
 If the workspace has no Nx yet, the bootstrap installs `nx` + `@nx/devkit` first.
 
+#### First-install warnings you may see
+
+- **`npm audit`: 2 high severity vulnerabilities** — these come from
+  `nx` itself, not from this plugin: `nx@23.2.x` exact-pins
+  `smol-toml@1.6.1`, which is affected by
+  [GHSA-7w5x-hrqm-74c2](https://github.com/advisories/GHSA-7w5x-hrqm-74c2)
+  (DoS via malformed TOML). Fixed upstream in nrwl/nx#37059 — it ships
+  with the next Nx release. To lift it today, add an npm override:
+  `"overrides": { "smol-toml": "^1.7.1" }`.
+- **`allow-scripts` prompt for `nx` postinstall** — `nx` runs
+  `node -e "try{require('./dist/bin/post-install')}catch(e){}"` on install
+  (loads Nx's post-install task, e.g. validating the platform-native
+  binary). Verify before approving: `npm view nx scripts`, or inspect
+  `node_modules/nx/package.json` → `scripts`. Skipping it is safe — Nx
+  works without the post-install hook.
+
 ### Manual setup
 
 ```bash

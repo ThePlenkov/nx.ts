@@ -1,5 +1,6 @@
 ---
 date: 2026-09-17
+status: resolved 2026-09-18
 tags: [security, bootstrap, docs]
 source: registry smoke test of @nx-devkit/typescript@0.1.1
 ---
@@ -24,3 +25,22 @@ binary) and how a consumer can verify it themselves (`npm view nx
 scripts`, or inspect `node_modules/nx/package.json` → `scripts`) before
 deciding whether to approve it — verification steps, not a blanket
 "safe to approve" claim.
+
+## Findings (2026-09-18)
+
+- Root cause: `nx@23.2.1` exact-pins `smol-toml@1.6.1` →
+  [GHSA-7w5x-hrqm-74c2](https://github.com/advisories/GHSA-7w5x-hrqm-74c2)
+  (DoS via malformed TOML). Both "high" entries are this single chain —
+  `nx` as affected parent + `smol-toml` itself. Not our dep.
+- Upstream fix already merged: nrwl/nx#37059 bumps to `smol-toml@1.7.1`;
+  present in `nx@23.3.0-canary.*`, lands with the next stable release.
+- Consumer mitigation documented: `"overrides": { "smol-toml": "^1.7.1" }`.
+- `allow-scripts` / postinstall: verified empirically — `nx show
+  projects` works in the packed-tarball e2e consumer where the
+  postinstall never ran, so skipping is safe. Verification steps
+  documented for consumers.
+
+## Resolution
+
+Documented both warnings in `packages/typescript-preset/README.md` →
+"First-install warnings you may see" (same PR that resolves this item).
