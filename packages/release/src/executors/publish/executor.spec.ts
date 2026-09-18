@@ -135,6 +135,25 @@ describe('publishExecutor', () => {
     expect(calls.some((c) => c.startsWith('git fetch'))).toBe(false)
   })
 
+  it('resolves the peeled commit of an annotated remote tag', async () => {
+    const dir = makePkgDir('@test/pkg', '0.4.2')
+    const calls = mockFlow({
+      'npm view': ok('0.4.2'),
+      // Tag object sha first, peeled commit second — the ^{} line wins
+      'git ls-remote --exit-code --tags': ok(
+        `${STALE_SHA}\trefs/tags/v0.4.2\n${HEAD_SHA}\trefs/tags/v0.4.2^{}`,
+      ),
+      'git rev-parse HEAD': ok(HEAD_SHA),
+      'gh release view': fail('not found'),
+      'gh release create': ok(),
+    })
+
+    const result = await publishExecutor({ packagePath: dir, mode: 'publish' })
+    expect(result.success).toBe(true)
+    expect(result.tagged).toBe(false)
+    expect(calls.some((c) => c.startsWith('git fetch'))).toBe(false)
+  })
+
   it('mode=publish accepts a tag whose commit carries the version after main moved on', async () => {
     const dir = makePkgDir('@test/pkg', '0.4.2')
     const calls = mockFlow({
