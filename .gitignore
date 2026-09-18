@@ -13,7 +13,8 @@ coverage/
 
 # OpenSpec skill/command artifacts managed by openspec init
 .kilocode/
-.agents/
+.agents/*
+!.agents/backlog/
 
 # Generated symlink views into .agents/skills (source of truth: skills-lock.json)
 .claude/
