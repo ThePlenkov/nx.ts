@@ -217,10 +217,13 @@ describe('publishExecutor', () => {
 
   it('mode=publish rejects a dirty working tree', async () => {
     const dir = makePkgDir('@test/pkg', '0.4.2')
-    mockFlow({ 'git status': ok(' M packages/cli/package.json') })
+    const calls = mockFlow({ 'git status': ok(' M packages/cli/package.json') })
     await expect(publishExecutor({ packagePath: dir, mode: 'publish' })).rejects.toThrow(
       'Working tree is dirty',
     )
+    // The guard checks all non-ignored changes — an uncommitted source file
+    // must not ship unpublished. Artifacts belong in .gitignore.
+    expect(calls).toContainEqual('git status --porcelain')
   })
 
   it('treats npm prerelease beta.10 as ahead of local beta.2 (semver, not lexical)', async () => {
