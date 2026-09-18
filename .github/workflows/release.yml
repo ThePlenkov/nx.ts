@@ -29,9 +29,17 @@ jobs:
         run: bunx nx run tools:prepare-for-release --dryRun=false
 
   release:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    # The release commit pushed by `nx release version` (message starts with
+    # "chore(release)") must not re-trigger this job — loop guard.
+    # head_commit is populated atomically in the push event payload.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && !startsWith(github.event.head_commit.message, 'chore(release)')
     name: Publish packages via nx release (OIDC)
     runs-on: ubuntu-latest
+    # Serialize release runs — a queued run must not interleave its version
+    # commit with an in-flight publish.
+    concurrency:
+      group: release
+      cancel-in-progress: false
     # https://docs.npmjs.com/trusted-publishers-with-npm-cli-and-github-actions
     # OIDC trusted publishing requires:
     #   1. npm >= 11.5 (installed by `npm install -g npm@latest` below)
@@ -41,7 +49,7 @@ jobs:
     # No NODE_AUTH_TOKEN / NPM_TOKEN is needed; npm exchanges the GHA OIDC
     # token for a short-lived npm registry token automatically.
     permissions:
-      contents: read
+      contents: write # release commits, tags, GitHub releases
       id-token: write
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
@@ -76,6 +84,25 @@ jobs:
         env:
           E2E_SKIP_BUILD: "1" # Build step above already produced dist/
         run: bash scripts/e2e-packed.sh
+      - name: Configure git identity for release commits
+        run: |
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+      - name: Version packages (conventional commits)
+        # Derives per-project bumps from conventional commits, updates
+        # package.json versions, commits, and tags (@nx-devkit/x@y.z)
+        # LOCALLY. The push is deferred until after publish succeeds —
+        # otherwise a publish failure would leave tags marking unpublished
+        # versions as the baseline with no clean retry path. The version
+        # commit/tags die with the runner and the next run recomputes the
+        # same versions from the last pushed tag.
+        # `gh auth setup-git` scopes GITHUB_TOKEN to git ops in these steps
+        # only — checkout keeps persist-credentials: false.
+        run: |
+          gh auth setup-git
+          npx nx release version --git-push=false
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: "Rewrite workspace: protocols for npm publish"
         # npm rejects the workspace: protocol — the only such dep is the
         # private, bundled @nx-devkit/internal. Rewrites CI-tree manifests
@@ -85,3 +112,13 @@ jobs:
         run: npx nx release publish
         env:
           NPM_CONFIG_PROVENANCE: 'true'
+      - name: Push release commit and tags
+        # Checkout is a detached HEAD — push HEAD to main explicitly.
+        # If a merge raced in during publish this push fails; the next run
+        # recomputes the same versions (baseline tag was never pushed) and
+        # self-heals — publish skips already-published versions.
+        run: |
+          git push origin HEAD:main
+          git push origin --tags
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
