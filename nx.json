@@ -3,12 +3,13 @@
   "$schema": "./node_modules/nx/schemas/nx-schema.json",
   "packageManager": "bun@1.3.14",
   "cli": {
-    "packageManager": "npm"
+    "packageManager": "bun"
   },
   "version": 2,
   "plugins": [
     "./packages/typescript-preset/src/plugin.ts",
-    "./packages/prepare-for-release/src/plugin.ts"
+    "./packages/prepare-for-release/src/plugin.ts",
+    "./packages/nx-cloud/src/plugin.ts"
   ],
   "release": {
     "projects": [
@@ -19,16 +20,24 @@
       "packages/prepare-for-release",
       "packages/skill",
       "packages/skillspector",
-      "packages/release"
+      "packages/release",
+      "packages/nx-cloud"
     ],
+    "projectsRelationship": "independent",
     "version": {
+      "conventionalCommits": {
+        "useCommitScope": false
+      },
+      "fallbackCurrentVersionResolver": "disk",
       "generatorOptions": {
         "packageRoot": "packages/{projectName}"
+      },
+      "git": {
+        "commit": true,
+        "commitMessage": "chore(release): publish {version}",
+        "tag": true,
+        "push": true
       }
-    },
-    "git": {
-      "commitMessage": "chore(release): publish {version}",
-      "tag": true
     }
   },
   "namedInputs": {

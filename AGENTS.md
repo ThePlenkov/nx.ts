@@ -118,7 +118,7 @@ The `@nx-devkit/typescript` preset is the **single recommended entry point** for
 | `.oxlintrc.*` | `lint` (oxlint, highest precedence) |
 | `eslint.config.*` | `lint` (eslint, fallback) |
 | `biome.json` | `format`, `format-check`, `lint` (fallback) |
-| `tsdown.config.*` | `build`, `build:watch` |
+| `tsdown.config.*` (or publishable `package.json` + `src/index.ts`), `tsdown` option enabled | `build`, `build:watch` |
 
 **Consumer nx.json should only register the preset:**
 

@@ -1,0 +1,10 @@
+{
+  "$schema": "https://json-schema.org/schema",
+  "generators": {
+    "init": {
+      "factory": "./dist/generators/init/generator.mjs",
+      "schema": "./src/generators/init/schema.json",
+      "description": "Registers @nx-devkit/nx-cloud in nx.json plugins so the nx-cloud-rotate target is inferred on the root project."
+    }
+  }
+}

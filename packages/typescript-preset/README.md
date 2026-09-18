@@ -20,6 +20,25 @@ This:
 
 If the workspace has no Nx yet, the bootstrap installs `nx` + `@nx/devkit` first.
 
+#### First-install warnings you may see
+
+- **`npm audit`: 2 high severity vulnerabilities** — these come from
+  `nx` itself, not from this plugin: `nx@23.2.x` exact-pins
+  `smol-toml@1.6.1`, which is affected by
+  [GHSA-7w5x-hrqm-74c2](https://github.com/advisories/GHSA-7w5x-hrqm-74c2)
+  (DoS via malformed TOML). Fixed upstream in nrwl/nx#37059 — it ships
+  with the next Nx release. To lift it today, add
+  `"overrides": { "smol-toml": "^1.7.1" }` to your root `package.json`
+  and re-run `npm install` — the audit warning persists until the tree
+  is re-resolved.
+- **`allow-scripts` prompt for `nx` postinstall** — `nx` runs
+  `node -e "try{require('./dist/bin/post-install')}catch(e){}"` on install
+  (loads Nx's post-install task — platform-support and Nx Cloud checks).
+  Verify before approving: `npm view nx scripts`, or inspect
+  `node_modules/nx/package.json` → `scripts`. In our tests Nx worked
+  without it (`nx show projects` ran fine with the hook blocked), but
+  check the exact script in your installed version before skipping.
+
 ### Manual setup
 
 ```bash
@@ -51,6 +70,7 @@ bun add -D vitest oxlint eslint @biomejs/biome tsdown
 | `eslint.config.*` + `eslint: true` | `lint` (if oxlint did not provide it) | `eslint .` |
 | `biome.json{,c}` + `biome: true` | `format`, `format-check` (+ `lint` if no earlier tool provided it) | `biome format --write .` / `biome format .` / `biome lint .` |
 | `tsdown.config.*` | `build`, `build:watch` | `@nx-devkit/typescript:build` executor — `tsdown` / `tsdown --watch` |
+| publishable `package.json` + `src/index.ts` (no `tsdown.config.*`) | `build`, `build:watch` | config-free tsdown — same executor; publishable = `exports` or `bin` field, or `main` + `files` |
 
 All `nx:run-commands` targets run with `cwd` = the project root and resolve binaries from `node_modules/.bin`. The executors resolve the tool's Node entry directly and walk up ancestor `node_modules` directories — hoisted monorepo installs work, on Windows too.
 
@@ -107,7 +127,7 @@ Pass via the plugin tuple in `nx.json`:
 | `oxlint` | `boolean` | `true` | `.oxlintrc.*` infers `lint`. |
 | `eslint` | `boolean` | `true` | `eslint.config.*` infers `lint` (below oxlint in precedence). |
 | `biome` | `boolean` | `true` | `biome.json{,c}` infers `format`/`format-check` (+ `lint` fallback). |
-| `tsdown` | `boolean` | `true` | `tsdown.config.*` infers `build`/`build:watch`. |
+| `tsdown` | `boolean` | `true` | `tsdown.config.*` — or a publishable `package.json` + `src/index.ts` — infers `build`/`build:watch`. |
 | `testGlob` | `string` | `"**/*.test.{ts,js,mts,mjs}"` | Glob for native test files. |
 | `specGlob` | `string` | `"**/*.spec.{ts,js,mts,mjs}"` | Glob for spec files. |
 | `includeRoot` | `boolean` | auto | `true`: root is always a project. `false`: never. Unset: only when it is the sole project — self-corrects when nested configs appear. |

@@ -1,6 +1,6 @@
 {
-  "name": "@nx-devkit/skillspector",
-  "version": "0.1.1",
+  "name": "@nx-devkit/nx-cloud",
+  "version": "0.0.1",
   "license": "MIT",
   "private": false,
   "type": "module",
@@ -16,34 +16,42 @@
       "types": "./dist/plugin.d.mts",
       "default": "./dist/plugin.mjs"
     },
+    "./generators/init": {
+      "types": "./dist/generators/init/generator.d.mts",
+      "default": "./dist/generators/init/generator.mjs"
+    },
     "./package.json": "./package.json"
   },
   "executors": "./executors.json",
+  "generators": "./generators.json",
   "files": [
     "dist",
     "executors.json",
-    "README.md",
-    "./src/executors/scan/schema.json"
+    "generators.json",
+    "src/executors/rotate/schema.json",
+    "src/generators/init/schema.json",
+    "README.md"
   ],
   "scripts": {
     "build": "tsdown",
     "test": "vitest run"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "peerDependencies": {
     "@nx/devkit": "^22.0.0 || ^23.0.0"
   },
   "devDependencies": {
     "@nx/devkit": "23.2.1",
-    "@types/node": "^26.0.0",
-    "memfs": "^4.50.0",
+    "@types/node": "^20.19.0",
     "tsdown": "^0.22.3",
     "typescript": "^6.0.3",
-    "vitest": "^4.1.9",
-    "@nx-devkit/internal": "workspace:*"
+    "vitest": "^4.1.9"
   },
   "repository": {
     "type": "git",
     "url": "https://github.com/nx-devkit/nx.ts",
-    "directory": "packages/skillspector"
+    "directory": "packages/nx-cloud"
   }
 }

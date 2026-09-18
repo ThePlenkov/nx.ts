@@ -40,7 +40,7 @@ export interface NxDevkitTypescriptOptions {
   eslint?: boolean;
   /** Infer `format`/`format-check`/`lint` from `biome.json`. Default: true. */
   biome?: boolean;
-  /** Infer `build` target from `tsdown.config.ts`. Default: true. */
+  /** Infer `build` target from `tsdown.config.*` or a publishable `package.json` + `src/index.ts`. Default: true. */
   tsdown?: boolean;
   /** Glob for native test files. Default: "**/*.test.{ts,js,mts,mjs}". */
   testGlob?: string;
@@ -64,8 +64,8 @@ export interface NxDevkitTypescriptOptions {
 | `lint` | `eslint.config.*` + `eslint: true` | `npx eslint .`. ESLint wins over biome for `lint`. Only when oxlint is not owning it. |
 | `lint` | `biome.json` + oxlint AND eslint NOT providing lint | `npx biome lint .`. Only when oxlint disabled or no `.oxlintrc.*`, and eslint disabled or no `eslint.config.*`. |
 | `format` / `format-check` | `biome.json` + `biome: true` | `format` writes files (cache false), `format-check` is cached. |
-| `build` | `tsdown.config.ts` + `tsdown: true` | `npx tsdown`, outputs `{projectRoot}/dist`, `dependsOn: ['^build']`. |
-| `build:watch` | `tsdown.config.ts` + `tsdown: true` | `npx tsdown --watch`, cache disabled. |
+| `build` | (`tsdown.config.*` or publishable `package.json` + `src/index.ts`) + `tsdown: true` | `npx tsdown`, outputs `{projectRoot}/dist`, `dependsOn: ['^build']`. Publishable = `exports`/`bin`, or `main` + `files`. |
+| `build:watch` | same as `build` | `npx tsdown --watch`, cache disabled. |
 
 ### Lint precedence
 

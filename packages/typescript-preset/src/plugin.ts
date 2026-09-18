@@ -24,7 +24,11 @@ import { inferVitestTargets } from './targets/vitest.js'
 import { inferNativeTestTargets } from './targets/native-test.js'
 import { inferOxlintTarget, inferEslintTarget } from './targets/lint.js'
 import { inferBiomeTargets } from './targets/format.js'
-import { inferTsdownBuildTarget, inferTsdownWatchTarget } from './targets/build.js'
+import {
+  hasConfigFreeTsdownEntry,
+  inferTsdownBuildTarget,
+  inferTsdownWatchTarget,
+} from './targets/build.js'
 
 // Re-export everything for backward compatibility
 export type { NxDevkitTypescriptOptions }
@@ -35,7 +39,11 @@ export { inferVitestTargets } from './targets/vitest.js'
 export { inferNativeTestTargets } from './targets/native-test.js'
 export { inferOxlintTarget, inferEslintTarget } from './targets/lint.js'
 export { inferBiomeTargets } from './targets/format.js'
-export { inferTsdownBuildTarget, inferTsdownWatchTarget } from './targets/build.js'
+export {
+  hasConfigFreeTsdownEntry,
+  inferTsdownBuildTarget,
+  inferTsdownWatchTarget,
+} from './targets/build.js'
 
 const PLUGIN_SCOPE = 'nx-typescript'
 
@@ -198,7 +206,10 @@ export const createNodesV2: CreateNodesV2<NxDevkitTypescriptOptions> = [
           workspaceRoot,
           TSDOWN_CONFIG_NAMES,
         )
-        if (tsdownConfigPath) {
+        if (
+          tsdownConfigPath ||
+          (await hasConfigFreeTsdownEntry(resolve(workspaceRoot, projectRoot)))
+        ) {
           targets.build = inferTsdownBuildTarget(relProjectRoot)
           targets['build:watch'] = inferTsdownWatchTarget(relProjectRoot)
         }
