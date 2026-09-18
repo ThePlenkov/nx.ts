@@ -3,7 +3,7 @@ export interface NxCloudRotateOptions {
   workspaceName?: string
   /** Nx Cloud instance URL. Default: NX_CLOUD_API/NRWL_API env or https://cloud.nx.app. */
   cloudUrl?: string
-  /** installationSource tag sent with the request. Default: "nx-devkit-nx-cloud". */
+  /** InstallationSource tag sent with the request. Default: "nx-devkit-nx-cloud". */
   installationSource?: string
   /** Call the API but do not rewrite nx.json. Default: false. */
   dryRun?: boolean

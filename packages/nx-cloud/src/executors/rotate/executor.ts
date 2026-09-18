@@ -7,7 +7,7 @@ export interface NxCloudRotateOptions {
   workspaceName?: string
   /** Nx Cloud instance URL. Default: NX_CLOUD_API/NRWL_API env or https://cloud.nx.app. */
   cloudUrl?: string
-  /** installationSource tag sent with the request. Default: "nx-devkit-nx-cloud". */
+  /** InstallationSource tag sent with the request. Default: "nx-devkit-nx-cloud". */
   installationSource?: string
   /** Call the API but do not rewrite nx.json. Default: false. */
   dryRun?: boolean
@@ -42,7 +42,7 @@ function resolveCloudUrl(option: string | undefined): string {
   if (parsed.protocol !== 'https:') {
     throw new Error(`Invalid cloudUrl "${raw}": only https:// URLs are allowed.`)
   }
-  return parsed.origin
+  return `${parsed.origin}${parsed.pathname.replace(/\/+$/, '')}`
 }
 
 function readJson(path: string): Record<string, unknown> {
@@ -120,6 +120,7 @@ async function postOrgAndWorkspace({
         body: JSON.stringify(payload),
         headers: { 'Content-Type': 'application/json' },
         method: 'POST',
+        redirect: 'error',
         signal: AbortSignal.timeout(30_000),
       })
     } catch (error) {
@@ -130,7 +131,9 @@ async function postOrgAndWorkspace({
   } else {
     throw new Error(`Refusing to POST to unapproved Nx Cloud endpoint: ${url}`)
   }
-  const data = (await response.json().catch(() => ({}))) as Record<string, unknown>
+  const parsed = (await response.json().catch(() => ({}))) as unknown
+  const data =
+    typeof parsed === 'object' && parsed !== null ? (parsed as Record<string, unknown>) : {}
   return { data, status: response.status }
 }
 
@@ -203,8 +206,13 @@ export async function rotateExecutor(
   const resolved = resolveOptions(options, context.root)
   const nxJsonPath = join(context.root, 'nx.json')
   const nxJson = readJson(nxJsonPath)
-  const previousBinding =
-    (nxJson.nxCloudId as string | undefined) ?? (nxJson.nxCloudAccessToken as string | undefined)
+  const binding = nxJson.nxCloudId ?? nxJson.nxCloudAccessToken
+  let previousBinding: string | undefined
+  if (typeof binding === 'string') {
+    previousBinding = binding
+  } else if (binding != null) {
+    previousBinding = String(binding)
+  }
 
   const nxInitDate = getNxInitDate(context.root)
 
@@ -255,7 +263,7 @@ export async function rotateExecutor(
     ...(v2 ? { nxCloudId: v2.nxCloudId } : {}),
     ...(v1 ? { token: v1.token } : {}),
     ...(url ? { url } : {}),
-    ...(previousBinding ? { previousBinding } : {}),
+    ...(previousBinding ? { previousBinding: maskBinding(previousBinding) } : {}),
   }
 }
 

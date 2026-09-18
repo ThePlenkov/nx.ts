@@ -26,6 +26,7 @@ export const createNodesV2: CreateNodesV2<NxCloudPluginOptions> = [
               root: '.',
               targets: {
                 [targetName]: {
+                  cache: false,
                   executor: `${PLUGIN_NAME}:rotate`,
                   options: {},
                 },

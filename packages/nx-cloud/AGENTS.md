@@ -55,7 +55,7 @@ export interface NxCloudRotateOptions {
 - Touch ONLY `packages/nx-cloud/`.
 - Do NOT modify other plugin packages or the root `nx.json`.
 - The executor MUST NOT delete organizations — no public API exists; it only prints the previous binding for manual cleanup.
-- Use global `fetch` for HTTP (Node >= 22), no axios dependency. Mock via `vi.stubGlobal` in specs.
+- Use global `fetch` for HTTP (Node >= 22), no axios dependency. Mock by assigning `globalThis.fetch` in specs (the suite also runs under `bun test`, which has no `vi.stubGlobal`).
 - Mock `node:child_process` `spawnSync` for the `git log` nxInitDate probe.
 
 ## TDD workflow

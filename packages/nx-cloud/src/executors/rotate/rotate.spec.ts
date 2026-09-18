@@ -118,7 +118,7 @@ describe('rotateExecutor', () => {
 
     const result = await rotateExecutor({}, { root: workspace })
 
-    expect(result.previousBinding).toBe('old-token-123')
+    expect(result.previousBinding).toBe('old-…')
     const nxJson = readJson(join(workspace, 'nx.json'))
     expect(nxJson.nxCloudId).toBe('ws_new123')
     expect(nxJson.nxCloudAccessToken).toBeUndefined()
@@ -130,7 +130,7 @@ describe('rotateExecutor', () => {
 
     const result = await rotateExecutor({}, { root: workspace })
 
-    expect(result.previousBinding).toBe('ws_old999')
+    expect(result.previousBinding).toBe('ws_o…')
     expect(readJson(join(workspace, 'nx.json')).nxCloudId).toBe('ws_new123')
   })
 

@@ -39,17 +39,17 @@ Tasks map to independent beads. Status: `[ ]` pending, `[x]` done.
 
 - [x] Register `./packages/nx-cloud/src/plugin.ts` in root `nx.json` plugins
 - [x] Add `packages/nx-cloud` to `release.projects` in root `nx.json`
-- [ ] `bunx nx show project nx-devkit-plugins` — `nx-cloud-rotate` target inferred on root project
-- [ ] `bun run check:spec` — no conflicts with other plugins
+- [x] `bunx nx show project nx-devkit-plugins` — `nx-cloud-rotate` target inferred on root project
+- [x] `bun run check:spec` — no conflicts with other plugins
 
 ## 6. Verification
 
-- [ ] `bun test` — all pass
-- [ ] `bun run build` — build succeeds
-- [ ] `bun run lint` — clean
-- [ ] `bun run format:check` — clean
-- [ ] `bunx openspec validate` — no errors
-- [ ] `bash scripts/e2e.sh` — demo passes
+- [x] `bun test` — all pass
+- [x] `bun run build` — build succeeds
+- [x] `bun run lint` — clean
+- [x] `bun run format:check` — clean
+- [x] `bunx openspec validate` — no errors
+- [x] `bash scripts/e2e.sh` — demo passes
 
 ## 7. Publish (separate bead)
 

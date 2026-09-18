@@ -10,10 +10,14 @@ function readJson(tree: Tree, path: string): Record<string, unknown> | null {
   if (!tree.exists(path)) {
     return null
   }
-  try {
-    return JSON.parse(tree.read(path, 'utf8') ?? '{}') as Record<string, unknown>
-  } catch {
+  const text = tree.read(path, 'utf8')
+  if (text == null) {
     return null
+  }
+  try {
+    return JSON.parse(text) as Record<string, unknown>
+  } catch (error) {
+    throw new Error(`Cannot parse ${path}: ${(error as Error).message}`, { cause: error })
   }
 }
 
@@ -27,8 +31,10 @@ function registerPlugin(tree: Tree, pluginPath: string): void {
   const alreadyRegistered = plugins.some(
     (entry) =>
       (typeof entry === 'string' && entry === pluginPath) ||
+      (Array.isArray(entry) && entry[0] === pluginPath) ||
       (typeof entry === 'object' &&
         entry !== null &&
+        !Array.isArray(entry) &&
         (entry as { plugin?: string }).plugin === pluginPath),
   )
   if (alreadyRegistered) {

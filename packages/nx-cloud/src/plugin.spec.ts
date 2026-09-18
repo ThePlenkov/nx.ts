@@ -42,6 +42,7 @@ describe('createNodesV2', () => {
     expect(Object.keys(projects)).toEqual(['.'])
     expect(projects['.']?.targets).toEqual({
       'nx-cloud-rotate': {
+        cache: false,
         executor: '@nx-devkit/nx-cloud:rotate',
         options: {},
       },

@@ -7,6 +7,8 @@
   "properties": {
     "pluginPath": {
       "type": "string",
+      "minLength": 1,
+      "default": "@nx-devkit/nx-cloud",
       "description": "Plugin identifier written into nx.json plugins. Default: @nx-devkit/nx-cloud. Use a relative source path (e.g. ./packages/nx-cloud/src/plugin.ts) for in-repo development."
     }
   },
