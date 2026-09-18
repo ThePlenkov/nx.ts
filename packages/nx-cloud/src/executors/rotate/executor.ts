@@ -32,11 +32,25 @@ interface ResolvedOptions {
 }
 
 function resolveCloudUrl(option: string | undefined): string {
-  return option ?? process.env.NX_CLOUD_API ?? process.env.NRWL_API ?? DEFAULT_CLOUD_URL
+  const raw = option ?? process.env.NX_CLOUD_API ?? process.env.NRWL_API ?? DEFAULT_CLOUD_URL
+  let parsed: URL
+  try {
+    parsed = new URL(raw)
+  } catch {
+    throw new Error(`Invalid cloudUrl "${raw}": expected an absolute URL.`)
+  }
+  if (parsed.protocol !== 'https:') {
+    throw new Error(`Invalid cloudUrl "${raw}": only https:// URLs are allowed.`)
+  }
+  return parsed.origin
 }
 
 function readJson(path: string): Record<string, unknown> {
-  return JSON.parse(readFileSync(path, 'utf8')) as Record<string, unknown>
+  try {
+    return JSON.parse(readFileSync(path, 'utf8')) as Record<string, unknown>
+  } catch (error) {
+    throw new Error(`Cannot read ${path}: ${(error as Error).message}`)
+  }
 }
 
 function resolveOptions(options: NxCloudRotateOptions, root: string): ResolvedOptions {
@@ -85,13 +99,23 @@ async function postOrgAndWorkspace(
   url: string,
   payload: { installationSource: string; nxInitDate: string; workspaceName: string },
 ): Promise<{ status: number; data: Record<string, unknown> }> {
-  const response = await fetch(url, {
-    body: JSON.stringify(payload),
-    headers: { 'Content-Type': 'application/json' },
-    method: 'POST',
-  })
+  let response: Response
+  try {
+    response = await fetch(url, {
+      body: JSON.stringify(payload),
+      headers: { 'Content-Type': 'application/json' },
+      method: 'POST',
+      signal: AbortSignal.timeout(30_000),
+    })
+  } catch (error) {
+    throw new Error(`Nx Cloud request to ${url} failed: ${(error as Error).message}`)
+  }
   const data = (await response.json().catch(() => ({}))) as Record<string, unknown>
   return { data, status: response.status }
+}
+
+function maskBinding(value: string): string {
+  return value.length <= 4 ? '***' : `${value.slice(0, 4)}…`
 }
 
 function assertNoApiError(status: number, data: Record<string, unknown>): void {
@@ -119,7 +143,13 @@ async function createNxCloudWorkspaceV2(
     return null
   }
   assertNoApiError(status, data)
-  return { nxCloudId: String(data.nxCloudId), url: String(data.url) }
+  if (typeof data.nxCloudId !== 'string' || !data.nxCloudId) {
+    throw new Error(`Malformed response from ${resolved.cloudUrl}: missing nxCloudId.`)
+  }
+  if (typeof data.url !== 'string' || !data.url) {
+    throw new Error(`Malformed response from ${resolved.cloudUrl}: missing url.`)
+  }
+  return { nxCloudId: data.nxCloudId, url: data.url }
 }
 
 async function createNxCloudWorkspaceV1(
@@ -135,7 +165,13 @@ async function createNxCloudWorkspaceV1(
     },
   )
   assertNoApiError(status, data)
-  return { token: String(data.token), url: String(data.url) }
+  if (typeof data.token !== 'string' || !data.token) {
+    throw new Error(`Malformed response from ${resolved.cloudUrl}: missing token.`)
+  }
+  if (typeof data.url !== 'string' || !data.url) {
+    throw new Error(`Malformed response from ${resolved.cloudUrl}: missing url.`)
+  }
+  return { token: data.token, url: data.url }
 }
 
 export async function rotateExecutor(
@@ -179,7 +215,7 @@ export async function rotateExecutor(
     console.log(`Onboarding URL: ${url}`)
   }
   if (previousBinding) {
-    console.log(`Previous binding: ${previousBinding}`)
+    console.log(`Previous binding: ${maskBinding(previousBinding)}`)
     console.log(
       'Note: Nx Cloud has no public API to delete the old organization — ' +
         'remove it manually at https://cloud.nx.app (organization settings).',

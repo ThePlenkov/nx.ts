@@ -8,6 +8,14 @@ function makeWorkspace(): string {
   return mkdtempSync(join(tmpdir(), 'nx-cloud-plugin-'))
 }
 
+function firstProjects(result: unknown): Record<string, { targets?: Record<string, unknown> }> {
+  const entries = result as (readonly [
+    string,
+    { projects: Record<string, { targets?: Record<string, unknown> }> },
+  ])[]
+  return entries[0]![1].projects
+}
+
 describe('createNodesV2', () => {
   let workspace: string
   beforeEach(() => {
@@ -29,15 +37,10 @@ describe('createNodesV2', () => {
       },
     )
 
-    const projects = (
-      result as (readonly [
-        string,
-        { projects: Record<string, { targets?: Record<string, unknown> }> },
-      ])[]
-    ).map(([_file, body]) => body.projects)[0]
+    const projects = firstProjects(result)
 
     expect(Object.keys(projects)).toEqual(['.'])
-    expect(projects['.'].targets).toEqual({
+    expect(projects['.']?.targets).toEqual({
       'nx-cloud-rotate': {
         executor: '@nx-devkit/nx-cloud:rotate',
         options: {},
@@ -57,14 +60,9 @@ describe('createNodesV2', () => {
       },
     )
 
-    const projects = (
-      result as (readonly [
-        string,
-        { projects: Record<string, { targets?: Record<string, unknown> }> },
-      ])[]
-    ).map(([_file, body]) => body.projects)[0]
+    const projects = firstProjects(result)
 
-    expect(Object.keys(projects['.'].targets ?? {})).toEqual(['cloud:rotate'])
+    expect(Object.keys(projects['.']?.targets ?? {})).toEqual(['cloud:rotate'])
   })
 
   it('ignores nx.json files outside the workspace root', () => {

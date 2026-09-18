@@ -4,7 +4,7 @@ import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const state: {
-  fetchCalls: { url: string; init?: { method?: string; body?: string } }[]
+  fetchCalls: { url: string; init: { method?: string; body?: string } | undefined }[]
   fetchResponse:
     | { status: number; body: unknown }
     | ((url: string) => { status: number; body: unknown })
