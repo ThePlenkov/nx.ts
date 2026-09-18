@@ -1,4 +1,4 @@
-/* eslint-disable one-var, node/no-sync -- test style follows repo conventions, not CodeFactor's default preset */
+/* eslint-disable one-var, node/no-sync, capitalized-comments -- test style follows repo conventions, not CodeFactor's default preset */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
