@@ -230,6 +230,8 @@ export async function rotateExecutor(
   if (!resolved.dryRun) {
     if (resolved.cloudUrl !== DEFAULT_CLOUD_URL) {
       nxJson.nxCloudUrl = resolved.cloudUrl
+    } else {
+      delete nxJson.nxCloudUrl
     }
     if (v2) {
       nxJson.nxCloudId = v2.nxCloudId
