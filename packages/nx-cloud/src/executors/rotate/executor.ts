@@ -47,6 +47,7 @@ function resolveCloudUrl(option: string | undefined): string {
 
 function readJson(path: string): Record<string, unknown> {
   try {
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- path is join(context.root, ...) under the trusted Nx workspace root
     return JSON.parse(readFileSync(path, 'utf8')) as Record<string, unknown>
   } catch (error) {
     throw new Error(`Cannot read ${path}: ${(error as Error).message}`, { cause: error })
@@ -79,8 +80,7 @@ function getNxInitDate(root: string): string {
       { cwd: root, encoding: 'utf8' },
     )
     if (result.status === 0) {
-      const oldest = (result.stdout ?? '')
-        .toString()
+      const oldest = result.stdout
         .split('\n')
         .map((line) => line.trim())
         .filter(Boolean)
@@ -225,6 +225,7 @@ export async function rotateExecutor(
       nxJson.nxCloudAccessToken = v1.token
       delete nxJson.nxCloudId
     }
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- nxJsonPath is join(context.root, 'nx.json') under the trusted Nx workspace root
     writeFileSync(nxJsonPath, `${JSON.stringify(nxJson, null, 2)}\n`, 'utf8')
   }
 

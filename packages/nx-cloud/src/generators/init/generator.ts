@@ -51,7 +51,7 @@ export async function initGenerator(
   const checklist = [
     '1. The plugin is registered — the root project now has an `nx-cloud-rotate` target.',
     '2. Rotate the Nx Cloud organization when the quota is exhausted:',
-    '   bunx nx run <root-project>:nx-cloud-rotate',
+    '   bunx nx run {root-project}:nx-cloud-rotate',
     '3. Commit the updated nx.json — CI then points at the fresh org.',
     '4. Delete the old organization manually at https://cloud.nx.app (no public API exists).',
   ]
