@@ -141,9 +141,8 @@ describe('initGenerator', () => {
 
     await initGenerator(tree as unknown as Tree, {})
 
-    const text = tree.read('nx.json') ?? ''
-    expect(text).toContain('// keep me')
-    expect(text).toContain('"other-plugin"')
-    expect(text).toContain('@nx-devkit/nx-cloud')
+    expect(tree.read('nx.json')).toBe(
+      '{\n  // keep me\n  "plugins": [\n    "other-plugin",\n    {\n      "options": {},\n      "plugin": "@nx-devkit/nx-cloud"\n    }\n  ]\n}\n',
+    )
   })
 })
