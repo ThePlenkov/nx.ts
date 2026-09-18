@@ -230,4 +230,71 @@ describe('publishExecutor', () => {
       'requires a committed semver version',
     )
   })
+
+  it('treats npm prerelease beta.10 as ahead of local beta.2 (semver, not lexical)', async () => {
+    const dir = makePkgDir('@test/pkg', '1.0.0-beta.2')
+    mockSpawn.mockImplementation((cmd: string, args: string[]) => {
+      if (cmd === 'npm' && args[0] === 'view') return ok('1.0.0-beta.10')
+      if (cmd === 'git' && args[0] === 'ls-remote') return fail('not found')
+      return ok()
+    })
+
+    const result = await publishExecutor({ packagePath: dir, version: 'patch' })
+    expect(result.version).toBe('1.0.0-beta.10')
+  })
+
+  it('stages a package-local package-lock.json in the bump commit', async () => {
+    const dir = makePkgDir('@test/pkg', '0.4.1'),
+      calls: string[][] = []
+    writeFileSync(join(dir, 'package-lock.json'), '{}')
+    mockSpawn.mockImplementation((cmd: string, args: string[]) => {
+      calls.push([cmd, ...args])
+      if (cmd === 'npm' && args[0] === 'view') return ok('0.4.1')
+      if (cmd === 'git' && args[0] === 'ls-remote') return fail('not found')
+      if (cmd === 'git' && args[0] === 'diff') return fail('diff')
+      if (cmd === 'gh' && args[0] === 'pr') return ok('https://github.com/x/y/pull/1')
+      return ok()
+    })
+
+    await publishExecutor({ packagePath: dir, version: 'patch', mode: 'bump' })
+    const joined = calls.map((c) => c.join(' '))
+    expect(joined).toContainEqual(`git add ${dir}/package-lock.json`)
+  })
+
+  it('mode=bump cuts the release branch from origin/<branch>, not current HEAD', async () => {
+    const dir = makePkgDir('@test/pkg', '0.4.1'),
+      calls: string[][] = []
+    mockSpawn.mockImplementation((cmd: string, args: string[]) => {
+      calls.push([cmd, ...args])
+      if (cmd === 'npm' && args[0] === 'view') return ok('0.4.1')
+      if (cmd === 'git' && args[0] === 'ls-remote') return fail('not found')
+      if (cmd === 'git' && args[0] === 'diff') return fail('diff')
+      if (cmd === 'gh' && args[0] === 'pr') return ok('https://github.com/x/y/pull/1')
+      return ok()
+    })
+
+    await publishExecutor({ packagePath: dir, version: 'patch', mode: 'bump' })
+    const joined = calls.map((c) => c.join(' '))
+    expect(joined).toContainEqual('git fetch origin main')
+    expect(joined).toContainEqual('git checkout -B release/v0.4.2 origin/main')
+  })
+
+  it('mode=full tags after rebase so the tag points at the pushed commit', async () => {
+    const dir = makePkgDir('@test/pkg', '0.4.1'),
+      calls: string[][] = []
+    mockSpawn.mockImplementation((cmd: string, args: string[]) => {
+      calls.push([cmd, ...args])
+      if (cmd === 'npm' && args[0] === 'view') return ok('0.4.1')
+      if (cmd === 'git' && args[0] === 'ls-remote') return fail('not found')
+      if (cmd === 'git' && args[0] === 'diff') return fail('diff')
+      return ok()
+    })
+
+    await publishExecutor({ packagePath: dir, version: 'patch' })
+    const joined = calls.map((c) => c.join(' ')),
+      rebaseIdx = joined.indexOf('git rebase origin/main'),
+      tagIdx = joined.indexOf('git tag v0.4.2')
+    expect(rebaseIdx).toBeGreaterThanOrEqual(0)
+    expect(tagIdx).toBeGreaterThan(rebaseIdx)
+  })
 })

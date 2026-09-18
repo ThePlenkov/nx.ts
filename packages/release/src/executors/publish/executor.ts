@@ -166,7 +166,8 @@ function compareSemver(a: string, b: string): number {
   if (aPre === bPre) return 0
   if (!aPre) return 1
   if (!bPre) return -1
-  return aPre < bPre ? -1 : 1
+  // Numeric-aware compare so beta.10 > beta.2 (semver identifier order)
+  return aPre.localeCompare(bPre, 'en', { numeric: true }) < 0 ? -1 : 1
 }
 
 function bumpSemver(base: string, kind: 'patch' | 'minor' | 'major'): string {
@@ -196,8 +197,10 @@ function stampVersion(packagePath: string, version: string): void {
 
 function commitBumpFiles(packagePath: string, version: string): void {
   execOrThrow('git', ['add', `${packagePath}/package.json`])
-  if (existsSync('package-lock.json')) {
-    execOrThrow('git', ['add', 'package-lock.json'])
+  const lockfiles = ['package-lock.json']
+  if (packagePath !== '.') lockfiles.push(`${packagePath}/package-lock.json`)
+  for (const lockfile of lockfiles) {
+    if (existsSync(lockfile)) execOrThrow('git', ['add', lockfile])
   }
   const diffResult = exec('git', ['diff', '--cached', '--quiet'])
   if (!diffResult.ok) {
@@ -229,7 +232,8 @@ function runBumpMode(
     throw new Error('Working tree is dirty — commit or stash changes before bump mode')
   }
   gitConfigBot()
-  execOrThrow('git', ['checkout', '-B', releaseBranch])
+  execOrThrow('git', ['fetch', 'origin', resolved.branch])
+  execOrThrow('git', ['checkout', '-B', releaseBranch, `origin/${resolved.branch}`])
   stampVersion(resolved.packagePath, nextVersion)
   commitBumpFiles(resolved.packagePath, nextVersion)
   execOrThrow('git', ['push', 'origin', releaseBranch])
@@ -287,10 +291,6 @@ function tagAndPush(
   if (resolved.mode === 'full') {
     gitConfigBot()
     commitBumpFiles(resolved.packagePath, nextVersion)
-  }
-  execOrThrow('git', ['tag', tag])
-  result.tagged = true
-  if (resolved.mode === 'full') {
     execOrThrow('git', ['fetch', 'origin', resolved.branch])
     const rebaseResult = exec('git', ['rebase', `origin/${resolved.branch}`])
     if (!rebaseResult.ok) {
@@ -301,6 +301,8 @@ function tagAndPush(
       throw new Error(`Push to ${resolved.branch} failed: ${pushResult.stderr}`)
     }
   }
+  execOrThrow('git', ['tag', tag])
+  result.tagged = true
   const tagPushResult = exec('git', ['push', 'origin', tag])
   if (!tagPushResult.ok) {
     throw new Error(`Tag push failed: ${tagPushResult.stderr}`)
