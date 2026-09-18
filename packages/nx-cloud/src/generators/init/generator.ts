@@ -1,4 +1,5 @@
 import type { GeneratorCallback, Tree } from '@nx/devkit'
+import { parse, type ParseError, printParseErrorCode } from 'jsonc-parser'
 
 export interface NxCloudInitOptions {
   pluginPath?: string
@@ -14,11 +15,16 @@ function readJson(tree: Tree, path: string): Record<string, unknown> | null {
   if (text == null) {
     return null
   }
-  try {
-    return JSON.parse(text) as Record<string, unknown>
-  } catch (error) {
-    throw new Error(`Cannot parse ${path}: ${(error as Error).message}`, { cause: error })
+  const errors: ParseError[] = []
+  const data = parse(text, errors, { allowTrailingComma: true }) as unknown
+  if (errors.length > 0) {
+    const { error, offset } = errors[0]!
+    throw new Error(`Cannot parse ${path}: ${printParseErrorCode(error)} at offset ${offset}`)
   }
+  if (typeof data !== 'object' || data === null || Array.isArray(data)) {
+    throw new Error(`Cannot parse ${path}: expected a JSON object`)
+  }
+  return data as Record<string, unknown>
 }
 
 function writeJson(tree: Tree, path: string, value: unknown): void {
@@ -46,14 +52,23 @@ function registerPlugin(tree: Tree, pluginPath: string): void {
   writeJson(tree, 'nx.json', nxJson)
 }
 
+function resolveRootProjectName(tree: Tree): string | undefined {
+  // Nx names the root project from project.json, then nx.json, then package.json.
+  for (const path of ['project.json', 'nx.json', 'package.json']) {
+    const name = readJson(tree, path)?.name
+    if (typeof name === 'string' && name) {
+      return name
+    }
+  }
+  return undefined
+}
+
 export async function initGenerator(
   tree: Tree,
   options: NxCloudInitOptions = {},
 ): Promise<GeneratorCallback> {
   const pluginPath = options.pluginPath ?? DEFAULT_PLUGIN_PATH
-  const rootProject = readJson(tree, 'package.json')?.name
-  const projectName =
-    typeof rootProject === 'string' && rootProject ? rootProject : '{root-project}'
+  const projectName = resolveRootProjectName(tree) ?? '{root-project}'
 
   registerPlugin(tree, pluginPath)
 

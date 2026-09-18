@@ -321,9 +321,42 @@ describe('rotateExecutor', () => {
 
     await rotateExecutor({}, { root: workspace })
 
-    const text = readFileSync(join(workspace, 'nx.json'), 'utf8')
-    expect(text).toContain('// workspace config')
-    expect(text).toContain('"nxCloudId": "ws_new123"')
-    expect(text).toContain('"a": ["x"]')
+    expect(readFileSync(join(workspace, 'nx.json'), 'utf8')).toBe(
+      '{\n  "nxCloudId": "ws_new123",\n  // workspace config\n  "defaultBase": "main",\n  "a": ["x"]\n}\n',
+    )
+  })
+
+  it('detects indent past a leading block comment', async () => {
+    rmSync(workspace, { force: true, recursive: true })
+    const root = mkdtempSync(join(tmpdir(), 'nx-cloud-rotate-'))
+    writeFileSync(
+      join(root, 'nx.json'),
+      '{\n  /*\n   * Nx workspace\n   */\n  "defaultBase": "main"\n}\n',
+    )
+    writeFileSync(join(root, 'package.json'), JSON.stringify({ name: 'my-workspace' }))
+    workspace = root
+
+    await rotateExecutor({}, { root: workspace })
+
+    expect(readFileSync(join(workspace, 'nx.json'), 'utf8')).toBe(
+      '{\n  "nxCloudId": "ws_new123",\n  /*\n   * Nx workspace\n   */\n  "defaultBase": "main"\n}\n',
+    )
+  })
+
+  it('inserts with CRLF line endings when the file uses them', async () => {
+    rmSync(workspace, { force: true, recursive: true })
+    const root = mkdtempSync(join(tmpdir(), 'nx-cloud-rotate-'))
+    writeFileSync(
+      join(root, 'nx.json'),
+      '{\r\n  "$schema": "x",\r\n  "defaultBase": "main"\r\n}\r\n',
+    )
+    writeFileSync(join(root, 'package.json'), JSON.stringify({ name: 'my-workspace' }))
+    workspace = root
+
+    await rotateExecutor({}, { root: workspace })
+
+    expect(readFileSync(join(workspace, 'nx.json'), 'utf8')).toBe(
+      '{\r\n  "$schema": "x",\r\n  "nxCloudId": "ws_new123",\r\n  "defaultBase": "main"\r\n}\r\n',
+    )
   })
 })

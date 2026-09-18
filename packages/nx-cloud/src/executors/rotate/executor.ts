@@ -76,7 +76,7 @@ function detectFormatting(text: string): {
   formattingOptions: { eol: string; insertSpaces: boolean; tabSize: number }
   getInsertionIndex: (properties: string[]) => number
 } {
-  const match = /\n([ \t]+)\S/.exec(text)
+  const match = /\n([ \t]+)"/.exec(text)
   const indent = match?.[1] ?? '  '
   return {
     formattingOptions: {

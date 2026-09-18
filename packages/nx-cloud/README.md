@@ -33,7 +33,7 @@ What it does:
 
 ## Deleting the old organization
 
-There is **no public API or CLI command** to delete an Nx Cloud organization — the server swagger was removed from the docs explicitly. Delete it manually at https://cloud.nx.app (organization settings → danger zone), or leave it: an exhausted free org costs nothing. The previous binding is printed once, masked, at rotation time and is not persisted anywhere — copy it before closing the terminal if you need it to identify the old org.
+There is **no public API or CLI command** to delete an Nx Cloud organization — the server swagger was removed from the docs explicitly. Delete it manually at https://cloud.nx.app (organization settings → danger zone), or leave it: an exhausted free org costs nothing. The previous binding is reported once, masked to its first four characters, and is not persisted — enough to spot the old org in the dashboard list; the full value is unrecoverable once `nx.json` is rewritten.
 
 ## Options
 

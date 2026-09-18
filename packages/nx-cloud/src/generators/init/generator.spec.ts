@@ -24,6 +24,20 @@ function createTree(): MemTree {
   return tree
 }
 
+async function captureLogs(run: () => Promise<unknown>): Promise<string[]> {
+  const lines: string[] = []
+  const original = console.log
+  console.log = (msg: unknown) => {
+    lines.push(String(msg))
+  }
+  try {
+    await run()
+  } finally {
+    console.log = original
+  }
+  return lines
+}
+
 describe('initGenerator', () => {
   it('registers @nx-devkit/nx-cloud in nx.json plugins', async () => {
     const tree = createTree()
@@ -94,17 +108,30 @@ describe('initGenerator', () => {
   it('prints the real root project name in the checklist', async () => {
     const tree = createTree()
     tree.write('package.json', JSON.stringify({ name: 'my-workspace' }))
-    const lines: string[] = []
-    const original = console.log
-    console.log = (msg: unknown) => {
-      lines.push(String(msg))
-    }
-    try {
-      await initGenerator(tree as unknown as Tree, {})
-    } finally {
-      console.log = original
-    }
+    const lines = await captureLogs(async () => initGenerator(tree as unknown as Tree, {}))
 
     expect(lines.join('\n')).toContain('my-workspace:nx-cloud-rotate')
+  })
+
+  it('prints a custom pluginPath in the checklist', async () => {
+    const tree = createTree()
+
+    const lines = await captureLogs(async () =>
+      initGenerator(tree as unknown as Tree, {
+        pluginPath: './packages/nx-cloud/src/plugin.ts',
+      }),
+    )
+
+    expect(lines.join('\n')).toContain('./packages/nx-cloud/src/plugin.ts')
+  })
+
+  it('prefers nx.json name over package.json name for the root project', async () => {
+    const tree = createTree()
+    tree.write('nx.json', JSON.stringify({ name: 'ws-name' }))
+    tree.write('package.json', JSON.stringify({ name: 'pkg-name' }))
+
+    const lines = await captureLogs(async () => initGenerator(tree as unknown as Tree, {}))
+
+    expect(lines.join('\n')).toContain('ws-name:nx-cloud-rotate')
   })
 })

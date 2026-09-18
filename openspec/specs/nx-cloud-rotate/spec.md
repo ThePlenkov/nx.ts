@@ -44,7 +44,7 @@ When the v2 endpoint responds with HTTP 404, the executor MUST call `{cloudUrl}/
 - **THEN** the executor calls the v1 endpoint instead of throwing
 
 ### Requirement: Error propagation
-The executor MUST fail when the API returns a non-404 HTTP error or a response body containing a `message` string, and MUST NOT modify `nx.json` in that case.
+The executor MUST fail when the API returns a non-404 HTTP error or a response body containing a `message` string — except a v2 HTTP 404, which triggers the v1 fallback — and MUST NOT modify `nx.json` in that case.
 
 #### Scenario: Server error
 - **WHEN** the v2 endpoint returns HTTP 500 or a body `{ message: "boom" }`
