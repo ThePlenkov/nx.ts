@@ -17,6 +17,12 @@
       "type": "string",
       "description": "Version to release (x.y.z, or patch|minor|major vs npm latest). Default: patch."
     },
+    "mode": {
+      "type": "string",
+      "enum": ["full", "bump", "publish"],
+      "description": "full: publish → bump commit + tag → push branch + tag → release. bump: commit the next version on release/v<x.y.z>, push the branch, open a PR (no publish/tag). publish: take the committed package.json version, publish, tag HEAD, push only the tag, create the release. Default: full.",
+      "default": "full"
+    },
     "dryRun": {
       "type": "boolean",
       "description": "If true, do not publish, tag, push, or create a release. Default: false.",
