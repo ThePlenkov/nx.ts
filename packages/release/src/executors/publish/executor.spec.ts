@@ -134,15 +134,15 @@ describe('publishExecutor', () => {
   })
 
   it('mode=bump creates a release branch + PR, never publishes or tags', async () => {
-    const dir = makePkgDir('@test/pkg', '0.4.1')
-    const calls: string[][] = []
+    const dir = makePkgDir('@test/pkg', '0.4.1'),
+      calls: string[][] = []
     mockSpawn.mockImplementation((cmd: string, args: string[]) => {
       calls.push([cmd, ...args])
       if (cmd === 'npm' && args[0] === 'view') return ok('0.4.1')
       if (cmd === 'git' && args[0] === 'ls-remote' && args.includes('--heads'))
         return fail('no branch')
       if (cmd === 'git' && args[0] === 'ls-remote' && args.includes('--tags')) return fail('no tag')
-      if (cmd === 'git' && args[0] === 'diff') return fail('diff') // non-empty staged diff
+      if (cmd === 'git' && args[0] === 'diff') return fail('diff') // Non-empty staged diff
       if (cmd === 'gh' && args[0] === 'pr' && args[1] === 'create')
         return ok('https://github.com/x/y/pull/1')
       return ok()
@@ -178,8 +178,8 @@ describe('publishExecutor', () => {
   })
 
   it('mode=publish uses package.json version and never pushes the branch', async () => {
-    const dir = makePkgDir('@test/pkg', '0.4.2')
-    const calls: string[][] = []
+    const dir = makePkgDir('@test/pkg', '0.4.2'),
+      calls: string[][] = []
     mockSpawn.mockImplementation((cmd: string, args: string[]) => {
       calls.push([cmd, ...args])
       if (cmd === 'npm' && args[0] === 'view') return ok('0.4.1')

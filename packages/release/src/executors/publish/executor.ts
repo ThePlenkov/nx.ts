@@ -57,6 +57,12 @@ interface ResolvedOptions {
   provenance: boolean
 }
 
+interface ReleaseState {
+  alreadyPublished: boolean
+  alreadyTagged: boolean
+  alreadyReleased: boolean
+}
+
 function readPackageJson(packagePath: string): { name: string; version: string } {
   const pkgPath = `${packagePath}/package.json`
   if (!existsSync(pkgPath)) {
@@ -65,9 +71,9 @@ function readPackageJson(packagePath: string): { name: string; version: string }
   let raw: { name?: string; version?: string }
   try {
     raw = JSON.parse(readFileSync(pkgPath, 'utf-8'))
-  } catch (err) {
-    throw new Error(`Invalid JSON in ${pkgPath}: ${(err as Error).message}`, {
-      cause: err,
+  } catch (error) {
+    throw new Error(`Invalid JSON in ${pkgPath}: ${(error as Error).message}`, {
+      cause: error,
     })
   }
   if (!raw.name) {
@@ -76,7 +82,7 @@ function readPackageJson(packagePath: string): { name: string; version: string }
   return { name: raw.name, version: raw.version ?? '0.0.0' }
 }
 
-function runSync(
+function exec(
   cmd: string,
   args: string[],
   opts: { cwd?: string; timeout?: number } = {},
@@ -100,12 +106,12 @@ function runSync(
   }
 }
 
-function runSyncOrThrow(
+function execOrThrow(
   cmd: string,
   args: string[],
   opts: { cwd?: string; timeout?: number } = {},
 ): { stdout: string; stderr: string } {
-  const result = runSync(cmd, args, opts)
+  const result = exec(cmd, args, opts)
   if (!result.ok) {
     throw new Error(`${cmd} ${args.join(' ')} failed: ${result.stderr}`)
   }
@@ -113,16 +119,16 @@ function runSyncOrThrow(
 }
 
 function npmViewVersion(packageName: string, registry: string): string | null {
-  const result = runSync('npm', ['view', packageName, 'version', '--registry', registry])
+  const result = exec('npm', ['view', packageName, 'version', '--registry', registry])
   return result.ok && result.stdout ? result.stdout : null
 }
 
 function gitRemoteTagExists(tag: string): boolean {
-  return runSync('git', ['ls-remote', '--exit-code', '--tags', 'origin', `refs/tags/${tag}`]).ok
+  return exec('git', ['ls-remote', '--exit-code', '--tags', 'origin', `refs/tags/${tag}`]).ok
 }
 
 function ghReleaseExists(tag: string): boolean {
-  return runSync('gh', ['release', 'view', tag]).ok
+  return exec('gh', ['release', 'view', tag]).ok
 }
 
 function computeNextVersion(
@@ -174,8 +180,8 @@ function bumpSemver(base: string, kind: 'patch' | 'minor' | 'major'): string {
 }
 
 function gitConfigBot(): void {
-  runSyncOrThrow('git', ['config', 'user.name', 'github-actions[bot]'])
-  runSyncOrThrow('git', [
+  execOrThrow('git', ['config', 'user.name', 'github-actions[bot]'])
+  execOrThrow('git', [
     'config',
     'user.email',
     '41898282+github-actions[bot]@users.noreply.github.com',
@@ -183,30 +189,30 @@ function gitConfigBot(): void {
 }
 
 function stampVersion(packagePath: string, version: string): void {
-  runSyncOrThrow('npm', ['version', version, '--no-git-tag-version', '--allow-same-version'], {
+  execOrThrow('npm', ['version', version, '--no-git-tag-version', '--allow-same-version'], {
     cwd: packagePath,
   })
 }
 
 function commitBumpFiles(packagePath: string, version: string): void {
-  runSyncOrThrow('git', ['add', `${packagePath}/package.json`])
+  execOrThrow('git', ['add', `${packagePath}/package.json`])
   if (existsSync('package-lock.json')) {
-    runSyncOrThrow('git', ['add', 'package-lock.json'])
+    execOrThrow('git', ['add', 'package-lock.json'])
   }
-  const diffResult = runSync('git', ['diff', '--cached', '--quiet'])
+  const diffResult = exec('git', ['diff', '--cached', '--quiet'])
   if (!diffResult.ok) {
-    runSyncOrThrow('git', ['commit', '-m', `chore: release ${version}`])
+    execOrThrow('git', ['commit', '-m', `chore: release ${version}`])
   }
 }
 
-// bump mode: cut release/v<x.y.z>, commit the stamp, push the branch, open a PR — no publish/tag
+// Bump mode: cut release/v<x.y.z>, commit the stamp, push the branch, open a PR — no publish/tag
 function runBumpMode(
   resolved: ResolvedOptions,
   nextVersion: string,
   result: PublishResult,
 ): PublishResult {
   const releaseBranch = `release/v${nextVersion}`
-  const branchExists = runSync('git', [
+  const branchExists = exec('git', [
     'ls-remote',
     '--exit-code',
     '--heads',
@@ -218,16 +224,16 @@ function runBumpMode(
     result.skipped.push('release branch already exists')
     return result
   }
-  const dirty = runSync('git', ['status', '--porcelain'])
+  const dirty = exec('git', ['status', '--porcelain'])
   if (dirty.ok && dirty.stdout) {
     throw new Error('Working tree is dirty — commit or stash changes before bump mode')
   }
   gitConfigBot()
-  runSyncOrThrow('git', ['checkout', '-B', releaseBranch])
+  execOrThrow('git', ['checkout', '-B', releaseBranch])
   stampVersion(resolved.packagePath, nextVersion)
   commitBumpFiles(resolved.packagePath, nextVersion)
-  runSyncOrThrow('git', ['push', 'origin', releaseBranch])
-  const prResult = runSync('gh', [
+  execOrThrow('git', ['push', 'origin', releaseBranch])
+  const prResult = exec('gh', [
     'pr',
     'create',
     '--title',
@@ -262,7 +268,7 @@ function publishToNpm(
   const publishArgs = ['publish', '--access', 'public']
   if (resolved.provenance) publishArgs.push('--provenance')
   publishArgs.push('--registry', resolved.registry)
-  const publishResult = runSync('npm', publishArgs, {
+  const publishResult = exec('npm', publishArgs, {
     cwd: resolved.packagePath,
     timeout: 180_000,
   })
@@ -282,27 +288,27 @@ function tagAndPush(
     gitConfigBot()
     commitBumpFiles(resolved.packagePath, nextVersion)
   }
-  runSyncOrThrow('git', ['tag', tag])
+  execOrThrow('git', ['tag', tag])
   result.tagged = true
   if (resolved.mode === 'full') {
-    runSyncOrThrow('git', ['fetch', 'origin', resolved.branch])
-    const rebaseResult = runSync('git', ['rebase', `origin/${resolved.branch}`])
+    execOrThrow('git', ['fetch', 'origin', resolved.branch])
+    const rebaseResult = exec('git', ['rebase', `origin/${resolved.branch}`])
     if (!rebaseResult.ok) {
       throw new Error(`Rebase failed: ${rebaseResult.stderr}`)
     }
-    const pushResult = runSync('git', ['push', 'origin', resolved.branch])
+    const pushResult = exec('git', ['push', 'origin', resolved.branch])
     if (!pushResult.ok) {
       throw new Error(`Push to ${resolved.branch} failed: ${pushResult.stderr}`)
     }
   }
-  const tagPushResult = runSync('git', ['push', 'origin', tag])
+  const tagPushResult = exec('git', ['push', 'origin', tag])
   if (!tagPushResult.ok) {
     throw new Error(`Tag push failed: ${tagPushResult.stderr}`)
   }
 }
 
 function createGithubRelease(resolved: ResolvedOptions, tag: string, result: PublishResult): void {
-  const releaseResult = runSync('gh', [
+  const releaseResult = exec('gh', [
     'release',
     'create',
     tag,
@@ -320,14 +326,13 @@ function createGithubRelease(resolved: ResolvedOptions, tag: string, result: Pub
   }
 }
 
-export async function publishExecutor(
-  options: NxReleasePublishOptions = {},
-): Promise<PublishResult> {
-  const packagePath = options.packagePath ?? '.'
-  const pkg = readPackageJson(packagePath)
-  const resolved: ResolvedOptions = {
+function resolveOptions(
+  options: NxReleasePublishOptions,
+  pkg: { name: string; version: string },
+): ResolvedOptions {
+  return {
     packageName: options.packageName ?? pkg.name,
-    packagePath,
+    packagePath: options.packagePath ?? '.',
     version: options.version ?? 'patch',
     mode: options.mode ?? 'full',
     dryRun: options.dryRun ?? false,
@@ -336,8 +341,10 @@ export async function publishExecutor(
     generateNotes: options.generateNotes ?? true,
     provenance: options.provenance ?? true,
   }
+}
 
-  const result: PublishResult = {
+function emptyResult(): PublishResult {
+  return {
     success: false,
     version: '',
     published: false,
@@ -346,26 +353,45 @@ export async function publishExecutor(
     prCreated: false,
     skipped: [],
   }
+}
 
-  // 1. Resolve target version (publish mode takes the committed package.json version)
-  const nextVersion =
-    resolved.mode === 'publish'
-      ? pkg.version
-      : computeNextVersion(resolved.version, resolved.packageName, pkg.version, resolved.registry)
+function checkReleaseState(
+  resolved: ResolvedOptions,
+  tag: string,
+  nextVersion: string,
+): ReleaseState {
+  const alreadyPublished = npmViewVersion(resolved.packageName, resolved.registry) === nextVersion
+  const alreadyTagged = gitRemoteTagExists(tag)
+  const alreadyReleased = alreadyTagged && ghReleaseExists(tag)
+  return { alreadyPublished, alreadyTagged, alreadyReleased }
+}
+
+export async function publishExecutor(
+  options: NxReleasePublishOptions = {},
+): Promise<PublishResult> {
+  const pkg = readPackageJson(options.packagePath ?? '.')
+  const resolved = resolveOptions(options, pkg)
+  const result = emptyResult()
+
   if (resolved.mode === 'publish' && (pkg.version === '0.0.0' || !SEMVER_RE.test(pkg.version))) {
     throw new Error(
       `publish mode requires a committed semver version in package.json (got "${pkg.version}")`,
     )
   }
 
+  // Publish mode takes the committed package.json version
+  const nextVersion =
+    resolved.mode === 'publish'
+      ? pkg.version
+      : computeNextVersion(resolved.version, resolved.packageName, pkg.version, resolved.registry)
   result.version = nextVersion
   const tag = `v${nextVersion}`
 
-  // 2. Check if already published
-  const npmVersion = npmViewVersion(resolved.packageName, resolved.registry)
-  const alreadyPublished = npmVersion === nextVersion
-  const alreadyTagged = gitRemoteTagExists(tag)
-  const alreadyReleased = alreadyTagged && ghReleaseExists(tag)
+  const { alreadyPublished, alreadyTagged, alreadyReleased } = checkReleaseState(
+    resolved,
+    tag,
+    nextVersion,
+  )
 
   if (alreadyPublished && alreadyTagged && alreadyReleased) {
     result.success = true
@@ -383,12 +409,11 @@ export async function publishExecutor(
     return runBumpMode(resolved, nextVersion, result)
   }
 
-  // 3. Stamp package.json version (full mode only; publish mode takes it as committed)
+  // Stamp package.json version (full mode only; publish mode takes it as committed)
   if (!alreadyPublished && resolved.mode === 'full') {
     stampVersion(resolved.packagePath, nextVersion)
   }
 
-  // 4-6. Publish, tag, push (tag-only in publish mode)
   publishToNpm(resolved, result, alreadyPublished)
   if (!alreadyTagged) {
     tagAndPush(resolved, tag, nextVersion, result)
@@ -396,7 +421,6 @@ export async function publishExecutor(
     result.skipped.push('already tagged')
   }
 
-  // 7. Create GitHub Release (if not already released)
   if (resolved.generateNotes && !alreadyReleased) {
     createGithubRelease(resolved, tag, result)
   }
