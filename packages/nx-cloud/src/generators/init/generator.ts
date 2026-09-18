@@ -1,5 +1,6 @@
 import type { GeneratorCallback, Tree } from '@nx/devkit'
-import { parse, type ParseError, printParseErrorCode } from 'jsonc-parser'
+import { applyEdits, modify } from 'jsonc-parser'
+import { detectIndent, parseJsonObject } from '../../jsonc.ts'
 
 export interface NxCloudInitOptions {
   pluginPath?: string
@@ -15,26 +16,12 @@ function readJson(tree: Tree, path: string): Record<string, unknown> | null {
   if (text == null) {
     return null
   }
-  const errors: ParseError[] = []
-  const data = parse(text, errors, { allowTrailingComma: true }) as unknown
-  if (errors.length > 0) {
-    const details = errors
-      .map((e) => `${printParseErrorCode(e.error)} at offset ${e.offset}`)
-      .join('; ')
-    throw new Error(`Cannot parse ${path}: ${details}`)
-  }
-  if (typeof data !== 'object' || data === null || Array.isArray(data)) {
-    throw new Error(`Cannot parse ${path}: expected a JSON object`)
-  }
-  return data as Record<string, unknown>
-}
-
-function writeJson(tree: Tree, path: string, value: unknown): void {
-  tree.write(path, `${JSON.stringify(value, null, 2)}\n`)
+  return parseJsonObject(text, path)
 }
 
 function registerPlugin(tree: Tree, pluginPath: string): void {
-  const nxJson = readJson(tree, 'nx.json') ?? {}
+  const text = tree.exists('nx.json') ? tree.read('nx.json', 'utf8') : null
+  const nxJson = text == null ? {} : parseJsonObject(text, 'nx.json')
   const plugins = Array.isArray(nxJson.plugins) ? (nxJson.plugins as unknown[]) : []
   const alreadyRegistered = plugins.some(
     (entry) =>
@@ -49,9 +36,22 @@ function registerPlugin(tree: Tree, pluginPath: string): void {
     return
   }
 
-  plugins.push({ options: {}, plugin: pluginPath })
-  nxJson.plugins = plugins
-  writeJson(tree, 'nx.json', nxJson)
+  const entry = { options: {}, plugin: pluginPath }
+  if (text == null) {
+    tree.write('nx.json', `${JSON.stringify({ plugins: [entry] }, null, 2)}\n`)
+    return
+  }
+  const formattingOptions = detectIndent(text)
+  const updated = applyEdits(
+    text,
+    modify(
+      text,
+      Array.isArray(nxJson.plugins) ? ['plugins', plugins.length] : ['plugins'],
+      Array.isArray(nxJson.plugins) ? entry : [entry],
+      { formattingOptions, isArrayInsertion: true },
+    ),
+  )
+  tree.write('nx.json', updated)
 }
 
 function resolveRootProjectName(tree: Tree): string | undefined {

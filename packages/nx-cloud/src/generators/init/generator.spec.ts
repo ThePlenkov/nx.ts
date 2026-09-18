@@ -134,4 +134,16 @@ describe('initGenerator', () => {
 
     expect(lines.join('\n')).toContain('ws-name:nx-cloud-rotate')
   })
+
+  it('preserves comments and formatting in nx.json', async () => {
+    const tree = new MemTree()
+    tree.write('nx.json', '{\n  // keep me\n  "plugins": ["other-plugin"]\n}\n')
+
+    await initGenerator(tree as unknown as Tree, {})
+
+    const text = tree.read('nx.json') ?? ''
+    expect(text).toContain('// keep me')
+    expect(text).toContain('"other-plugin"')
+    expect(text).toContain('@nx-devkit/nx-cloud')
+  })
 })

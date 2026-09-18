@@ -1,7 +1,8 @@
 import { spawnSync } from 'node:child_process'
 import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { applyEdits, modify, parse, type ParseError, printParseErrorCode } from 'jsonc-parser'
+import { applyEdits, modify } from 'jsonc-parser'
+import { detectIndent, parseJsonObject } from '../../jsonc.ts'
 
 export interface NxCloudRotateOptions {
   /** Name sent to create-org-and-workspace. Default: root package.json `name`. */
@@ -55,37 +56,16 @@ function readTextFile(path: string): string {
   }
 }
 
-function parseJsonObject(text: string, path: string): Record<string, unknown> {
-  const errors: ParseError[] = []
-  const data = parse(text, errors, { allowTrailingComma: true }) as unknown
-  if (errors.length > 0) {
-    const details = errors
-      .map((e) => `${printParseErrorCode(e.error)} at offset ${e.offset}`)
-      .join('; ')
-    throw new Error(`Cannot parse ${path}: ${details}`)
-  }
-  if (typeof data !== 'object' || data === null || Array.isArray(data)) {
-    throw new Error(`Cannot parse ${path}: expected a JSON object`)
-  }
-  return data as Record<string, unknown>
-}
-
 function readJson(path: string): Record<string, unknown> {
   return parseJsonObject(readTextFile(path), path)
 }
 
 function detectFormatting(text: string): {
   formattingOptions: { eol: string; insertSpaces: boolean; tabSize: number }
-  getInsertionIndex: (properties: string[]) => number
+  getInsertionIndex: () => number
 } {
-  const match = /\n([ \t]+)"/.exec(text)
-  const indent = match?.[1] ?? '  '
   return {
-    formattingOptions: {
-      eol: text.includes('\r\n') ? '\r\n' : '\n',
-      insertSpaces: !indent.startsWith('\t'),
-      tabSize: indent.startsWith('\t') ? 1 : indent.length,
-    },
+    formattingOptions: detectIndent(text),
     // Inserts go first so the reserialized sibling is the former first property.
     // That keeps compact values and end-of-line comments untouched.
     getInsertionIndex: () => 0,
