@@ -1,7 +1,7 @@
 # nx-cloud-rotate Specification
 
 ## Purpose
-TBD - created by archiving change nx-cloud-rotate. Update Purpose after archive.
+Rotates a workspace's Nx Cloud binding: creates a fresh organization + workspace via the create-org-and-workspace API and rebinds `nx.json` to it. Exposed as an inferred `nx-cloud-rotate` target on the workspace-root project.
 ## Requirements
 ### Requirement: nx.json triggers root-project inference
 The plugin MUST use `createNodesV2` with trigger file `nx.json` and infer a target only for the workspace-root `nx.json` (directory `.`). Nested `nx.json` files MUST be ignored.
@@ -72,7 +72,7 @@ The plugin MUST NOT attempt to delete organizations — no public API exists. It
 
 #### Scenario: Previous binding reported
 - **WHEN** a workspace bound to `ws_old` is rotated
-- **THEN** the result includes `previousBinding: "ws_old"` for manual cleanup
+- **THEN** the result includes a masked `previousBinding` (e.g. `ws_o…`) for manual cleanup — the raw binding is never returned or logged
 
 ### Requirement: init generator registers the plugin
 The `init` generator MUST add `{ plugin: "@nx-devkit/nx-cloud", options: {} }` to `nx.json` plugins without duplicating an existing entry and without dropping other entries.
