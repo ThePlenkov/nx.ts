@@ -220,6 +220,10 @@ function commitBumpFiles(packagePath: string, version: string): void {
 }
 
 function assertCleanTree(): void {
+  // Any non-ignored untracked file blocks: npm publish ships whatever is on
+  // disk, so an uncommitted source file must not slip past. Build artifacts
+  // (npm pack .tgz, dist/) belong in the consumer's .gitignore — porcelain
+  // never lists ignored files.
   const dirty = exec('git', ['status', '--porcelain'])
   if (dirty.ok && dirty.stdout) {
     throw new Error('Working tree is dirty — commit or stash changes before releasing')
@@ -438,6 +442,23 @@ export async function publishExecutor(
     return runBumpMode(resolved, nextVersion, result)
   }
 
+  return runPublishPath(resolved, pkg, nextVersion, tag, result, {
+    alreadyPublished,
+    alreadyTagged,
+    alreadyReleased,
+  })
+}
+
+// Publish/full path: clean tree → stamp (full) → land bump commit (full) →
+// publish → tag → GitHub Release
+function runPublishPath(
+  resolved: ResolvedOptions,
+  pkg: { name: string; version: string },
+  nextVersion: string,
+  tag: string,
+  result: PublishResult,
+  state: ReleaseState,
+): PublishResult {
   // Publish ships the working tree — refuse to publish uncommitted changes
   assertCleanTree()
 
@@ -449,18 +470,18 @@ export async function publishExecutor(
 
   // Full mode lands the bump commit before publishing so npm, branch, and tag
   // all represent the same commit
-  if (resolved.mode === 'full' && !alreadyTagged) {
+  if (resolved.mode === 'full' && !state.alreadyTagged) {
     syncFullBranch(resolved, nextVersion)
   }
 
-  publishToNpm(resolved, result, alreadyPublished)
-  if (!alreadyTagged) {
+  publishToNpm(resolved, result, state.alreadyPublished)
+  if (!state.alreadyTagged) {
     tagAndPush(tag, result)
   } else {
     result.skipped.push('already tagged')
   }
 
-  if (resolved.generateNotes && !alreadyReleased) {
+  if (resolved.generateNotes && !state.alreadyReleased) {
     createGithubRelease(resolved, tag, result)
   }
 
