@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/schema",
+  "version": 2,
+  "title": "rotate executor",
+  "description": "Creates a fresh Nx Cloud organization + workspace via the create-org-and-workspace API and rebinds this workspace by writing the returned nxCloudId into nx.json. Deleting the old organization is a manual step (no public API exists).",
+  "type": "object",
+  "properties": {
+    "workspaceName": {
+      "type": "string",
+      "description": "Name sent to create-org-and-workspace. Default: root package.json `name`."
+    },
+    "cloudUrl": {
+      "type": "string",
+      "description": "Nx Cloud instance URL. Default: NX_CLOUD_API/NRWL_API env or https://cloud.nx.app."
+    },
+    "installationSource": {
+      "type": "string",
+      "description": "installationSource tag sent with the request.",
+      "default": "nx-devkit-nx-cloud"
+    },
+    "dryRun": {
+      "type": "boolean",
+      "description": "Call the API but do not rewrite nx.json.",
+      "default": false
+    }
+  },
+  "additionalProperties": false
+}

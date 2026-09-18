@@ -57,6 +57,20 @@
         "@nx/devkit": "^22.0.0 || ^23.0.0",
       },
     },
+    "packages/nx-cloud": {
+      "name": "@nx-devkit/nx-cloud",
+      "version": "0.0.0",
+      "devDependencies": {
+        "@nx/devkit": "23.2.1",
+        "@types/node": "^20.19.0",
+        "tsdown": "^0.22.3",
+        "typescript": "^6.0.3",
+        "vitest": "^4.1.9",
+      },
+      "peerDependencies": {
+        "@nx/devkit": "^22.0.0 || ^23.0.0",
+      },
+    },
     "packages/oxlint": {
       "name": "@nx-devkit/oxlint",
       "version": "0.1.1",
@@ -548,6 +562,8 @@
     "@nx-devkit/demo-workspace": ["@nx-devkit/demo-workspace@workspace:apps/demo"],
 
     "@nx-devkit/internal": ["@nx-devkit/internal@workspace:packages/internal"],
+
+    "@nx-devkit/nx-cloud": ["@nx-devkit/nx-cloud@workspace:packages/nx-cloud"],
 
     "@nx-devkit/oxlint": ["@nx-devkit/oxlint@workspace:packages/oxlint"],
 
