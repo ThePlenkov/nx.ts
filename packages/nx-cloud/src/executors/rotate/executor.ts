@@ -1,6 +1,8 @@
 import { spawnSync } from 'node:child_process'
 import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
+import { applyEdits, modify } from 'jsonc-parser'
+import { detectIndent, parseJsonObject } from '../../jsonc.ts'
 
 export interface NxCloudRotateOptions {
   /** Name sent to create-org-and-workspace. Default: root package.json `name`. */
@@ -45,18 +47,28 @@ function resolveCloudUrl(option: string | undefined): string {
   return `${parsed.origin}${parsed.pathname.replace(/\/+$/, '')}`
 }
 
-function readJson(path: string): Record<string, unknown> {
-  let text: string
+function readTextFile(path: string): string {
   try {
     // eslint-disable-next-line security/detect-non-literal-fs-filename -- path is join(context.root, ...) under the trusted Nx workspace root
-    text = readFileSync(path, 'utf8')
+    return readFileSync(path, 'utf8')
   } catch (error) {
     throw new Error(`Cannot read ${path}: ${(error as Error).message}`, { cause: error })
   }
-  try {
-    return JSON.parse(text) as Record<string, unknown>
-  } catch (error) {
-    throw new Error(`Cannot parse ${path}: ${(error as Error).message}`, { cause: error })
+}
+
+function readJson(path: string): Record<string, unknown> {
+  return parseJsonObject(readTextFile(path), path)
+}
+
+function detectFormatting(text: string): {
+  formattingOptions: { eol: string; insertSpaces: boolean; tabSize: number }
+  getInsertionIndex: () => number
+} {
+  return {
+    formattingOptions: detectIndent(text),
+    // Inserts go first so the reserialized sibling is the former first property.
+    // That keeps compact values and end-of-line comments untouched.
+    getInsertionIndex: () => 0,
   }
 }
 
@@ -89,8 +101,7 @@ function getNxInitDate(root: string): string {
       const oldest = result.stdout
         .split('\n')
         .map((line) => line.trim())
-        .filter(Boolean)
-        .pop()
+        .findLast(Boolean)
       if (oldest) {
         return new Date(oldest).toISOString()
       }
@@ -211,7 +222,8 @@ export async function rotateExecutor(
 ): Promise<RotateResult> {
   const resolved = resolveOptions(options, context.root)
   const nxJsonPath = join(context.root, 'nx.json')
-  const nxJson = readJson(nxJsonPath)
+  const nxJsonText = readTextFile(nxJsonPath)
+  const nxJson = parseJsonObject(nxJsonText, nxJsonPath)
   const binding = nxJson.nxCloudId ?? nxJson.nxCloudAccessToken
   let previousBinding: string | undefined
   if (typeof binding === 'string') {
@@ -228,20 +240,25 @@ export async function rotateExecutor(
   const url = v2?.url ?? v1?.url
 
   if (!resolved.dryRun) {
+    const formatting = detectFormatting(nxJsonText)
+    let updated = nxJsonText
+    const set = (key: string, value: unknown) => {
+      updated = applyEdits(updated, modify(updated, [key], value, formatting))
+    }
     if (resolved.cloudUrl !== DEFAULT_CLOUD_URL) {
-      nxJson.nxCloudUrl = resolved.cloudUrl
+      set('nxCloudUrl', resolved.cloudUrl)
     } else {
-      delete nxJson.nxCloudUrl
+      set('nxCloudUrl', undefined)
     }
     if (v2) {
-      nxJson.nxCloudId = v2.nxCloudId
-      delete nxJson.nxCloudAccessToken
+      set('nxCloudId', v2.nxCloudId)
+      set('nxCloudAccessToken', undefined)
     } else if (v1) {
-      nxJson.nxCloudAccessToken = v1.token
-      delete nxJson.nxCloudId
+      set('nxCloudAccessToken', v1.token)
+      set('nxCloudId', undefined)
     }
     // eslint-disable-next-line security/detect-non-literal-fs-filename -- nxJsonPath is join(context.root, 'nx.json') under the trusted Nx workspace root
-    writeFileSync(nxJsonPath, `${JSON.stringify(nxJson, null, 2)}\n`, 'utf8')
+    writeFileSync(nxJsonPath, updated, 'utf8')
   }
 
   if (v2) {

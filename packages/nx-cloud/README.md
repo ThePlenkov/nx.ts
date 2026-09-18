@@ -27,13 +27,13 @@ bunx nx run <root-project>:nx-cloud-rotate --workspaceName=my-workspace --dryRun
 What it does:
 
 1. Reads the current binding (`nxCloudId` / `nxCloudAccessToken`) from `nx.json`.
-2. `POST https://cloud.nx.app/nx-cloud/v2/create-org-and-workspace` — the same endpoint `nx connect-to-nx-cloud` calls. Falls back to v1 on HTTP 404.
+2. `POST {cloudUrl}/nx-cloud/v2/create-org-and-workspace` — the same endpoint `nx connect-to-nx-cloud` calls (`{cloudUrl}` defaults to `https://cloud.nx.app`, override via option or env). Falls back to `{cloudUrl}/nx-cloud/create-org-and-workspace` (v1) on HTTP 404.
 3. Writes the returned `nxCloudId` (or `nxCloudAccessToken` on v1) into `nx.json`, removing the stale counterpart key.
 4. Prints the onboarding URL so you can claim the org in the Nx Cloud dashboard.
 
 ## Deleting the old organization
 
-There is **no public API or CLI command** to delete an Nx Cloud organization — the server swagger was removed from the docs explicitly. Delete it manually at https://cloud.nx.app (organization settings → danger zone), or leave it: an exhausted free org costs nothing.
+There is **no public API or CLI command** to delete an Nx Cloud organization — the server swagger was removed from the docs explicitly. Delete it manually at https://cloud.nx.app (organization settings → danger zone), or leave it: an exhausted free org costs nothing. The previous binding is reported once, masked to its first four characters, and is not persisted — enough to spot the old org in the dashboard list; the full value is unrecoverable once `nx.json` is rewritten.
 
 ## Options
 
@@ -48,4 +48,4 @@ There is **no public API or CLI command** to delete an Nx Cloud organization —
 
 - Works unauthenticated — same trust level as `nx connect-to-nx-cloud`. The created org is *unclaimed* until you open the onboarding URL.
 - If your old org was GitHub-connected, the replacement is a standard org; VCS integration must be re-linked in the dashboard.
-- Committing `nx.json` after rotation points CI at the new org immediately (default ID access level is `read-write`).
+- Committing `nx.json` after rotation points CI at the new org immediately. **Warning:** the default `nxCloudId` grants `read-write` remote-cache access to anyone holding it — on public repos the committed ID is world-visible, so anyone can read and write your Nx Cloud cache. If that matters, rotate the org's access-level in the Nx Cloud dashboard or keep the repo private.

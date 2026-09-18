@@ -18,6 +18,11 @@ function firstProjects(result: unknown): Record<string, { targets?: Record<strin
 
 describe('createNodesV2', () => {
   let workspace: string
+
+  it('watches the nx.json glob', () => {
+    expect(createNodesV2[0]).toBe('nx.json')
+  })
+
   beforeEach(() => {
     workspace = makeWorkspace()
   })
@@ -63,7 +68,13 @@ describe('createNodesV2', () => {
 
     const projects = firstProjects(result)
 
-    expect(Object.keys(projects['.']?.targets ?? {})).toEqual(['cloud:rotate'])
+    expect(projects['.']?.targets).toEqual({
+      'cloud:rotate': {
+        cache: false,
+        executor: '@nx-devkit/nx-cloud:rotate',
+        options: {},
+      },
+    })
   })
 
   it('ignores nx.json files outside the workspace root', () => {
@@ -73,6 +84,19 @@ describe('createNodesV2', () => {
 
     const result = createNodesV2[1](
       ['packages/lib/nx.json'],
+      {},
+      {
+        nxJsonConfiguration: {},
+        workspaceRoot: workspace,
+      },
+    )
+
+    expect(result).toEqual([])
+  })
+
+  it('ignores an nx.json path escaping the workspace root', () => {
+    const result = createNodesV2[1](
+      ['../nx.json'],
       {},
       {
         nxJsonConfiguration: {},

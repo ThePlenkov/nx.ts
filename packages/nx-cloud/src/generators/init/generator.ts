@@ -1,4 +1,6 @@
 import type { GeneratorCallback, Tree } from '@nx/devkit'
+import { applyEdits, modify } from 'jsonc-parser'
+import { detectIndent, parseJsonObject } from '../../jsonc.ts'
 
 export interface NxCloudInitOptions {
   pluginPath?: string
@@ -14,19 +16,12 @@ function readJson(tree: Tree, path: string): Record<string, unknown> | null {
   if (text == null) {
     return null
   }
-  try {
-    return JSON.parse(text) as Record<string, unknown>
-  } catch (error) {
-    throw new Error(`Cannot parse ${path}: ${(error as Error).message}`, { cause: error })
-  }
-}
-
-function writeJson(tree: Tree, path: string, value: unknown): void {
-  tree.write(path, `${JSON.stringify(value, null, 2)}\n`)
+  return parseJsonObject(text, path)
 }
 
 function registerPlugin(tree: Tree, pluginPath: string): void {
-  const nxJson = readJson(tree, 'nx.json') ?? {}
+  const text = tree.exists('nx.json') ? tree.read('nx.json', 'utf8') : null
+  const nxJson = text == null ? {} : parseJsonObject(text, 'nx.json')
   const plugins = Array.isArray(nxJson.plugins) ? (nxJson.plugins as unknown[]) : []
   const alreadyRegistered = plugins.some(
     (entry) =>
@@ -41,9 +36,33 @@ function registerPlugin(tree: Tree, pluginPath: string): void {
     return
   }
 
-  plugins.push({ options: {}, plugin: pluginPath })
-  nxJson.plugins = plugins
-  writeJson(tree, 'nx.json', nxJson)
+  const entry = { options: {}, plugin: pluginPath }
+  if (text == null) {
+    tree.write('nx.json', `${JSON.stringify({ plugins: [entry] }, null, 2)}\n`)
+    return
+  }
+  const formattingOptions = detectIndent(text)
+  const updated = applyEdits(
+    text,
+    modify(
+      text,
+      Array.isArray(nxJson.plugins) ? ['plugins', plugins.length] : ['plugins'],
+      Array.isArray(nxJson.plugins) ? entry : [entry],
+      { formattingOptions, isArrayInsertion: true },
+    ),
+  )
+  tree.write('nx.json', updated)
+}
+
+function resolveRootProjectName(tree: Tree): string | undefined {
+  // Nx names the root project from project.json, then nx.json, then package.json.
+  for (const path of ['project.json', 'nx.json', 'package.json']) {
+    const name = readJson(tree, path)?.name
+    if (typeof name === 'string' && name) {
+      return name
+    }
+  }
+  return undefined
 }
 
 export async function initGenerator(
@@ -51,13 +70,14 @@ export async function initGenerator(
   options: NxCloudInitOptions = {},
 ): Promise<GeneratorCallback> {
   const pluginPath = options.pluginPath ?? DEFAULT_PLUGIN_PATH
+  const projectName = resolveRootProjectName(tree) ?? '{root-project}'
 
   registerPlugin(tree, pluginPath)
 
   const checklist = [
-    '1. The plugin is registered — the root project now has an `nx-cloud-rotate` target.',
+    `1. The plugin is registered (${pluginPath}) — the root project now has an \`nx-cloud-rotate\` target.`,
     '2. Rotate the Nx Cloud organization when the quota is exhausted:',
-    '   bunx nx run {root-project}:nx-cloud-rotate',
+    `   bunx nx run ${projectName}:nx-cloud-rotate`,
     '3. Commit the updated nx.json — CI then points at the fresh org.',
     '4. Delete the old organization manually at https://cloud.nx.app (no public API exists).',
   ]
