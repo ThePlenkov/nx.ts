@@ -1,14 +1,14 @@
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const state: {
   fetchCalls: { url: string; init: { method?: string; body?: string } | undefined }[]
   fetchResponse:
     | { status: number; body: unknown }
     | ((url: string) => { status: number; body: unknown })
-  spawnCalls: { command: string; args: string[] }[]
+  spawnCalls: { command: string; args: string[]; options: { cwd?: string } | undefined }[]
   spawnResponse: { status: number; stdout: string; stderr: string }
 } = {
   fetchCalls: [],
@@ -18,8 +18,8 @@ const state: {
 }
 
 vi.mock('node:child_process', () => ({
-  spawnSync: (command: string, args: string[] = []) => {
-    state.spawnCalls.push({ args, command })
+  spawnSync: (command: string, args: string[] = [], options?: { cwd?: string }) => {
+    state.spawnCalls.push({ args, command, options })
     return state.spawnResponse
   },
 }))
@@ -38,7 +38,12 @@ const fetchMock = async (
     json: async () => res.body,
   } as Response
 }
+const originalFetch = globalThis.fetch
 globalThis.fetch = fetchMock as typeof fetch
+
+afterAll(() => {
+  globalThis.fetch = originalFetch
+})
 
 const { rotateExecutor } = await import('./executor.ts')
 
@@ -109,7 +114,15 @@ describe('rotateExecutor', () => {
 
     const gitCall = state.spawnCalls.find((c) => c.command === 'git')
     expect(gitCall).toBeDefined()
-    expect(gitCall?.args.join(' ')).toContain('nx.json')
+    expect(gitCall?.args).toEqual([
+      'log',
+      '--diff-filter=A',
+      '--follow',
+      '--format=%aI',
+      '--',
+      'nx.json',
+    ])
+    expect(gitCall?.options?.cwd).toBe(workspace)
   })
 
   it('removes a stale nxCloudAccessToken when rebinding to nxCloudId', async () => {
@@ -212,5 +225,105 @@ describe('rotateExecutor', () => {
     const body = JSON.parse(state.fetchCalls[0]?.init?.body ?? '{}')
     expect(() => new Date(body.nxInitDate)).not.toThrow()
     expect(Number.isNaN(Date.parse(body.nxInitDate))).toBe(false)
+  })
+
+  it('rejects a non-URL cloudUrl', async () => {
+    await expect(rotateExecutor({ cloudUrl: 'not-a-url' }, { root: workspace })).rejects.toThrow(
+      /absolute URL/,
+    )
+    expect(state.fetchCalls).toHaveLength(0)
+  })
+
+  it('rejects a non-https cloudUrl', async () => {
+    await expect(
+      rotateExecutor({ cloudUrl: 'http://nx-cloud.example.com' }, { root: workspace }),
+    ).rejects.toThrow(/https/)
+    expect(state.fetchCalls).toHaveLength(0)
+  })
+
+  it('keeps a configured cloudUrl path prefix', async () => {
+    await rotateExecutor({ cloudUrl: 'https://proxy.example.com/nx/' }, { root: workspace })
+
+    expect(state.fetchCalls[0]?.url).toBe(
+      'https://proxy.example.com/nx/nx-cloud/v2/create-org-and-workspace',
+    )
+  })
+
+  it('throws on a malformed v2 body (missing nxCloudId)', async () => {
+    state.fetchResponse = { status: 200, body: { url: 'https://cloud.nx.app/connect/x' } }
+
+    await expect(rotateExecutor({}, { root: workspace })).rejects.toThrow(/nxCloudId/)
+  })
+
+  it('throws on a null v2 body', async () => {
+    state.fetchResponse = { status: 200, body: null }
+
+    await expect(rotateExecutor({}, { root: workspace })).rejects.toThrow(/nxCloudId/)
+  })
+
+  it('throws on a malformed v1 body (missing token)', async () => {
+    state.fetchResponse = (url: string) =>
+      url.includes('/v2/')
+        ? { status: 404, body: {} }
+        : { status: 200, body: { url: 'https://cloud.nx.app/connect/x' } }
+
+    await expect(rotateExecutor({}, { root: workspace })).rejects.toThrow(/token/)
+  })
+
+  it('falls back to v1 when v2 returns 404 with a message body', async () => {
+    state.fetchResponse = (url: string) =>
+      url.includes('/v2/')
+        ? { status: 404, body: { message: 'unknown route' } }
+        : { status: 200, body: { token: 'v1-tok', url: 'https://cloud.nx.app/connect/v1' } }
+
+    const result = await rotateExecutor({}, { root: workspace })
+
+    expect(result.success).toBe(true)
+    expect(state.fetchCalls[1]?.url).toBe('https://cloud.nx.app/nx-cloud/create-org-and-workspace')
+  })
+
+  it('masks a short previous binding fully', async () => {
+    rmSync(workspace, { force: true, recursive: true })
+    workspace = makeWorkspace({ nxCloudId: 'ab' })
+
+    const result = await rotateExecutor({}, { root: workspace })
+
+    expect(result.previousBinding).toBe('***')
+  })
+
+  it('preserves nx.json formatting on write (minimal diff)', async () => {
+    rmSync(workspace, { force: true, recursive: true })
+    const root = mkdtempSync(join(tmpdir(), 'nx-cloud-rotate-'))
+    writeFileSync(
+      join(root, 'nx.json'),
+      '{\n  "$schema": "./node_modules/nx/schemas/nx-schema.json",\n  "nxCloudId": "ws_old",\n  "plugins": [\n    {\n      "plugin": "@nx/vitest",\n      "exclude": ["**/*"]\n    }\n  ]\n}\n',
+    )
+    writeFileSync(join(root, 'package.json'), JSON.stringify({ name: 'my-workspace' }))
+    workspace = root
+
+    await rotateExecutor({}, { root: workspace })
+
+    const text = readFileSync(join(workspace, 'nx.json'), 'utf8')
+    expect(text).toBe(
+      '{\n  "$schema": "./node_modules/nx/schemas/nx-schema.json",\n  "nxCloudId": "ws_new123",\n  "plugins": [\n    {\n      "plugin": "@nx/vitest",\n      "exclude": ["**/*"]\n    }\n  ]\n}\n',
+    )
+  })
+
+  it('keeps comments in nx.json when inserting a new binding', async () => {
+    rmSync(workspace, { force: true, recursive: true })
+    const root = mkdtempSync(join(tmpdir(), 'nx-cloud-rotate-'))
+    writeFileSync(
+      join(root, 'nx.json'),
+      '{\n  // workspace config\n  "defaultBase": "main",\n  "a": ["x"]\n}\n',
+    )
+    writeFileSync(join(root, 'package.json'), JSON.stringify({ name: 'my-workspace' }))
+    workspace = root
+
+    await rotateExecutor({}, { root: workspace })
+
+    const text = readFileSync(join(workspace, 'nx.json'), 'utf8')
+    expect(text).toContain('// workspace config')
+    expect(text).toContain('"nxCloudId": "ws_new123"')
+    expect(text).toContain('"a": ["x"]')
   })
 })

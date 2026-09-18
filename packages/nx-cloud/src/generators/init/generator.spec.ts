@@ -69,4 +69,42 @@ describe('initGenerator', () => {
     const plugins = nxJson.plugins as Array<{ plugin: string }>
     expect(plugins.some((p) => p.plugin === './packages/nx-cloud/src/plugin.ts')).toBe(true)
   })
+
+  it('does not duplicate a string-form plugin entry', async () => {
+    const tree = createTree()
+    tree.write('nx.json', JSON.stringify({ plugins: ['@nx-devkit/nx-cloud'] }))
+
+    await initGenerator(tree as unknown as Tree, {})
+
+    const nxJson = JSON.parse(tree.read('nx.json') ?? '{}')
+    const plugins = nxJson.plugins as unknown[]
+    expect(plugins).toEqual(['@nx-devkit/nx-cloud'])
+  })
+
+  it('creates nx.json when it is missing', async () => {
+    const tree = new MemTree()
+
+    await initGenerator(tree as unknown as Tree, {})
+
+    const nxJson = JSON.parse(tree.read('nx.json') ?? '{}')
+    const plugins = nxJson.plugins as Array<{ plugin: string }>
+    expect(plugins.some((p) => p.plugin === '@nx-devkit/nx-cloud')).toBe(true)
+  })
+
+  it('prints the real root project name in the checklist', async () => {
+    const tree = createTree()
+    tree.write('package.json', JSON.stringify({ name: 'my-workspace' }))
+    const lines: string[] = []
+    const original = console.log
+    console.log = (msg: unknown) => {
+      lines.push(String(msg))
+    }
+    try {
+      await initGenerator(tree as unknown as Tree, {})
+    } finally {
+      console.log = original
+    }
+
+    expect(lines.join('\n')).toContain('my-workspace:nx-cloud-rotate')
+  })
 })

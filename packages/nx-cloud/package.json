@@ -53,5 +53,8 @@
     "type": "git",
     "url": "https://github.com/nx-devkit/nx.ts",
     "directory": "packages/nx-cloud"
+  },
+  "dependencies": {
+    "jsonc-parser": "^3.3.1"
   }
 }

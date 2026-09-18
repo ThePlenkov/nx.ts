@@ -33,11 +33,15 @@ The `rotate` executor MUST `POST {cloudUrl}/nx-cloud/v2/create-org-and-workspace
 - **THEN** after a v2 rotation `nx.json` contains the new `nxCloudId` and no `nxCloudAccessToken`
 
 ### Requirement: v1 fallback on HTTP 404
-When the v2 endpoint responds with HTTP 404, the executor MUST call `{cloudUrl}/nx-cloud/create-org-and-workspace` and write the returned `token` as `nxCloudAccessToken`, removing any stale `nxCloudId`.
+When the v2 endpoint responds with HTTP 404, the executor MUST call `{cloudUrl}/nx-cloud/create-org-and-workspace` and write the returned `token` as `nxCloudAccessToken`, removing any stale `nxCloudId`. The 404 check MUST run before the message-body failure rule, so a 404 response whose body contains a `message` still triggers the fallback rather than failing.
 
 #### Scenario: v1 fallback
 - **WHEN** the v2 endpoint returns 404 and v1 returns `{ token: "abc", url: "..." }`
 - **THEN** `nx.json` contains `nxCloudAccessToken: "abc"` and no `nxCloudId`
+
+#### Scenario: 404 with message body still falls back
+- **WHEN** the v2 endpoint returns 404 with body `{ message: "unknown route" }`
+- **THEN** the executor calls the v1 endpoint instead of throwing
 
 ### Requirement: Error propagation
 The executor MUST fail when the API returns a non-404 HTTP error or a response body containing a `message` string, and MUST NOT modify `nx.json` in that case.
@@ -54,11 +58,19 @@ With `dryRun: true` the executor MUST still call the API but MUST NOT write `nx.
 - **THEN** the API is called and `nx.json` on disk is byte-identical
 
 ### Requirement: Option and env resolution
-`workspaceName` defaults to the root `package.json` `name`; `cloudUrl` resolves from the option, then `NX_CLOUD_API`, then `NRWL_API`, then `https://cloud.nx.app`. When `NX_CLOUD_API`/`NRWL_API` is set, the executor MUST write `nxCloudUrl` into `nx.json`.
+`workspaceName` defaults to the root `package.json` `name`; `cloudUrl` resolves from the option, then `NX_CLOUD_API`, then `NRWL_API`, then `https://cloud.nx.app`. When the resolved `cloudUrl` differs from the default, the executor MUST persist it as `nxCloudUrl` in `nx.json`; when it equals the default, the executor MUST remove any stale `nxCloudUrl`. This write is skipped under `dryRun`.
 
 #### Scenario: Custom cloud URL via env
 - **WHEN** `NX_CLOUD_API=https://onprem.example.com` is set
 - **THEN** the request goes to `https://onprem.example.com/...` and `nx.json` gains `nxCloudUrl: "https://onprem.example.com"`
+
+#### Scenario: Custom cloud URL via option
+- **WHEN** the executor runs with `cloudUrl: "https://onprem.example.com"`
+- **THEN** `nx.json` gains `nxCloudUrl: "https://onprem.example.com"`
+
+#### Scenario: Stale nxCloudUrl removed on default URL
+- **WHEN** `nx.json` contains `nxCloudUrl` and the resolved `cloudUrl` is the default
+- **THEN** `nx.json` no longer contains `nxCloudUrl`
 
 ### Requirement: nxInitDate provenance
 `nxInitDate` MUST be the oldest `git log --follow` author date of `nx.json`, falling back to the current time when git fails.
