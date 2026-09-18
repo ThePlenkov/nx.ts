@@ -65,10 +65,11 @@ const NO_REMOTE = {
   'git diff --cached': fail('diff'), // non-empty staged diff
 } satisfies Record<string, SpawnOut>
 
-// Full mode: tag exists and marks the branch tip it was pushed on
+// Full mode: tag exists and its commit carries the released version
 const RELEASED = {
   'git ls-remote --exit-code --tags': ok(`${HEAD_SHA}\trefs/tags/v0.4.2`),
-  'git ls-remote --exit-code --heads': ok(`${HEAD_SHA}\trefs/heads/main`),
+  'git fetch': ok(),
+  'git show': ok(JSON.stringify({ name: '@test/pkg', version: '0.4.2' })),
   'gh release view': ok(),
 } satisfies Record<string, SpawnOut>
 
@@ -102,7 +103,8 @@ describe('publishExecutor', () => {
     mockFlow({
       'npm view': ok('0.4.2'),
       'git ls-remote --exit-code --tags': ok(`${HEAD_SHA}\trefs/tags/v0.4.2`),
-      'git ls-remote --exit-code --heads': ok(`${HEAD_SHA}\trefs/heads/main`),
+      'git fetch': ok(),
+      'git show': ok(JSON.stringify({ name: '@test/pkg', version: '0.4.2' })),
       'gh release view': fail('not found'),
       'gh release create': ok(),
     })
@@ -135,7 +137,7 @@ describe('publishExecutor', () => {
 
   it('mode=publish accepts a tag whose commit carries the version after main moved on', async () => {
     const dir = makePkgDir('@test/pkg', '0.4.2')
-    mockFlow({
+    const calls = mockFlow({
       'npm view': ok('0.4.2'),
       'git ls-remote --exit-code --tags': ok(`${HEAD_SHA}\trefs/tags/v0.4.2`),
       'git rev-parse HEAD': ok(TIP_SHA),
@@ -149,6 +151,8 @@ describe('publishExecutor', () => {
     expect(result.success).toBe(true)
     expect(result.tagged).toBe(false)
     expect(result.releaseCreated).toBe(true)
+    // cwd-relative ":./" form — works for absolute packagePath too
+    expect(calls).toContainEqual('git show FETCH_HEAD:./package.json')
   })
 
   it('mode=publish fails loudly when the remote tag points at an unrelated commit', async () => {
@@ -171,7 +175,20 @@ describe('publishExecutor', () => {
     mockFlow({
       'npm view': ok('0.4.2'),
       'git ls-remote --exit-code --tags': ok(`${STALE_SHA}\trefs/tags/v0.4.2`),
-      'git ls-remote --exit-code --heads': ok(`${TIP_SHA}\trefs/heads/main`),
+      'git fetch': ok(),
+      'git show': ok(JSON.stringify({ name: '@test/pkg', version: '0.3.9' })),
+    })
+
+    await expect(publishExecutor({ packagePath: dir, version: 'patch' })).rejects.toThrow(
+      'stale tag',
+    )
+  })
+
+  it('mode=full rejects a tag on the branch tip when its commit lacks the version', async () => {
+    const dir = makePkgDir('@test/pkg', '0.4.1')
+    mockFlow({
+      'npm view': ok('0.4.2'),
+      'git ls-remote --exit-code --tags': ok(`${TIP_SHA}\trefs/tags/v0.4.2`),
       'git fetch': ok(),
       'git show': ok(JSON.stringify({ name: '@test/pkg', version: '0.3.9' })),
     })

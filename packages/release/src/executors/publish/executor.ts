@@ -144,26 +144,15 @@ function gitRemoteTagSha(tag: string): string | null {
   return ref?.split('\t')[0] || null
 }
 
-function remoteBranchSha(branch: string): string | null {
-  const result = exec('git', [
-    'ls-remote',
-    '--exit-code',
-    '--heads',
-    'origin',
-    `refs/heads/${branch}`,
-  ])
-  return result.ok ? result.stdout.split('\t')[0] || null : null
-}
-
-// Fallback when the sha check misses: fetch the tag and inspect its commit's
-// package.json. A reusable tag must mark a release commit — one carrying this
-// exact version. Also covers annotated tags, whose ls-remote sha is the tag
-// object, and release commits the branch tip has since moved past.
+// Fetch the tag and inspect its commit's package.json — a reusable tag must
+// mark a release commit, one carrying this exact version. Covers annotated
+// tags (whose ls-remote sha is the tag object) and release commits the branch
+// tip has since moved past. ":./" resolves against cwd, so absolute
+// packagePath values work too.
 function tagCarriesVersion(packagePath: string, tag: string, version: string): boolean {
   const fetched = exec('git', ['fetch', '--depth=1', 'origin', `refs/tags/${tag}`])
   if (!fetched.ok) return false
-  const pkgJson = packagePath === '.' ? 'package.json' : `${packagePath}/package.json`
-  const shown = exec('git', ['show', `FETCH_HEAD:${pkgJson}`])
+  const shown = exec('git', ['show', 'FETCH_HEAD:./package.json'], { cwd: packagePath })
   if (!shown.ok) return false
   try {
     return (JSON.parse(shown.stdout) as { version?: string }).version === version
@@ -174,9 +163,9 @@ function tagCarriesVersion(packagePath: string, tag: string, version: string): b
 
 // An existing remote tag on the wrong commit would suppress tag creation and
 // attach the GitHub Release to the wrong source — verify the target before
-// skipping. Publish mode intends to tag HEAD (the merged release commit);
-// full mode intends to tag the bump commit it lands on origin/<branch>.
-// Bump mode never tags.
+// skipping. Publish mode intends to tag HEAD (the merged release commit), so
+// an sha match on HEAD is the fast path; both modes fall back to the content
+// check. Bump mode never tags.
 function assertTagTarget(
   resolved: ResolvedOptions,
   tag: string,
@@ -184,11 +173,12 @@ function assertTagTarget(
   nextVersion: string,
 ): void {
   if (resolved.mode === 'bump') return
-  const expected =
-    resolved.mode === 'publish'
-      ? execOrThrow('git', ['rev-parse', 'HEAD']).stdout
-      : remoteBranchSha(resolved.branch)
-  if (remoteTagSha !== expected && !tagCarriesVersion(resolved.packagePath, tag, nextVersion)) {
+  const match =
+    resolved.mode === 'full'
+      ? tagCarriesVersion(resolved.packagePath, tag, nextVersion)
+      : remoteTagSha === execOrThrow('git', ['rev-parse', 'HEAD']).stdout ||
+        tagCarriesVersion(resolved.packagePath, tag, nextVersion)
+  if (!match) {
     throw new Error(
       `Remote tag ${tag} points at ${remoteTagSha.slice(0, 12)} — refusing to attach the ${nextVersion} release to a stale tag`,
     )
