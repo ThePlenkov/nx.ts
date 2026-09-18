@@ -90,13 +90,17 @@ jobs:
           git config user.name "github-actions[bot]"
       - name: Version packages (conventional commits)
         # Derives per-project bumps from conventional commits, updates
-        # package.json versions, commits, tags (@nx-devkit/x@y.z), and pushes
-        # to main. The loop guard on this job skips the re-triggered run.
-        # `gh auth setup-git` scopes GITHUB_TOKEN to git ops in this step
+        # package.json versions, commits, and tags (@nx-devkit/x@y.z)
+        # LOCALLY. The push is deferred until after publish succeeds —
+        # otherwise a publish failure would leave tags marking unpublished
+        # versions as the baseline with no clean retry path. The version
+        # commit/tags die with the runner and the next run recomputes the
+        # same versions from the last pushed tag.
+        # `gh auth setup-git` scopes GITHUB_TOKEN to git ops in these steps
         # only — checkout keeps persist-credentials: false.
         run: |
           gh auth setup-git
-          npx nx release version
+          npx nx release version --git-push=false
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: "Rewrite workspace: protocols for npm publish"
@@ -108,3 +112,13 @@ jobs:
         run: npx nx release publish
         env:
           NPM_CONFIG_PROVENANCE: 'true'
+      - name: Push release commit and tags
+        # Checkout is a detached HEAD — push HEAD to main explicitly.
+        # If a merge raced in during publish this push fails; the next run
+        # recomputes the same versions (baseline tag was never pushed) and
+        # self-heals — publish skips already-published versions.
+        run: |
+          git push origin HEAD:main
+          git push origin --tags
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
