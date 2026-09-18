@@ -46,11 +46,17 @@ function resolveCloudUrl(option: string | undefined): string {
 }
 
 function readJson(path: string): Record<string, unknown> {
+  let text: string
   try {
     // eslint-disable-next-line security/detect-non-literal-fs-filename -- path is join(context.root, ...) under the trusted Nx workspace root
-    return JSON.parse(readFileSync(path, 'utf8')) as Record<string, unknown>
+    text = readFileSync(path, 'utf8')
   } catch (error) {
     throw new Error(`Cannot read ${path}: ${(error as Error).message}`, { cause: error })
+  }
+  try {
+    return JSON.parse(text) as Record<string, unknown>
+  } catch (error) {
+    throw new Error(`Cannot parse ${path}: ${(error as Error).message}`, { cause: error })
   }
 }
 
@@ -77,7 +83,7 @@ function getNxInitDate(root: string): string {
     const result = spawnSync(
       'git',
       ['log', '--diff-filter=A', '--follow', '--format=%aI', '--', 'nx.json'],
-      { cwd: root, encoding: 'utf8' },
+      { cwd: root, encoding: 'utf8', timeout: 30_000 },
     )
     if (result.status === 0) {
       const oldest = result.stdout
@@ -222,9 +228,8 @@ export async function rotateExecutor(
   const url = v2?.url ?? v1?.url
 
   if (!resolved.dryRun) {
-    const overrideUrl = process.env.NX_CLOUD_API || process.env.NRWL_API
-    if (overrideUrl) {
-      nxJson.nxCloudUrl = overrideUrl
+    if (resolved.cloudUrl !== DEFAULT_CLOUD_URL) {
+      nxJson.nxCloudUrl = resolved.cloudUrl
     }
     if (v2) {
       nxJson.nxCloudId = v2.nxCloudId

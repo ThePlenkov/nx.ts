@@ -1,6 +1,6 @@
 # @nx-devkit/nx-cloud
 
-Zero-config Nx plugin that puts an `nx-cloud-rotate` target on the workspace **root project**. The target creates a fresh Nx Cloud organization + workspace (same name, new `nxCloudId`) and rebinds `nx.json` — the escape hatch for when your Nx Cloud quota is exhausted and you want to roll over to a new org.
+Zero-config Nx plugin that puts an `nx-cloud-rotate` target on the workspace **root project**. The target creates a fresh Nx Cloud organization + workspace (same name, new binding — `nxCloudId`, or `nxCloudAccessToken` on the v1 fallback) and rebinds `nx.json` — the escape hatch for when your Nx Cloud quota is exhausted and you want to roll over to a new org.
 
 ## Install
 
