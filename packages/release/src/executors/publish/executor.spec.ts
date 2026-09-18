@@ -56,13 +56,19 @@ function mockFlow(responses: Record<string, SpawnOut> = {}): string[] {
   return calls
 }
 
+const HEAD_SHA = 'a'.repeat(40)
+const TIP_SHA = 'b'.repeat(40)
+const STALE_SHA = 'c'.repeat(40)
+
 const NO_REMOTE = {
   'git ls-remote': fail('not found'),
   'git diff --cached': fail('diff'), // non-empty staged diff
 } satisfies Record<string, SpawnOut>
 
+// Full mode: tag exists and marks the branch tip it was pushed on
 const RELEASED = {
-  'git ls-remote': ok('v0.4.2'),
+  'git ls-remote --exit-code --tags': ok(`${HEAD_SHA}\trefs/tags/v0.4.2`),
+  'git ls-remote --exit-code --heads': ok(`${HEAD_SHA}\trefs/heads/main`),
   'gh release view': ok(),
 } satisfies Record<string, SpawnOut>
 
@@ -95,7 +101,8 @@ describe('publishExecutor', () => {
     const dir = makePkgDir('@test/pkg', '0.4.2')
     mockFlow({
       'npm view': ok('0.4.2'),
-      'git ls-remote': ok('v0.4.2'),
+      'git ls-remote --exit-code --tags': ok(`${HEAD_SHA}\trefs/tags/v0.4.2`),
+      'git ls-remote --exit-code --heads': ok(`${HEAD_SHA}\trefs/heads/main`),
       'gh release view': fail('not found'),
       'gh release create': ok(),
     })
@@ -105,6 +112,73 @@ describe('publishExecutor', () => {
     expect(result.releaseCreated).toBe(true)
     expect(result.published).toBe(false)
     expect(result.tagged).toBe(false)
+  })
+
+  it('mode=publish skips tagging when the remote tag already marks HEAD', async () => {
+    const dir = makePkgDir('@test/pkg', '0.4.2')
+    const calls = mockFlow({
+      'npm view': ok('0.4.2'),
+      'git ls-remote --exit-code --tags': ok(`${HEAD_SHA}\trefs/tags/v0.4.2`),
+      'git rev-parse HEAD': ok(HEAD_SHA),
+      'gh release view': fail('not found'),
+      'gh release create': ok(),
+    })
+
+    const result = await publishExecutor({ packagePath: dir, mode: 'publish' })
+    expect(result.success).toBe(true)
+    expect(result.tagged).toBe(false)
+    expect(result.skipped).toContain('already tagged')
+    expect(calls.some((c) => c === 'git tag v0.4.2')).toBe(false)
+    // Sha matched — no need to fetch the tag for content verification
+    expect(calls.some((c) => c.startsWith('git fetch'))).toBe(false)
+  })
+
+  it('mode=publish accepts a tag whose commit carries the version after main moved on', async () => {
+    const dir = makePkgDir('@test/pkg', '0.4.2')
+    mockFlow({
+      'npm view': ok('0.4.2'),
+      'git ls-remote --exit-code --tags': ok(`${HEAD_SHA}\trefs/tags/v0.4.2`),
+      'git rev-parse HEAD': ok(TIP_SHA),
+      'git fetch': ok(),
+      'git show': ok(JSON.stringify({ name: '@test/pkg', version: '0.4.2' })),
+      'gh release view': fail('not found'),
+      'gh release create': ok(),
+    })
+
+    const result = await publishExecutor({ packagePath: dir, mode: 'publish' })
+    expect(result.success).toBe(true)
+    expect(result.tagged).toBe(false)
+    expect(result.releaseCreated).toBe(true)
+  })
+
+  it('mode=publish fails loudly when the remote tag points at an unrelated commit', async () => {
+    const dir = makePkgDir('@test/pkg', '0.4.2')
+    mockFlow({
+      'npm view': ok('0.4.2'),
+      'git ls-remote --exit-code --tags': ok(`${STALE_SHA}\trefs/tags/v0.4.2`),
+      'git rev-parse HEAD': ok(HEAD_SHA),
+      'git fetch': ok(),
+      'git show': ok(JSON.stringify({ name: '@test/pkg', version: '0.3.9' })),
+    })
+
+    await expect(publishExecutor({ packagePath: dir, mode: 'publish' })).rejects.toThrow(
+      'stale tag',
+    )
+  })
+
+  it('mode=full fails loudly when the remote tag does not mark the release commit', async () => {
+    const dir = makePkgDir('@test/pkg', '0.4.1')
+    mockFlow({
+      'npm view': ok('0.4.2'),
+      'git ls-remote --exit-code --tags': ok(`${STALE_SHA}\trefs/tags/v0.4.2`),
+      'git ls-remote --exit-code --heads': ok(`${TIP_SHA}\trefs/heads/main`),
+      'git fetch': ok(),
+      'git show': ok(JSON.stringify({ name: '@test/pkg', version: '0.3.9' })),
+    })
+
+    await expect(publishExecutor({ packagePath: dir, version: 'patch' })).rejects.toThrow(
+      'stale tag',
+    )
   })
 
   it('dry run does nothing', async () => {
