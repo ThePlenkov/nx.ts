@@ -95,15 +95,19 @@ function getNxInitDate(root: string): string {
   return new Date().toISOString()
 }
 
-async function postOrgAndWorkspace(
-  url: string,
-  payload: { installationSource: string; nxInitDate: string; workspaceName: string },
-): Promise<{ status: number; data: Record<string, unknown> }> {
+interface OrgRequest {
+  url: string
+  payload: { installationSource: string; nxInitDate: string; workspaceName: string }
+}
+
+async function postOrgAndWorkspace({
+  url,
+  payload,
+}: OrgRequest): Promise<{ status: number; data: Record<string, unknown> }> {
   let response: Response
   try {
-    // eslint-disable-next-line -- SSRF false positive: `url` is an operator-configured
-    // Nx Cloud endpoint (executor option / NX_CLOUD_API), already validated to an
-    // https:// origin in resolveCloudUrl — not request-user input.
+    // `url` is an operator-configured Nx Cloud endpoint (executor option /
+    // NX_CLOUD_API), already validated to an https:// origin in resolveCloudUrl.
     response = await fetch(url, {
       body: JSON.stringify(payload),
       headers: { 'Content-Type': 'application/json' },
@@ -136,14 +140,14 @@ async function createNxCloudWorkspaceV2(
   resolved: ResolvedOptions,
   nxInitDate: string,
 ): Promise<{ nxCloudId: string; url: string } | null> {
-  const { data, status } = await postOrgAndWorkspace(
-    `${resolved.cloudUrl}/nx-cloud/v2/create-org-and-workspace`,
-    {
+  const { data, status } = await postOrgAndWorkspace({
+    url: `${resolved.cloudUrl}/nx-cloud/v2/create-org-and-workspace`,
+    payload: {
       installationSource: resolved.installationSource,
       nxInitDate,
       workspaceName: resolved.workspaceName,
     },
-  )
+  })
   if (status === 404) {
     return null
   }
@@ -161,14 +165,14 @@ async function createNxCloudWorkspaceV1(
   resolved: ResolvedOptions,
   nxInitDate: string,
 ): Promise<{ token: string; url: string }> {
-  const { data, status } = await postOrgAndWorkspace(
-    `${resolved.cloudUrl}/nx-cloud/create-org-and-workspace`,
-    {
+  const { data, status } = await postOrgAndWorkspace({
+    url: `${resolved.cloudUrl}/nx-cloud/create-org-and-workspace`,
+    payload: {
       installationSource: resolved.installationSource,
       nxInitDate,
       workspaceName: resolved.workspaceName,
     },
-  )
+  })
   assertNoApiError(status, data)
   if (typeof data.token !== 'string' || !data.token) {
     throw new Error(`Malformed response from ${resolved.cloudUrl}: missing token.`)
