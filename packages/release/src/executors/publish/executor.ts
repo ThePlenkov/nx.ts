@@ -68,9 +68,17 @@ function readPackageJson(packagePath: string): { name: string; version: string }
   if (!existsSync(pkgPath)) {
     throw new Error(`No package.json found at ${pkgPath}`)
   }
+  let text: string
+  try {
+    text = readFileSync(pkgPath, 'utf-8')
+  } catch (error) {
+    throw new Error(`Cannot read ${pkgPath}: ${(error as Error).message}`, {
+      cause: error,
+    })
+  }
   let raw: { name?: string; version?: string }
   try {
-    raw = JSON.parse(readFileSync(pkgPath, 'utf-8'))
+    raw = JSON.parse(text)
   } catch (error) {
     throw new Error(`Invalid JSON in ${pkgPath}: ${(error as Error).message}`, {
       cause: error,
@@ -174,10 +182,12 @@ function bumpSemver(base: string, kind: 'patch' | 'minor' | 'major'): string {
   if (!SEMVER_RE.test(base)) {
     throw new Error(`Cannot bump invalid version: ${base}`)
   }
-  const [maj, min, pat] = base.split('.').map(Number)
+  const [main, pre] = base.split('-', 2)
+  const [maj, min, pat] = (main ?? '0.0.0').split('.').map(Number)
   if (kind === 'major') return `${(maj ?? 0) + 1}.0.0`
   if (kind === 'minor') return `${maj ?? 0}.${(min ?? 0) + 1}.0`
-  return `${maj ?? 0}.${min ?? 0}.${(pat ?? 0) + 1}`
+  // patch on a prerelease graduates it to stable (1.0.0-beta.2 → 1.0.0)
+  return `${maj ?? 0}.${min ?? 0}.${(pat ?? 0) + (pre ? 0 : 1)}`
 }
 
 function gitConfigBot(): void {
@@ -208,35 +218,19 @@ function commitBumpFiles(packagePath: string, version: string): void {
   }
 }
 
-// Bump mode: cut release/v<x.y.z>, commit the stamp, push the branch, open a PR — no publish/tag
-function runBumpMode(
-  resolved: ResolvedOptions,
-  nextVersion: string,
-  result: PublishResult,
-): PublishResult {
-  const releaseBranch = `release/v${nextVersion}`
-  const branchExists = exec('git', [
-    'ls-remote',
-    '--exit-code',
-    '--heads',
-    'origin',
-    `refs/heads/${releaseBranch}`,
-  ]).ok
-  if (branchExists) {
-    result.success = true
-    result.skipped.push('release branch already exists')
-    return result
-  }
+function assertCleanTree(): void {
   const dirty = exec('git', ['status', '--porcelain'])
   if (dirty.ok && dirty.stdout) {
-    throw new Error('Working tree is dirty — commit or stash changes before bump mode')
+    throw new Error('Working tree is dirty — commit or stash changes before releasing')
   }
-  gitConfigBot()
-  execOrThrow('git', ['fetch', 'origin', resolved.branch])
-  execOrThrow('git', ['checkout', '-B', releaseBranch, `origin/${resolved.branch}`])
-  stampVersion(resolved.packagePath, nextVersion)
-  commitBumpFiles(resolved.packagePath, nextVersion)
-  execOrThrow('git', ['push', 'origin', releaseBranch])
+}
+
+function createReleasePr(
+  resolved: ResolvedOptions,
+  releaseBranch: string,
+  nextVersion: string,
+  result: PublishResult,
+): void {
   const prResult = exec('gh', [
     'pr',
     'create',
@@ -256,6 +250,37 @@ function runBumpMode(
   } else {
     throw new Error(`gh pr create failed: ${prResult.stderr}`)
   }
+}
+
+// Bump mode: cut release/v<x.y.z>, commit the stamp, push the branch, open a PR — no publish/tag
+function runBumpMode(
+  resolved: ResolvedOptions,
+  nextVersion: string,
+  result: PublishResult,
+): PublishResult {
+  const releaseBranch = `release/v${nextVersion}`
+  const branchExists = exec('git', [
+    'ls-remote',
+    '--exit-code',
+    '--heads',
+    'origin',
+    `refs/heads/${releaseBranch}`,
+  ]).ok
+  if (branchExists) {
+    // A previous run may have pushed the branch but died before gh pr create — repair it
+    createReleasePr(resolved, releaseBranch, nextVersion, result)
+    result.success = true
+    if (!result.prCreated) result.skipped.push('release branch already exists')
+    return result
+  }
+  assertCleanTree()
+  gitConfigBot()
+  execOrThrow('git', ['fetch', 'origin', resolved.branch])
+  execOrThrow('git', ['checkout', '-B', releaseBranch, `origin/${resolved.branch}`])
+  stampVersion(resolved.packagePath, nextVersion)
+  commitBumpFiles(resolved.packagePath, nextVersion)
+  execOrThrow('git', ['push', 'origin', releaseBranch])
+  createReleasePr(resolved, releaseBranch, nextVersion, result)
   result.success = true
   return result
 }
@@ -282,25 +307,24 @@ function publishToNpm(
   result.published = true
 }
 
-function tagAndPush(
-  resolved: ResolvedOptions,
-  tag: string,
-  nextVersion: string,
-  result: PublishResult,
-): void {
-  if (resolved.mode === 'full') {
-    gitConfigBot()
-    commitBumpFiles(resolved.packagePath, nextVersion)
-    execOrThrow('git', ['fetch', 'origin', resolved.branch])
-    const rebaseResult = exec('git', ['rebase', `origin/${resolved.branch}`])
-    if (!rebaseResult.ok) {
-      throw new Error(`Rebase failed: ${rebaseResult.stderr}`)
-    }
-    const pushResult = exec('git', ['push', 'origin', resolved.branch])
-    if (!pushResult.ok) {
-      throw new Error(`Push to ${resolved.branch} failed: ${pushResult.stderr}`)
-    }
+// Full mode: commit the bump and land it on origin/<branch> BEFORE publishing —
+// the published tarball must match the pushed commit, and the tag is created
+// after the rebase so it cannot point at a pre-rebase commit.
+function syncFullBranch(resolved: ResolvedOptions, nextVersion: string): void {
+  gitConfigBot()
+  commitBumpFiles(resolved.packagePath, nextVersion)
+  execOrThrow('git', ['fetch', 'origin', resolved.branch])
+  const rebaseResult = exec('git', ['rebase', `origin/${resolved.branch}`])
+  if (!rebaseResult.ok) {
+    throw new Error(`Rebase failed: ${rebaseResult.stderr}`)
   }
+  const pushResult = exec('git', ['push', 'origin', resolved.branch])
+  if (!pushResult.ok) {
+    throw new Error(`Push to ${resolved.branch} failed: ${pushResult.stderr}`)
+  }
+}
+
+function tagAndPush(tag: string, result: PublishResult): void {
   execOrThrow('git', ['tag', tag])
   result.tagged = true
   const tagPushResult = exec('git', ['push', 'origin', tag])
@@ -362,7 +386,9 @@ function checkReleaseState(
   tag: string,
   nextVersion: string,
 ): ReleaseState {
-  const alreadyPublished = npmViewVersion(resolved.packageName, resolved.registry) === nextVersion
+  // Query the exact version — npm latest may have moved past nextVersion
+  const alreadyPublished =
+    npmViewVersion(`${resolved.packageName}@${nextVersion}`, resolved.registry) === nextVersion
   const alreadyTagged = gitRemoteTagExists(tag)
   const alreadyReleased = alreadyTagged && ghReleaseExists(tag)
   return { alreadyPublished, alreadyTagged, alreadyReleased }
@@ -411,14 +437,24 @@ export async function publishExecutor(
     return runBumpMode(resolved, nextVersion, result)
   }
 
-  // Stamp package.json version (full mode only; publish mode takes it as committed)
-  if (!alreadyPublished && resolved.mode === 'full') {
+  // Publish ships the working tree — refuse to publish uncommitted changes
+  assertCleanTree()
+
+  // Stamp package.json version (full mode only; publish mode takes it as committed).
+  // Also stamp when npm is ahead — repair still needs the bump commit on the branch.
+  if (resolved.mode === 'full' && pkg.version !== nextVersion) {
     stampVersion(resolved.packagePath, nextVersion)
+  }
+
+  // Full mode lands the bump commit before publishing so npm, branch, and tag
+  // all represent the same commit
+  if (resolved.mode === 'full' && !alreadyTagged) {
+    syncFullBranch(resolved, nextVersion)
   }
 
   publishToNpm(resolved, result, alreadyPublished)
   if (!alreadyTagged) {
-    tagAndPush(resolved, tag, nextVersion, result)
+    tagAndPush(tag, result)
   } else {
     result.skipped.push('already tagged')
   }

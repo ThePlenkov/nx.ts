@@ -161,13 +161,15 @@ describe('publishExecutor', () => {
     expect(joined.some((c) => c.startsWith('git tag'))).toBe(false)
   })
 
-  it('mode=bump skips when the release branch already exists remotely', async () => {
+  it('mode=bump skips when the release branch and its PR already exist', async () => {
     const dir = makePkgDir('@test/pkg', '0.4.1')
     mockSpawn.mockImplementation((cmd: string, args: string[]) => {
       if (cmd === 'npm' && args[0] === 'view') return ok('0.4.1')
       if (cmd === 'git' && args[0] === 'ls-remote' && args.includes('--heads'))
         return ok('refs/heads/release/v0.4.2')
       if (cmd === 'git' && args[0] === 'ls-remote' && args.includes('--tags')) return fail('no tag')
+      if (cmd === 'gh' && args[0] === 'pr' && args[1] === 'create')
+        return fail('a pull request already exists')
       return ok()
     })
 
@@ -175,6 +177,88 @@ describe('publishExecutor', () => {
     expect(result.success).toBe(true)
     expect(result.prCreated).toBe(false)
     expect(result.skipped).toContain('release branch already exists')
+  })
+
+  it('mode=bump repairs a missing PR when the release branch exists without one', async () => {
+    const dir = makePkgDir('@test/pkg', '0.4.1')
+    mockSpawn.mockImplementation((cmd: string, args: string[]) => {
+      if (cmd === 'npm' && args[0] === 'view') return ok('0.4.1')
+      if (cmd === 'git' && args[0] === 'ls-remote' && args.includes('--heads'))
+        return ok('refs/heads/release/v0.4.2')
+      if (cmd === 'git' && args[0] === 'ls-remote' && args.includes('--tags')) return fail('no tag')
+      if (cmd === 'gh' && args[0] === 'pr' && args[1] === 'create')
+        return ok('https://github.com/x/y/pull/9')
+      return ok()
+    })
+
+    const result = await publishExecutor({ packagePath: dir, version: 'patch', mode: 'bump' })
+    expect(result.success).toBe(true)
+    expect(result.prCreated).toBe(true)
+    expect(result.skipped).not.toContain('release branch already exists')
+  })
+
+  it('graduates a prerelease to stable on patch bump (1.0.0-beta.2 → 1.0.0)', async () => {
+    const dir = makePkgDir('@test/pkg', '1.0.0-beta.2')
+    mockSpawn.mockImplementation((cmd: string, args: string[]) => {
+      if (cmd === 'npm' && args[0] === 'view') return fail('not published')
+      if (cmd === 'git' && args[0] === 'ls-remote') return fail('not found')
+      return ok()
+    })
+
+    const result = await publishExecutor({ packagePath: dir, version: 'patch' })
+    expect(result.version).toBe('1.0.0')
+  })
+
+  it('mode=publish rejects a dirty working tree', async () => {
+    const dir = makePkgDir('@test/pkg', '0.4.2')
+    mockSpawn.mockImplementation((cmd: string, args: string[]) => {
+      if (cmd === 'git' && args[0] === 'status') return ok(' M packages/cli/package.json')
+      return ok()
+    })
+    await expect(publishExecutor({ packagePath: dir, mode: 'publish' })).rejects.toThrow(
+      'Working tree is dirty',
+    )
+  })
+
+  it('mode=full still stamps the version when npm is ahead (repair)', async () => {
+    const dir = makePkgDir('@test/pkg', '0.4.1'),
+      calls: string[][] = []
+    mockSpawn.mockImplementation((cmd: string, args: string[]) => {
+      calls.push([cmd, ...args])
+      if (cmd === 'npm' && args[0] === 'view') return ok('0.4.2')
+      if (cmd === 'git' && args[0] === 'ls-remote') return fail('not found')
+      if (cmd === 'git' && args[0] === 'diff') return fail('diff')
+      return ok()
+    })
+
+    const result = await publishExecutor({ packagePath: dir, version: 'patch' })
+    expect(result.success).toBe(true)
+    expect(result.version).toBe('0.4.2')
+    expect(result.published).toBe(false)
+    const joined = calls.map((c) => c.join(' '))
+    expect(joined).toContainEqual(expect.stringContaining('npm version 0.4.2'))
+    expect(joined.some((c) => c.startsWith('git commit'))).toBe(true)
+  })
+
+  it('mode=full pushes the branch before publishing and tags last', async () => {
+    const dir = makePkgDir('@test/pkg', '0.4.1'),
+      calls: string[][] = []
+    mockSpawn.mockImplementation((cmd: string, args: string[]) => {
+      calls.push([cmd, ...args])
+      if (cmd === 'npm' && args[0] === 'view') return ok('0.4.1')
+      if (cmd === 'git' && args[0] === 'ls-remote') return fail('not found')
+      if (cmd === 'git' && args[0] === 'diff') return fail('diff')
+      return ok()
+    })
+
+    await publishExecutor({ packagePath: dir, version: 'patch' })
+    const joined = calls.map((c) => c.join(' ')),
+      pushIdx = joined.indexOf('git push origin main'),
+      publishIdx = joined.findIndex((c) => c.startsWith('npm publish')),
+      tagIdx = joined.indexOf('git tag v0.4.2')
+    expect(pushIdx).toBeGreaterThanOrEqual(0)
+    expect(publishIdx).toBeGreaterThan(pushIdx)
+    expect(tagIdx).toBeGreaterThan(publishIdx)
   })
 
   it('mode=publish uses package.json version and never pushes the branch', async () => {
