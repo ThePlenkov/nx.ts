@@ -18,8 +18,10 @@ function readJson(tree: Tree, path: string): Record<string, unknown> | null {
   const errors: ParseError[] = []
   const data = parse(text, errors, { allowTrailingComma: true }) as unknown
   if (errors.length > 0) {
-    const { error, offset } = errors[0]!
-    throw new Error(`Cannot parse ${path}: ${printParseErrorCode(error)} at offset ${offset}`)
+    const details = errors
+      .map((e) => `${printParseErrorCode(e.error)} at offset ${e.offset}`)
+      .join('; ')
+    throw new Error(`Cannot parse ${path}: ${details}`)
   }
   if (typeof data !== 'object' || data === null || Array.isArray(data)) {
     throw new Error(`Cannot parse ${path}: expected a JSON object`)
