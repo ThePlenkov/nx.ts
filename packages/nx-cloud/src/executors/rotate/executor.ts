@@ -59,10 +59,8 @@ function parseJsonObject(text: string, path: string): Record<string, unknown> {
   const errors: ParseError[] = []
   const data = parse(text, errors, { allowTrailingComma: true }) as unknown
   if (errors.length > 0) {
-    const first = errors[0]
-    throw new Error(
-      `Cannot parse ${path}: ${first ? printParseErrorCode(first.error) : 'unknown error'} at offset ${first?.offset}`,
-    )
+    const { error, offset } = errors[0]!
+    throw new Error(`Cannot parse ${path}: ${printParseErrorCode(error)} at offset ${offset}`)
   }
   if (typeof data !== 'object' || data === null || Array.isArray(data)) {
     throw new Error(`Cannot parse ${path}: expected a JSON object`)
