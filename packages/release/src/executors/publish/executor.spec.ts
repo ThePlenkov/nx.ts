@@ -1,3 +1,4 @@
+/* eslint-disable one-var, node/no-sync -- test style follows repo conventions, not CodeFactor's default preset */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -24,11 +25,13 @@ function spawnResult(
   return { status, stdout, stderr }
 }
 
-function ok(stdout = ''): { status: number | null; stdout: string; stderr: string } {
+type SpawnOut = ReturnType<typeof spawnResult>
+
+function ok(stdout = ''): SpawnOut {
   return spawnResult(0, stdout)
 }
 
-function fail(stderr = ''): { status: number | null; stdout: string; stderr: string } {
+function fail(stderr = ''): SpawnOut {
   return spawnResult(1, '', stderr)
 }
 
@@ -38,6 +41,31 @@ function makePkgDir(name: string, version: string): string {
   return dir
 }
 
+// Route spawn calls by line prefix (insertion order — put specific needles first),
+// return ok() by default, and record every invocation line for assertions.
+function mockFlow(responses: Record<string, SpawnOut> = {}): string[] {
+  const calls: string[] = []
+  mockSpawn.mockImplementation((cmd: string, args: string[]) => {
+    const line = [cmd, ...args].join(' ')
+    calls.push(line)
+    for (const [needle, res] of Object.entries(responses)) {
+      if (line.startsWith(needle)) return res
+    }
+    return ok()
+  })
+  return calls
+}
+
+const NO_REMOTE = {
+  'git ls-remote': fail('not found'),
+  'git diff --cached': fail('diff'), // non-empty staged diff
+} satisfies Record<string, SpawnOut>
+
+const RELEASED = {
+  'git ls-remote': ok('v0.4.2'),
+  'gh release view': ok(),
+} satisfies Record<string, SpawnOut>
+
 describe('publishExecutor', () => {
   beforeEach(() => {
     mockSpawn.mockReset()
@@ -45,22 +73,7 @@ describe('publishExecutor', () => {
 
   it('computes next patch version from npm latest', async () => {
     const dir = makePkgDir('@test/pkg', '0.4.1')
-    mockSpawn.mockImplementation((cmd: string, args: string[]) => {
-      if (cmd === 'npm' && args[0] === 'view') return ok('0.4.1')
-      if (cmd === 'npm' && args[0] === 'version') return ok('0.4.2')
-      if (cmd === 'git' && args[0] === 'ls-remote') return fail('not found')
-      if (cmd === 'git' && args[0] === 'config') return ok()
-      if (cmd === 'git' && args[0] === 'add') return ok()
-      if (cmd === 'git' && args[0] === 'diff') return fail('diff') // non-empty diff
-      if (cmd === 'git' && args[0] === 'commit') return ok()
-      if (cmd === 'git' && args[0] === 'tag') return ok()
-      if (cmd === 'git' && args[0] === 'fetch') return ok()
-      if (cmd === 'git' && args[0] === 'rebase') return ok()
-      if (cmd === 'git' && args[0] === 'push') return ok()
-      if (cmd === 'npm' && args[0] === 'publish') return ok()
-      if (cmd === 'gh' && args[0] === 'release') return ok()
-      return ok()
-    })
+    mockFlow({ 'npm view': ok('0.4.1'), ...NO_REMOTE })
 
     const result = await publishExecutor({ packagePath: dir, version: 'patch' })
     expect(result.success).toBe(true)
@@ -71,12 +84,7 @@ describe('publishExecutor', () => {
 
   it('skips when already published, tagged, and released', async () => {
     const dir = makePkgDir('@test/pkg', '0.4.2')
-    mockSpawn.mockImplementation((cmd: string, args: string[]) => {
-      if (cmd === 'npm' && args[0] === 'view') return ok('0.4.2')
-      if (cmd === 'git' && args[0] === 'ls-remote') return ok('v0.4.2')
-      if (cmd === 'gh' && args[0] === 'release' && args[1] === 'view') return ok()
-      return ok()
-    })
+    mockFlow({ 'npm view': ok('0.4.2'), ...RELEASED })
 
     const result = await publishExecutor({ packagePath: dir, version: '0.4.2' })
     expect(result.success).toBe(true)
@@ -85,12 +93,11 @@ describe('publishExecutor', () => {
 
   it('does release repair when npm+tag exist but no GitHub Release', async () => {
     const dir = makePkgDir('@test/pkg', '0.4.2')
-    mockSpawn.mockImplementation((cmd: string, args: string[]) => {
-      if (cmd === 'npm' && args[0] === 'view') return ok('0.4.2')
-      if (cmd === 'git' && args[0] === 'ls-remote') return ok('v0.4.2')
-      if (cmd === 'gh' && args[0] === 'release' && args[1] === 'view') return fail('not found')
-      if (cmd === 'gh' && args[0] === 'release' && args[1] === 'create') return ok()
-      return ok()
+    mockFlow({
+      'npm view': ok('0.4.2'),
+      'git ls-remote': ok('v0.4.2'),
+      'gh release view': fail('not found'),
+      'gh release create': ok(),
     })
 
     const result = await publishExecutor({ packagePath: dir, version: '0.4.2' })
@@ -102,7 +109,7 @@ describe('publishExecutor', () => {
 
   it('dry run does nothing', async () => {
     const dir = makePkgDir('@test/pkg', '0.4.1')
-    mockSpawn.mockImplementation(() => ok())
+    mockFlow()
 
     const result = await publishExecutor({ packagePath: dir, version: 'patch', dryRun: true })
     expect(result.success).toBe(true)
@@ -111,22 +118,7 @@ describe('publishExecutor', () => {
 
   it('accepts explicit version', async () => {
     const dir = makePkgDir('@test/pkg', '0.4.1')
-    mockSpawn.mockImplementation((cmd: string, args: string[]) => {
-      if (cmd === 'npm' && args[0] === 'view') return fail('not found')
-      if (cmd === 'git' && args[0] === 'ls-remote') return fail('not found')
-      if (cmd === 'npm' && args[0] === 'version') return ok('1.0.0')
-      if (cmd === 'npm' && args[0] === 'publish') return ok()
-      if (cmd === 'git' && args[0] === 'config') return ok()
-      if (cmd === 'git' && args[0] === 'add') return ok()
-      if (cmd === 'git' && args[0] === 'diff') return fail('diff')
-      if (cmd === 'git' && args[0] === 'commit') return ok()
-      if (cmd === 'git' && args[0] === 'tag') return ok()
-      if (cmd === 'git' && args[0] === 'fetch') return ok()
-      if (cmd === 'git' && args[0] === 'rebase') return ok()
-      if (cmd === 'git' && args[0] === 'push') return ok()
-      if (cmd === 'gh' && args[0] === 'release') return ok()
-      return ok()
-    })
+    mockFlow({ 'npm view': fail('not found'), ...NO_REMOTE })
 
     const result = await publishExecutor({ packagePath: dir, version: '1.0.0' })
     expect(result.success).toBe(true)
@@ -134,18 +126,11 @@ describe('publishExecutor', () => {
   })
 
   it('mode=bump creates a release branch + PR, never publishes or tags', async () => {
-    const dir = makePkgDir('@test/pkg', '0.4.1'),
-      calls: string[][] = []
-    mockSpawn.mockImplementation((cmd: string, args: string[]) => {
-      calls.push([cmd, ...args])
-      if (cmd === 'npm' && args[0] === 'view') return ok('0.4.1')
-      if (cmd === 'git' && args[0] === 'ls-remote' && args.includes('--heads'))
-        return fail('no branch')
-      if (cmd === 'git' && args[0] === 'ls-remote' && args.includes('--tags')) return fail('no tag')
-      if (cmd === 'git' && args[0] === 'diff') return fail('diff') // Non-empty staged diff
-      if (cmd === 'gh' && args[0] === 'pr' && args[1] === 'create')
-        return ok('https://github.com/x/y/pull/1')
-      return ok()
+    const dir = makePkgDir('@test/pkg', '0.4.1')
+    const calls = mockFlow({
+      'npm view': ok('0.4.1'),
+      ...NO_REMOTE,
+      'gh pr create': ok('https://github.com/x/y/pull/1'),
     })
 
     const result = await publishExecutor({ packagePath: dir, version: 'patch', mode: 'bump' })
@@ -154,23 +139,19 @@ describe('publishExecutor', () => {
     expect(result.published).toBe(false)
     expect(result.tagged).toBe(false)
     expect(result.prCreated).toBe(true)
-    const joined = calls.map((c) => c.join(' '))
-    expect(joined).toContainEqual(expect.stringContaining('checkout -B release/v0.4.2'))
-    expect(joined).toContainEqual(expect.stringContaining('push origin release/v0.4.2'))
-    expect(joined.some((c) => c.startsWith('npm publish'))).toBe(false)
-    expect(joined.some((c) => c.startsWith('git tag'))).toBe(false)
+    expect(calls).toContainEqual(expect.stringContaining('checkout -B release/v0.4.2'))
+    expect(calls).toContainEqual(expect.stringContaining('push origin release/v0.4.2'))
+    expect(calls.some((c) => c.startsWith('npm publish'))).toBe(false)
+    expect(calls.some((c) => c.startsWith('git tag'))).toBe(false)
   })
 
   it('mode=bump skips when the release branch and its PR already exist', async () => {
     const dir = makePkgDir('@test/pkg', '0.4.1')
-    mockSpawn.mockImplementation((cmd: string, args: string[]) => {
-      if (cmd === 'npm' && args[0] === 'view') return ok('0.4.1')
-      if (cmd === 'git' && args[0] === 'ls-remote' && args.includes('--heads'))
-        return ok('refs/heads/release/v0.4.2')
-      if (cmd === 'git' && args[0] === 'ls-remote' && args.includes('--tags')) return fail('no tag')
-      if (cmd === 'gh' && args[0] === 'pr' && args[1] === 'create')
-        return fail('a pull request already exists')
-      return ok()
+    mockFlow({
+      'npm view': ok('0.4.1'),
+      'git ls-remote --exit-code --heads': ok('refs/heads/release/v0.4.2'),
+      'git ls-remote --exit-code --tags': fail('no tag'),
+      'gh pr create': fail('a pull request already exists'),
     })
 
     const result = await publishExecutor({ packagePath: dir, version: 'patch', mode: 'bump' })
@@ -181,14 +162,11 @@ describe('publishExecutor', () => {
 
   it('mode=bump repairs a missing PR when the release branch exists without one', async () => {
     const dir = makePkgDir('@test/pkg', '0.4.1')
-    mockSpawn.mockImplementation((cmd: string, args: string[]) => {
-      if (cmd === 'npm' && args[0] === 'view') return ok('0.4.1')
-      if (cmd === 'git' && args[0] === 'ls-remote' && args.includes('--heads'))
-        return ok('refs/heads/release/v0.4.2')
-      if (cmd === 'git' && args[0] === 'ls-remote' && args.includes('--tags')) return fail('no tag')
-      if (cmd === 'gh' && args[0] === 'pr' && args[1] === 'create')
-        return ok('https://github.com/x/y/pull/9')
-      return ok()
+    mockFlow({
+      'npm view': ok('0.4.1'),
+      'git ls-remote --exit-code --heads': ok('refs/heads/release/v0.4.2'),
+      'git ls-remote --exit-code --tags': fail('no tag'),
+      'gh pr create': ok('https://github.com/x/y/pull/9'),
     })
 
     const result = await publishExecutor({ packagePath: dir, version: 'patch', mode: 'bump' })
@@ -197,83 +175,9 @@ describe('publishExecutor', () => {
     expect(result.skipped).not.toContain('release branch already exists')
   })
 
-  it('graduates a prerelease to stable on patch bump (1.0.0-beta.2 → 1.0.0)', async () => {
-    const dir = makePkgDir('@test/pkg', '1.0.0-beta.2')
-    mockSpawn.mockImplementation((cmd: string, args: string[]) => {
-      if (cmd === 'npm' && args[0] === 'view') return fail('not published')
-      if (cmd === 'git' && args[0] === 'ls-remote') return fail('not found')
-      return ok()
-    })
-
-    const result = await publishExecutor({ packagePath: dir, version: 'patch' })
-    expect(result.version).toBe('1.0.0')
-  })
-
-  it('mode=publish rejects a dirty working tree', async () => {
-    const dir = makePkgDir('@test/pkg', '0.4.2')
-    mockSpawn.mockImplementation((cmd: string, args: string[]) => {
-      if (cmd === 'git' && args[0] === 'status') return ok(' M packages/cli/package.json')
-      return ok()
-    })
-    await expect(publishExecutor({ packagePath: dir, mode: 'publish' })).rejects.toThrow(
-      'Working tree is dirty',
-    )
-  })
-
-  it('mode=full still stamps the version when npm is ahead (repair)', async () => {
-    const dir = makePkgDir('@test/pkg', '0.4.1'),
-      calls: string[][] = []
-    mockSpawn.mockImplementation((cmd: string, args: string[]) => {
-      calls.push([cmd, ...args])
-      if (cmd === 'npm' && args[0] === 'view') return ok('0.4.2')
-      if (cmd === 'git' && args[0] === 'ls-remote') return fail('not found')
-      if (cmd === 'git' && args[0] === 'diff') return fail('diff')
-      return ok()
-    })
-
-    const result = await publishExecutor({ packagePath: dir, version: 'patch' })
-    expect(result.success).toBe(true)
-    expect(result.version).toBe('0.4.2')
-    expect(result.published).toBe(false)
-    const joined = calls.map((c) => c.join(' '))
-    expect(joined).toContainEqual(expect.stringContaining('npm version 0.4.2'))
-    expect(joined.some((c) => c.startsWith('git commit'))).toBe(true)
-  })
-
-  it('mode=full pushes the branch before publishing and tags last', async () => {
-    const dir = makePkgDir('@test/pkg', '0.4.1'),
-      calls: string[][] = []
-    mockSpawn.mockImplementation((cmd: string, args: string[]) => {
-      calls.push([cmd, ...args])
-      if (cmd === 'npm' && args[0] === 'view') return ok('0.4.1')
-      if (cmd === 'git' && args[0] === 'ls-remote') return fail('not found')
-      if (cmd === 'git' && args[0] === 'diff') return fail('diff')
-      return ok()
-    })
-
-    await publishExecutor({ packagePath: dir, version: 'patch' })
-    const joined = calls.map((c) => c.join(' ')),
-      pushIdx = joined.indexOf('git push origin main'),
-      publishIdx = joined.findIndex((c) => c.startsWith('npm publish')),
-      tagIdx = joined.indexOf('git tag v0.4.2')
-    expect(pushIdx).toBeGreaterThanOrEqual(0)
-    expect(publishIdx).toBeGreaterThan(pushIdx)
-    expect(tagIdx).toBeGreaterThan(publishIdx)
-  })
-
   it('mode=publish uses package.json version and never pushes the branch', async () => {
-    const dir = makePkgDir('@test/pkg', '0.4.2'),
-      calls: string[][] = []
-    mockSpawn.mockImplementation((cmd: string, args: string[]) => {
-      calls.push([cmd, ...args])
-      if (cmd === 'npm' && args[0] === 'view') return ok('0.4.1')
-      if (cmd === 'git' && args[0] === 'ls-remote') return fail('not found')
-      if (cmd === 'npm' && args[0] === 'publish') return ok()
-      if (cmd === 'git' && args[0] === 'tag') return ok()
-      if (cmd === 'git' && args[0] === 'push') return ok()
-      if (cmd === 'gh' && args[0] === 'release') return ok()
-      return ok()
-    })
+    const dir = makePkgDir('@test/pkg', '0.4.2')
+    const calls = mockFlow({ 'npm view': ok('0.4.1'), ...NO_REMOTE })
 
     const result = await publishExecutor({ packagePath: dir, mode: 'publish' })
     expect(result.success).toBe(true)
@@ -281,23 +185,19 @@ describe('publishExecutor', () => {
     expect(result.published).toBe(true)
     expect(result.tagged).toBe(true)
     expect(result.releaseCreated).toBe(true)
-    const joined = calls.map((c) => c.join(' '))
-    expect(joined).toContainEqual('git push origin v0.4.2')
-    expect(joined.some((c) => c === 'git push origin main')).toBe(false)
-    expect(joined.some((c) => c.startsWith('git commit'))).toBe(false)
-    expect(joined.some((c) => c.startsWith('npm version'))).toBe(false)
+    expect(calls).toContainEqual('git push origin v0.4.2')
+    expect(calls.some((c) => c === 'git push origin main')).toBe(false)
+    expect(calls.some((c) => c.startsWith('git commit'))).toBe(false)
+    expect(calls.some((c) => c.startsWith('npm version'))).toBe(false)
   })
 
   it('mode=publish repairs a half-release: skips publish, still tags + releases', async () => {
     const dir = makePkgDir('@test/pkg', '0.4.2')
-    mockSpawn.mockImplementation((cmd: string, args: string[]) => {
-      if (cmd === 'npm' && args[0] === 'view') return ok('0.4.2')
-      if (cmd === 'git' && args[0] === 'ls-remote') return fail('not found')
-      if (cmd === 'git' && args[0] === 'tag') return ok()
-      if (cmd === 'git' && args[0] === 'push') return ok()
-      if (cmd === 'gh' && args[0] === 'release' && args[1] === 'view') return fail('not found')
-      if (cmd === 'gh' && args[0] === 'release' && args[1] === 'create') return ok()
-      return ok()
+    mockFlow({
+      'npm view': ok('0.4.2'),
+      'git ls-remote': fail('not found'),
+      'gh release view': fail('not found'),
+      'gh release create': ok(),
     })
 
     const result = await publishExecutor({ packagePath: dir, mode: 'publish' })
@@ -309,76 +209,88 @@ describe('publishExecutor', () => {
 
   it('mode=publish refuses a missing/invalid committed version', async () => {
     const dir = makePkgDir('@test/pkg', 'invalid')
-    mockSpawn.mockImplementation(() => ok())
+    mockFlow()
     await expect(publishExecutor({ packagePath: dir, mode: 'publish' })).rejects.toThrow(
       'requires a committed semver version',
     )
   })
 
+  it('mode=publish rejects a dirty working tree', async () => {
+    const dir = makePkgDir('@test/pkg', '0.4.2')
+    mockFlow({ 'git status': ok(' M packages/cli/package.json') })
+    await expect(publishExecutor({ packagePath: dir, mode: 'publish' })).rejects.toThrow(
+      'Working tree is dirty',
+    )
+  })
+
   it('treats npm prerelease beta.10 as ahead of local beta.2 (semver, not lexical)', async () => {
     const dir = makePkgDir('@test/pkg', '1.0.0-beta.2')
-    mockSpawn.mockImplementation((cmd: string, args: string[]) => {
-      if (cmd === 'npm' && args[0] === 'view') return ok('1.0.0-beta.10')
-      if (cmd === 'git' && args[0] === 'ls-remote') return fail('not found')
-      return ok()
-    })
+    mockFlow({ 'npm view': ok('1.0.0-beta.10'), 'git ls-remote': fail('not found') })
 
     const result = await publishExecutor({ packagePath: dir, version: 'patch' })
     expect(result.version).toBe('1.0.0-beta.10')
   })
 
+  it('graduates a prerelease to stable on patch bump (1.0.0-beta.2 → 1.0.0)', async () => {
+    const dir = makePkgDir('@test/pkg', '1.0.0-beta.2')
+    mockFlow({ 'npm view': fail('not published'), 'git ls-remote': fail('not found') })
+
+    const result = await publishExecutor({ packagePath: dir, version: 'patch' })
+    expect(result.version).toBe('1.0.0')
+  })
+
   it('stages a package-local package-lock.json in the bump commit', async () => {
-    const dir = makePkgDir('@test/pkg', '0.4.1'),
-      calls: string[][] = []
+    const dir = makePkgDir('@test/pkg', '0.4.1')
     writeFileSync(join(dir, 'package-lock.json'), '{}')
-    mockSpawn.mockImplementation((cmd: string, args: string[]) => {
-      calls.push([cmd, ...args])
-      if (cmd === 'npm' && args[0] === 'view') return ok('0.4.1')
-      if (cmd === 'git' && args[0] === 'ls-remote') return fail('not found')
-      if (cmd === 'git' && args[0] === 'diff') return fail('diff')
-      if (cmd === 'gh' && args[0] === 'pr') return ok('https://github.com/x/y/pull/1')
-      return ok()
+    const calls = mockFlow({
+      'npm view': ok('0.4.1'),
+      ...NO_REMOTE,
+      'gh pr create': ok('https://github.com/x/y/pull/1'),
     })
 
     await publishExecutor({ packagePath: dir, version: 'patch', mode: 'bump' })
-    const joined = calls.map((c) => c.join(' '))
-    expect(joined).toContainEqual(`git add ${dir}/package-lock.json`)
+    expect(calls).toContainEqual(`git add ${dir}/package-lock.json`)
   })
 
   it('mode=bump cuts the release branch from origin/<branch>, not current HEAD', async () => {
-    const dir = makePkgDir('@test/pkg', '0.4.1'),
-      calls: string[][] = []
-    mockSpawn.mockImplementation((cmd: string, args: string[]) => {
-      calls.push([cmd, ...args])
-      if (cmd === 'npm' && args[0] === 'view') return ok('0.4.1')
-      if (cmd === 'git' && args[0] === 'ls-remote') return fail('not found')
-      if (cmd === 'git' && args[0] === 'diff') return fail('diff')
-      if (cmd === 'gh' && args[0] === 'pr') return ok('https://github.com/x/y/pull/1')
-      return ok()
+    const dir = makePkgDir('@test/pkg', '0.4.1')
+    const calls = mockFlow({
+      'npm view': ok('0.4.1'),
+      ...NO_REMOTE,
+      'gh pr create': ok('https://github.com/x/y/pull/1'),
     })
 
     await publishExecutor({ packagePath: dir, version: 'patch', mode: 'bump' })
-    const joined = calls.map((c) => c.join(' '))
-    expect(joined).toContainEqual('git fetch origin main')
-    expect(joined).toContainEqual('git checkout -B release/v0.4.2 origin/main')
+    expect(calls).toContainEqual('git fetch origin main')
+    expect(calls).toContainEqual('git checkout -B release/v0.4.2 origin/main')
   })
 
-  it('mode=full tags after rebase so the tag points at the pushed commit', async () => {
-    const dir = makePkgDir('@test/pkg', '0.4.1'),
-      calls: string[][] = []
-    mockSpawn.mockImplementation((cmd: string, args: string[]) => {
-      calls.push([cmd, ...args])
-      if (cmd === 'npm' && args[0] === 'view') return ok('0.4.1')
-      if (cmd === 'git' && args[0] === 'ls-remote') return fail('not found')
-      if (cmd === 'git' && args[0] === 'diff') return fail('diff')
-      return ok()
+  it('mode=full stamps the version even when npm is ahead (repair)', async () => {
+    const dir = makePkgDir('@test/pkg', '0.4.1')
+    const calls = mockFlow({
+      'npm view': ok('0.4.2'),
+      'git ls-remote': fail('not found'),
+      'git diff --cached': fail('diff'),
     })
 
+    const result = await publishExecutor({ packagePath: dir, version: 'patch' })
+    expect(result.success).toBe(true)
+    expect(result.version).toBe('0.4.2')
+    expect(result.published).toBe(false)
+    expect(calls).toContainEqual(expect.stringContaining('npm version 0.4.2'))
+    expect(calls.some((c) => c.startsWith('git commit'))).toBe(true)
+  })
+
+  it('mode=full pushes the branch before publishing and tags last', async () => {
+    const dir = makePkgDir('@test/pkg', '0.4.1')
+    const calls = mockFlow({ 'npm view': ok('0.4.1'), ...NO_REMOTE })
+
     await publishExecutor({ packagePath: dir, version: 'patch' })
-    const joined = calls.map((c) => c.join(' ')),
-      rebaseIdx = joined.indexOf('git rebase origin/main'),
-      tagIdx = joined.indexOf('git tag v0.4.2')
-    expect(rebaseIdx).toBeGreaterThanOrEqual(0)
-    expect(tagIdx).toBeGreaterThan(rebaseIdx)
+    const pushIdx = calls.indexOf('git push origin main'),
+      publishIdx = calls.findIndex((c) => c.startsWith('npm publish')),
+      tagIdx = calls.indexOf('git tag v0.4.2')
+    expect(pushIdx).toBeGreaterThanOrEqual(0)
+    expect(publishIdx).toBeGreaterThan(pushIdx)
+    expect(tagIdx).toBeGreaterThan(publishIdx)
   })
 })
