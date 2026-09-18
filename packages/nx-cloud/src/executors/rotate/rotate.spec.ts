@@ -356,7 +356,24 @@ describe('rotateExecutor', () => {
     await rotateExecutor({}, { root: workspace })
 
     expect(readFileSync(join(workspace, 'nx.json'), 'utf8')).toBe(
-      '{\r\n  "$schema": "x",\r\n  "nxCloudId": "ws_new123",\r\n  "defaultBase": "main"\r\n}\r\n',
+      '{\r\n  "nxCloudId": "ws_new123",\r\n  "$schema": "x",\r\n  "defaultBase": "main"\r\n}\r\n',
+    )
+  })
+
+  it('keeps an end-of-line comment on its original property', async () => {
+    rmSync(workspace, { force: true, recursive: true })
+    const root = mkdtempSync(join(tmpdir(), 'nx-cloud-rotate-'))
+    writeFileSync(
+      join(root, 'nx.json'),
+      '{\n  "$schema": "./x.json", // schema ref\n  "defaultBase": "main"\n}\n',
+    )
+    writeFileSync(join(root, 'package.json'), JSON.stringify({ name: 'my-workspace' }))
+    workspace = root
+
+    await rotateExecutor({}, { root: workspace })
+
+    expect(readFileSync(join(workspace, 'nx.json'), 'utf8')).toBe(
+      '{\n  "nxCloudId": "ws_new123",\n  "$schema": "./x.json", // schema ref\n  "defaultBase": "main"\n}\n',
     )
   })
 })

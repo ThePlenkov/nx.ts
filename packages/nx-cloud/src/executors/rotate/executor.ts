@@ -86,9 +86,9 @@ function detectFormatting(text: string): {
       insertSpaces: !indent.startsWith('\t'),
       tabSize: indent.startsWith('\t') ? 1 : indent.length,
     },
-    // Anchor inserts after "$schema" (or first): that sibling is a scalar,
-    // So reserializing it does not expand compact arrays/objects elsewhere.
-    getInsertionIndex: (properties: string[]) => properties.indexOf('$schema') + 1,
+    // Inserts go first so the reserialized sibling is the former first property.
+    // That keeps compact values and end-of-line comments untouched.
+    getInsertionIndex: () => 0,
   }
 }
 
