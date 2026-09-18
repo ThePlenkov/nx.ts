@@ -35,10 +35,11 @@ deciding whether to approve it — verification steps, not a blanket
 - Upstream fix already merged: nrwl/nx#37059 bumps to `smol-toml@1.7.1`;
   present in `nx@23.3.0-canary.*`, lands with the next stable release.
 - Consumer mitigation documented: `"overrides": { "smol-toml": "^1.7.1" }`.
-- `allow-scripts` / postinstall: verified empirically — `nx show
-  projects` works in the packed-tarball e2e consumer where the
-  postinstall never ran, so skipping is safe. Verification steps
-  documented for consumers.
+- `allow-scripts` / postinstall: `nx show projects` worked in our
+  packed-tarball e2e consumer where the postinstall never ran — that
+  establishes it for this environment, not universally (the hook also
+  does platform-support and Nx Cloud checks). README directs consumers
+  to verify the installed script for their version before skipping.
 
 ## Resolution
 

@@ -27,14 +27,17 @@ If the workspace has no Nx yet, the bootstrap installs `nx` + `@nx/devkit` first
   `smol-toml@1.6.1`, which is affected by
   [GHSA-7w5x-hrqm-74c2](https://github.com/advisories/GHSA-7w5x-hrqm-74c2)
   (DoS via malformed TOML). Fixed upstream in nrwl/nx#37059 — it ships
-  with the next Nx release. To lift it today, add an npm override:
-  `"overrides": { "smol-toml": "^1.7.1" }`.
+  with the next Nx release. To lift it today, add
+  `"overrides": { "smol-toml": "^1.7.1" }` to your root `package.json`
+  and re-run `npm install` — the audit warning persists until the tree
+  is re-resolved.
 - **`allow-scripts` prompt for `nx` postinstall** — `nx` runs
   `node -e "try{require('./dist/bin/post-install')}catch(e){}"` on install
-  (loads Nx's post-install task, e.g. validating the platform-native
-  binary). Verify before approving: `npm view nx scripts`, or inspect
-  `node_modules/nx/package.json` → `scripts`. Skipping it is safe — Nx
-  works without the post-install hook.
+  (loads Nx's post-install task — platform-support and Nx Cloud checks).
+  Verify before approving: `npm view nx scripts`, or inspect
+  `node_modules/nx/package.json` → `scripts`. In our tests Nx worked
+  without it (`nx show projects` ran fine with the hook blocked), but
+  check the exact script in your installed version before skipping.
 
 ### Manual setup
 
